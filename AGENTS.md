@@ -21,6 +21,12 @@ Use these conventions to keep contributions consistent and easy to review.
 - Prefer fast, deterministic tests; avoid network calls or system mutations. Use fakes/mocks for external services.
 - Add regression tests when fixing bugs. Target high coverage on critical paths; required checks must pass.
 
+## Documentation Guidelines
+- Pair every “do X” with “undo/restore/verify X” (e.g., backups need restore steps; config changes need rollback notes).
+- Call out safety rails for operational steps (mount checks before writing, fallbacks/recovery users for auth changes).
+- Include quick validation or troubleshooting snippets so readers can confirm behavior and debug common breakages.
+- Note platform-specific limits or conflicts (e.g., Timeshift scope, AppArmor/Firejail stacking).
+
 ## Commit & Pull Request Guidelines
 - Write commits in imperative mood (`Add CI pipeline`, `Fix input validation`). Keep summaries under ~72 characters and include a short body for rationale or edge cases.
 - Open PRs with a clear description, linked issue numbers, and any screenshots or logs that help reviewers. List what changed, how it was tested, and any follow-up work.
