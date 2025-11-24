@@ -617,7 +617,7 @@ install_power_management() {
   # Apply current state once
   if [[ -x "$helper_dst" ]]; then
     echo "Applying initial power profile..."
-    "$helper_dst" --apply || echo "Failed to apply power profile"
+    $SUDO "$helper_dst" --apply || echo "Failed to apply power profile"
   fi
 }
 

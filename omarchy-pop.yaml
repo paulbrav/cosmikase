@@ -158,7 +158,7 @@ apt:
     - name: steam-installer
       desc: Installer for the Steam software distribution service
       install: true
-    - name: firefox  # TODO why is this here?
+    - name: firefox
       desc: Fast, private and safe web browser
       install: true
 
