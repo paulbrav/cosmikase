@@ -150,8 +150,23 @@ install_apt_list() {
     APT_CACHE_READY=true
   fi
   local to_install=()
-  for pkg in "${pkgs[@]}"; do
-    [[ -z "$pkg" || "$pkg" == ghostty ]] && continue
+  for pkg_entry in "${pkgs[@]}"; do
+    [[ -z "$pkg_entry" ]] && continue
+    local pkg meta alias_pkg=""
+    pkg="$pkg_entry"
+    if [[ "$pkg_entry" == *"|"* ]]; then
+      pkg="${pkg_entry%%|*}"
+      meta="${pkg_entry#*|}"
+      IFS=',' read -ra meta_parts <<< "$meta"
+      for part in "${meta_parts[@]}"; do
+        [[ "$part" == alias=* ]] && alias_pkg="${part#alias=}"
+      done
+    fi
+    [[ "$pkg" == ghostty ]] && continue
+    if [[ -n "$alias_pkg" ]] && have_pkg "$alias_pkg"; then
+      echo "APT ($label): alias $alias_pkg already present; skipping $pkg"
+      continue
+    fi
     if ! have_pkg "$pkg"; then
       if ! apt-cache show "$pkg" >/dev/null 2>&1; then
         echo "Skipping $pkg (not found in apt cache)"
@@ -178,11 +193,19 @@ install_flatpaks() {
     fi
     sudo_cmd apt install -y flatpak
   fi
-  if ! flatpak remotes | grep -q flathub; then
-    sudo_cmd flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+  if ! flatpak remotes 2>/dev/null | grep -q flathub; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[dry-run] flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
+    else
+      sudo_cmd flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    fi
   fi
   for app in "${flatpaks[@]}"; do
-    [[ -z "$app" ]] && continue
+    if [[ "$DRY_RUN" == "true" ]]; then
+       echo "Installing Flatpak $app"
+       echo "[dry-run] flatpak install -y flathub $app"
+       continue
+    fi
     if ! flatpak list | awk '{print $1}' | grep -qx "$app"; then
       echo "Installing Flatpak $app"
       flatpak install -y flathub "$app"
@@ -193,33 +216,74 @@ install_flatpaks() {
 }
 
 install_ghostty() {
-  local url="${GHOSTTY_DEB_URL:-https://github.com/ghostty-org/ghostty/releases/latest/download/ghostty_amd64.deb}"
-  if have_pkg ghostty; then
+  if have_pkg ghostty || command -v ghostty >/dev/null 2>&1; then
     echo "Ghostty already installed"
     return 0
   fi
-  echo "Installing Ghostty from $url"
-  tmpdir=$(mktemp -d)
-  trap 'rm -rf "$tmpdir"' EXIT
   
-  if ! curl -fsSLo "$tmpdir/ghostty.deb" "$url"; then
-      echo "Error: Failed to download Ghostty from $url"
-      rm -rf "$tmpdir"
-      trap - EXIT
-      return 1
+  echo "Building Ghostty from source (requires Zig, GTK4, Adwaita)..."
+  
+  # 1. Install build dependencies
+  local deps=(libgtk-4-dev libadwaita-1-dev git build-essential)
+  if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[dry-run] apt install -y ${deps[*]}"
+  else
+      sudo_cmd apt update
+      sudo_cmd apt install -y "${deps[@]}"
   fi
-
-  if ! sudo_cmd dpkg -i "$tmpdir/ghostty.deb"; then
-      echo "dpkg error encountered; attempting fix with 'apt -f install'..."
-      if ! sudo_cmd apt -f install -y; then
-          echo "Error: Failed to install Ghostty dependencies"
-          rm -rf "$tmpdir"
-          trap - EXIT
-          return 1
+  
+  # 2. Ensure Zig is installed (download official binary if missing)
+  if ! command -v zig >/dev/null 2>&1; then
+      echo "Zig not found. Installing Zig 0.13.0..."
+      local zig_url="https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz"
+      local zig_dir="/opt/zig-0.13.0"
+      local zig_link="/usr/local/bin/zig"
+      
+      if [[ "$DRY_RUN" == "true" ]]; then
+          echo "[dry-run] download and extract zig to $zig_dir"
+          echo "[dry-run] ln -s $zig_dir/zig $zig_link"
+      else
+          (
+            tmpdir=$(mktemp -d)
+            trap 'rm -rf "$tmpdir"' EXIT
+            curl -fsSL "$zig_url" -o "$tmpdir/zig.tar.xz"
+            sudo_cmd mkdir -p "$zig_dir"
+            sudo_cmd tar -xf "$tmpdir/zig.tar.xz" -C "$zig_dir" --strip-components=1
+            sudo_cmd ln -sf "$zig_dir/zig" "$zig_link"
+          )
       fi
   fi
-  rm -rf "$tmpdir"
-  trap - EXIT
+  
+  # 3. Build Ghostty
+  local build_dir="$HOME/ghostty-source"
+  if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[dry-run] git clone https://github.com/ghostty-org/ghostty $build_dir"
+      echo "[dry-run] zig build -Doptimize=ReleaseFast in $build_dir"
+      echo "[dry-run] install binary to $TARGET_BIN/ghostty"
+  else
+      if [[ -d "$build_dir" ]]; then
+          echo "Updating existing Ghostty source in $build_dir..."
+          (cd "$build_dir" && git pull)
+      else
+          git clone https://github.com/ghostty-org/ghostty "$build_dir"
+      fi
+      
+      echo "Compiling Ghostty (this may take a while)..."
+      (cd "$build_dir" && zig build -Doptimize=ReleaseFast)
+      
+      # Install binary to user local bin
+      mkdir -p "$TARGET_BIN"
+      install -m 755 "$build_dir/zig-out/bin/ghostty" "$TARGET_BIN/ghostty"
+      
+      # Install desktop file/icon if possible (optional, skipping for basic bin install)
+      # But let's try to be nice:
+      if [[ -d "$build_dir/zig-out/share" ]]; then
+          echo "Installing Ghostty resources (desktop file, icons)..."
+          mkdir -p "$HOME/.local/share"
+          cp -r "$build_dir/zig-out/share/"* "$HOME/.local/share/"
+          update-desktop-database "$HOME/.local/share/applications" || true
+      fi
+  fi
 }
 
 install_dangerzone() {
@@ -246,7 +310,11 @@ install_dangerzone() {
       
       if [[ "$DRY_RUN" == "true" ]]; then
         echo "[dry-run] gpg --keyserver hkps://keys.openpgp.org --no-default-keyring --no-permission-warning --homedir $tmp_home --keyring gnupg-ring:/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg --recv-keys DE28AB241FA48260FAC9B8BAA7C9B38522604281"
-        gpg_success=true
+        run_cmd sudo_cmd gpg --keyserver hkps://keys.openpgp.org \
+          --no-default-keyring --no-permission-warning --homedir "$tmp_home" \
+          --keyring gnupg-ring:/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg \
+          --recv-keys DE28AB241FA48260FAC9B8BAA7C9B38522604281
+        gpg_success=0
       else
         sudo_cmd gpg --keyserver hkps://keys.openpgp.org \
           --no-default-keyring --no-permission-warning --homedir "$tmp_home" \
@@ -320,6 +388,44 @@ install_antigravity() {
   sudo_cmd apt install -y antigravity
 }
 
+install_brave() {
+  if have_pkg brave-browser; then
+    echo "Brave Browser already installed"
+    return 0
+  fi
+  echo "Installing Brave Browser..."
+
+  if [[ "$APT_CACHE_READY" != "true" ]]; then
+    sudo_cmd apt update
+    APT_CACHE_READY=true
+  fi
+  sudo_cmd apt install -y curl
+
+  if [[ ! -f /usr/share/keyrings/brave-browser-archive-keyring.gpg ]]; then
+      echo "Setting up Brave GPG key..."
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "[dry-run] download brave keyring to /usr/share/keyrings/brave-browser-archive-keyring.gpg"
+      else
+        sudo_cmd curl -fsSLo /usr/share/keyrings/brave-browser-archive-keyring.gpg https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+      fi
+  fi
+
+  if [[ ! -f /etc/apt/sources.list.d/brave-browser-release.sources ]]; then
+      echo "Adding Brave repository..."
+      local brave_url="https://brave-browser-apt-release.s3.brave.com/brave-browser.sources"
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "[dry-run] download repository file: $brave_url to /etc/apt/sources.list.d/brave-browser-release.sources"
+      else
+        sudo_cmd curl -fsSLo /etc/apt/sources.list.d/brave-browser-release.sources "$brave_url"
+      fi
+
+      sudo_cmd apt update
+      APT_CACHE_READY=true
+  fi
+
+  sudo_cmd apt install -y brave-browser
+}
+
 install_fonts() {
   if ! command -v unzip >/dev/null 2>&1; then
     echo "Installing unzip (required for fonts)..."
@@ -336,7 +442,12 @@ install_fonts() {
     local name url
     name="${font%%|*}"
     url="$(echo "$font" | awk -F'url=' '{print $2}')"
-    "$TARGET_BIN/omarchy-pop-fonts" --name "$name" --url "$url"
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[dry-run] $TARGET_BIN/omarchy-pop-fonts --name \"$name\" --url \"$url\""
+      run_cmd "$TARGET_BIN/omarchy-pop-fonts" --name "$name" --url "$url"
+    else
+      "$TARGET_BIN/omarchy-pop-fonts" --name "$name" --url "$url"
+    fi
   done
 }
 
@@ -465,15 +576,20 @@ append_shell_snippet() {
 }
 
 apply_theme() {
-  local theme="$1"
+  local theme="$1" theme_cmd=""
   if command -v omarchy-pop-theme >/dev/null 2>&1; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-      echo "[dry-run] omarchy-pop-theme $theme"
-    else
-      omarchy-pop-theme "$theme"
-    fi
+    theme_cmd="omarchy-pop-theme"
+  elif [[ -x "$TARGET_BIN/omarchy-pop-theme" ]]; then
+    theme_cmd="$TARGET_BIN/omarchy-pop-theme"
   else
     echo "omarchy-pop-theme not found on PATH; skipping theme apply"
+    return
+  fi
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] $theme_cmd $theme"
+  else
+    "$theme_cmd" "$theme"
   fi
 }
 
@@ -540,7 +656,10 @@ install_custom_list() {
         ;;
       flatpak)
         if [[ -n "$id" ]]; then
-          if ! flatpak list | awk '{print $1}' | grep -qx "$id"; then
+          if [[ "$DRY_RUN" == "true" ]]; then
+             echo "Installing Flatpak $id for $name"
+             echo "[dry-run] flatpak install -y flathub $id"
+          elif ! flatpak list | awk '{print $1}' | grep -qx "$id"; then
             echo "Installing Flatpak $id for $name"
             run_cmd flatpak install -y flathub "$id"
           else
@@ -554,17 +673,18 @@ install_custom_list() {
         if [[ -z "$deb_url" ]]; then
           echo "No deb_url for $name; skipping"
         else
-          tmpdir=$(mktemp -d)
-          trap 'rm -rf "$tmpdir"' EXIT
-          echo "Installing $name from deb: $deb_url"
-          if [[ "$DRY_RUN" == "true" ]]; then
-            echo "[dry-run] download deb from $deb_url into $tmpdir/pkg.deb"
-          else
-            (cd "$tmpdir" && curl -fsSLo pkg.deb "$deb_url")
-          fi
-          sudo_cmd dpkg -i "$tmpdir/pkg.deb" || sudo_cmd apt -f install -y
-          rm -rf "$tmpdir"
-          trap - EXIT
+          (
+            tmpdir=$(mktemp -d)
+            trap 'rm -rf "$tmpdir"' EXIT
+            echo "Installing $name from deb: $deb_url"
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "[dry-run] download deb from $deb_url into $tmpdir/pkg.deb"
+              echo "[dry-run] dpkg -i $tmpdir/pkg.deb"
+            else
+              (cd "$tmpdir" && curl -fsSLo pkg.deb "$deb_url")
+              sudo_cmd dpkg -i "$tmpdir/pkg.deb" || sudo_cmd apt -f install -y
+            fi
+          )
         fi
         ;;
       npm)
@@ -572,6 +692,9 @@ install_custom_list() {
           echo "No npm package specified for $name; skipping"
         elif ! command -v npm >/dev/null 2>&1; then
           echo "npm not found; skipping npm install for $name"
+        elif [[ "$DRY_RUN" == "true" ]]; then
+          echo "Installing npm package $npm_package for $name"
+          run_cmd npm install -g "$npm_package"
         elif npm list -g "$npm_package" >/dev/null 2>&1; then
           echo "npm package $npm_package already installed"
         else
@@ -584,6 +707,9 @@ install_custom_list() {
           echo "No bun package specified for $name; skipping"
         elif ! command -v bun >/dev/null 2>&1; then
           echo "bun not found; skipping bun install for $name"
+        elif [[ "$DRY_RUN" == "true" ]]; then
+          echo "Installing bun package $bun_package for $name"
+          run_cmd bun add -g "$bun_package"
         elif bun pm ls -g "$bun_package" >/dev/null 2>&1; then
           echo "bun package $bun_package already installed"
         else
@@ -613,6 +739,9 @@ install_custom_list() {
       custom_antigravity)
         install_antigravity
         ;;
+      custom_brave)
+        install_brave
+        ;;
       manual|*)
         echo "Manual install for $name: ${note:-'no note provided'}"
         ;;
@@ -629,6 +758,11 @@ install_uv_tools() {
   fi
   for tool in "${tools[@]}"; do
     [[ -z "$tool" ]] && continue
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "Installing uv tool $tool"
+        echo "[dry-run] uv tool install $tool"
+        continue
+    fi
     if uv tool list 2>/dev/null | grep -q "^$tool\b"; then
       echo "uv tool $tool already installed"
     else
@@ -636,6 +770,19 @@ install_uv_tools() {
       uv tool install "$tool" || echo "uv tool install $tool failed"
     fi
   done
+}
+
+install_theme_tui() {
+  if ! command -v uv >/dev/null 2>&1; then
+    echo "uv not installed; skipping theme-tui"
+    return
+  fi
+  if command -v theme-tui >/dev/null 2>&1; then
+    echo "Updating theme-tui (uv tool) from repo..."
+  else
+    echo "Installing theme-tui (uv tool) from repo..."
+  fi
+  run_cmd uv tool install --reinstall "$REPO_DIR" || echo "theme-tui install failed"
 }
 
 install_npm_packages() {
@@ -657,6 +804,12 @@ install_npm_packages() {
     fi
     pkg_spec="$name"
     [[ -n "$version" ]] && pkg_spec+="@$version"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "Installing npm package $pkg_spec"
+      echo "[dry-run] npm install -g $pkg_spec"
+      continue
+    fi
 
     if npm list -g --depth=0 "$name" >/dev/null 2>&1; then
       echo "npm package $name already installed"
@@ -759,18 +912,24 @@ main() {
     echo "== omarchy-pop install =="
   fi
 
-  local default_theme run_fw run_recovery ghostty_enabled
+  local default_theme run_fw run_recovery ghostty_enabled yubikey_setup
   default_theme="$(yaml_value defaults.theme osaka-jade)"
   run_fw="$(yaml_value defaults.run_fw_update false)"
   run_recovery="$(yaml_value defaults.run_recovery_upgrade false)"
   ghostty_enabled="$(yaml_value defaults.ghostty true)"
+  yubikey_setup="$(yaml_value defaults.yubikey_setup false)"
 
   mapfile -t apt_core < <(yaml_list apt core)
   mapfile -t apt_gui < <(yaml_list apt gui)
   mapfile -t apt_terminal < <(yaml_list apt terminal)
+  mapfile -t apt_yubikey < <(yaml_list apt yubikey)
 
   install_apt_list "core" "${apt_core[@]}"
   install_apt_list "gui" "${apt_gui[@]}"
+
+  if [[ "$yubikey_setup" == "true" ]]; then
+    install_apt_list "yubikey" "${apt_yubikey[@]}"
+  fi
 
   local ghostty_done=false
   for entry in "${apt_terminal[@]}"; do
@@ -802,6 +961,7 @@ main() {
   install_custom_list installers ai_tools
   install_custom_list installers security
   install_uv_tools
+  install_theme_tui
   install_npm_packages
   install_power_management
 

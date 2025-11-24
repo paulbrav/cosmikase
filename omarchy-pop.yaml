@@ -1,7 +1,8 @@
 defaults:
   install: true
   ghostty: true
-  theme: osaka-jade
+  yubikey_setup: false
+  theme: nord
   # Firmware/recovery steps run after core apt installs; they require fwupd (fwupdmgr)
   # and pop-upgrade to be present on PATH.
   run_fw_update: true
@@ -119,11 +120,38 @@ apt:
       desc: Helper tool used when compiling applications and libraries
       install: true
     # Backups & Remote
+    - name: timeshift
+      desc: System restore tool
+      install: true
     - name: restic
       desc: Fast, secure, efficient backup program
       install: true
     - name: sshfs
       desc: Filesystem client based on the SSH File Transfer Protocol
+      install: true
+    # Security
+    - name: firejail
+      desc: SUID sandbox program to reduce the risk of security breaches
+      install: true
+    - name: firejail-profiles
+      desc: Profiles for Firejail
+      install: true
+
+  yubikey:
+    - name: yubikey-manager
+      desc: Python library and command line tool for configuring a YubiKey
+      install: true
+    - name: libpam-u2f
+      desc: Universal 2nd Factor (U2F) PAM module
+      install: true
+    - name: pamu2fcfg
+      desc: Configuration tool for the U2F PAM module
+      install: true
+    - name: libfido2-1
+      desc: Library functionality for FIDO 2.0
+      install: true
+    - name: fido2-tools
+      desc: Command-line tools for FIDO 2.0
       install: true
 
   gui:
@@ -140,8 +168,8 @@ apt:
   terminal:
     - name: ghostty
       desc: Fast, feature-rich, and cross-platform terminal emulator
-      source: deb
-      note: "Official linux builds are experimental; manual install preferred over Snap."
+      source: source
+      note: "Compiling from source to ensure latest version (requires Zig 0.13+)"
       install: true
     - name: kitty
       desc: Fast, feature-rich, GPU based terminal emulator
@@ -181,7 +209,7 @@ flatpak:
       install: false
     - id: com.brave.Browser
       desc: Privacy-oriented web browser
-      install: true
+      install: false
     - id: com.bitwarden.desktop
       desc: Password manager
       install: true
@@ -243,14 +271,16 @@ installers:
       install: true
     - name: julia
       desc: High-level, high-performance, dynamic programming language
-      method: apt
+      method: script
+      url: https://install.julialang.org
+      args: -y
       check: julia
       install: true
   ai_tools:
     - name: cursor
       desc: The AI Code Editor
       method: deb
-      deb_url: "https://downloader.cursor.sh/linux/debian/x64"
+      deb_url: "https://api2.cursor.sh/updates/download/golden/linux-x64-deb/cursor/latest"
       check: cursor
       install: true
     - name: antigravity
@@ -267,6 +297,7 @@ installers:
     - name: opencode
       desc: Open source AI coding assistant
       method: bun
+      bun_package: opencode-ai
       check: opencode
       install: true
     - name: claude-code
@@ -280,6 +311,11 @@ installers:
       note: "Check https://ampcode.com for install instructions (often requires waitlist/login)."
       install: false
   security:
+    - name: brave-browser
+      desc: Privacy-oriented web browser (Official DEB)
+      method: custom_brave
+      check: brave-browser
+      install: true
     - name: dangerzone
       desc: Convert potentially dangerous PDFs/docs to safe PDFs
       method: custom_dangerzone
