@@ -1,0 +1,31 @@
+# Catppuccin-inspired palette for Alacritty
+# Matches ghostty.conf color scheme
+
+[colors.primary]
+background = "#1e1e2e"
+foreground = "#cdd6f4"
+
+[colors.cursor]
+cursor = "#cdd6f4"
+text = "#1e1e2e"
+
+[colors.normal]
+black = "#181825"
+red = "#f38ba8"
+green = "#a6e3a1"
+yellow = "#f9e2af"
+blue = "#89b4fa"
+magenta = "#cba6f7"
+cyan = "#94e2d5"
+white = "#cdd6f4"
+
+[colors.bright]
+black = "#313244"
+red = "#eba0ac"
+green = "#b4e0c3"
+yellow = "#f9e2af"
+blue = "#b4befe"
+magenta = "#d0bfe5"
+cyan = "#a6e9e0"
+white = "#f5e0dc"
+

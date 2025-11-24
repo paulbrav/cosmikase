@@ -1,0 +1,19 @@
+# ~/.ssh/config
+
+# Global options
+Host *
+    AddKeysToAgent yes
+    # Default to ed25519 key if present
+    IdentityFile ~/.ssh/id_ed25519
+
+    # Reuse connections (multiplexing) - speeds up subsequent connections
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist 10m
+
+# Example Host
+# Host my-server
+#     HostName 1.2.3.4
+#     User myuser
+#     Port 22
+

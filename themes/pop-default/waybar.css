@@ -1,0 +1,80 @@
+/* Pop!_OS-inspired Waybar styling */
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "CaskaydiaMono Nerd Font", "Symbols Nerd Font Mono", monospace;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(12, 13, 17, 0.95);
+    color: #e6e6e6;
+}
+
+#workspaces button {
+    padding: 0 6px;
+    color: #e6e6e6;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: #e95420;
+    background: rgba(233, 84, 32, 0.2);
+}
+
+#workspaces button:hover {
+    background: rgba(233, 84, 32, 0.1);
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#bluetooth,
+#tray,
+#custom-omarchy,
+#custom-update {
+    padding: 0 10px;
+    margin: 0 2px;
+    color: #e6e6e6;
+}
+
+#custom-omarchy {
+    color: #e95420;
+    font-weight: bold;
+}
+
+#battery.charging {
+    color: #48b9c7;
+}
+
+#battery.warning:not(.charging) {
+    color: #f6d32d;
+}
+
+#battery.critical:not(.charging) {
+    color: #e95420;
+}
+
+#network.disconnected {
+    color: #e95420;
+}
+
+#pulseaudio.muted {
+    color: #2f323d;
+}
+
+tooltip {
+    background: #20222b;
+    border: 1px solid #e95420;
+    border-radius: 5px;
+}
+
+tooltip label {
+    color: #e6e6e6;
+}
+

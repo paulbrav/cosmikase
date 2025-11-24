@@ -1,0 +1,26 @@
+palette = "pop_default"
+add_newline = false
+format = "$all"
+
+[palettes.pop_default]
+base = "#0c0d11"
+text = "#e6e6e6"
+accent = "#48b9c7"
+warn = "#f6d32d"
+err = "#e95420"
+
+[character]
+success_symbol = "[➜](accent) "
+error_symbol = "[✗](err) "
+
+[cmd_duration]
+style = "warn"
+
+[directory]
+style = "accent"
+
+[git_branch]
+style = "text"
+
+[git_status]
+style = "warn"

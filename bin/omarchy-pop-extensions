@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Extensions list captured from current Cursor installation
+EXTENSIONS=(
+    "anysphere.cpptools"
+    "anysphere.cursorpyright"
+    "anysphere.remote-containers"
+    "anysphere.remote-ssh"
+    "astral-sh.ty"
+    "bierner.markdown-mermaid"
+    "charliermarsh.ruff"
+    "james-yu.latex-workshop"
+    "julialang.language-julia"
+    "llvm-vs-code-extensions.vscode-clangd"
+    "modular-mojotools.vscode-mojo"
+    "ms-python.debugpy"
+    "ms-python.python"
+    "ms-toolsai.jupyter"
+    "ms-toolsai.jupyter-renderers"
+    "ms-toolsai.vscode-jupyter-cell-tags"
+    "ms-toolsai.vscode-jupyter-slideshow"
+    "ms-vscode.cmake-tools"
+    "openai.chatgpt"
+    "rust-lang.rust-analyzer"
+    "tomoki1207.pdf"
+    "vadimcn.vscode-lldb"
+    "valentjn.vscode-ltex"
+)
+
+install_extensions() {
+    local cmd="$1"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "Command '$cmd' not found, skipping extension installation for it."
+        return
+    fi
+
+    echo "Installing extensions for $cmd..."
+    for ext in "${EXTENSIONS[@]}"; do
+        echo "  Processing $ext..."
+        # Using --force to ensure it installs/updates.
+        # Suppress output to keep it clean, or let it show for feedback?
+        # Most CLI tools are noisy.
+        "$cmd" --install-extension "$ext" --force || echo "    Failed to install $ext for $cmd"
+    done
+}
+
+echo "Starting extension sync..."
+
+install_extensions "cursor"
+install_extensions "antigravity"
+
+echo "Extension installation complete."
+

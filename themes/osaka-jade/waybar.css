@@ -1,0 +1,80 @@
+/* Osaka Jade Waybar styling */
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "CaskaydiaMono Nerd Font", "Symbols Nerd Font Mono", monospace;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(11, 19, 20, 0.95);
+    color: #c8f3e4;
+}
+
+#workspaces button {
+    padding: 0 6px;
+    color: #c8f3e4;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: #3ecf8e;
+    background: rgba(62, 207, 142, 0.2);
+}
+
+#workspaces button:hover {
+    background: rgba(62, 207, 142, 0.1);
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#bluetooth,
+#tray,
+#custom-omarchy,
+#custom-update {
+    padding: 0 10px;
+    margin: 0 2px;
+    color: #c8f3e4;
+}
+
+#custom-omarchy {
+    color: #64d3e3;
+    font-weight: bold;
+}
+
+#battery.charging {
+    color: #3ecf8e;
+}
+
+#battery.warning:not(.charging) {
+    color: #ffd166;
+}
+
+#battery.critical:not(.charging) {
+    color: #ff6b6b;
+}
+
+#network.disconnected {
+    color: #ff6b6b;
+}
+
+#pulseaudio.muted {
+    color: #26393c;
+}
+
+tooltip {
+    background: #1a2324;
+    border: 1px solid #3ecf8e;
+    border-radius: 5px;
+}
+
+tooltip label {
+    color: #c8f3e4;
+}
+

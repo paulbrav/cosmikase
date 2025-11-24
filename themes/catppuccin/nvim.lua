@@ -1,0 +1,31 @@
+local colors = {
+  bg = "#1e1e2e",
+  fg = "#cdd6f4",
+  accent = "#89b4fa",
+  warn = "#f9e2af",
+  error = "#f38ba8",
+  subtle = "#181825",
+}
+
+vim.opt.background = "dark"
+vim.g.colors_name = "omarchy-pop-catppuccin"
+
+local function hi(group, opts)
+  vim.api.nvim_set_hl(0, group, opts)
+end
+
+hi("Normal", { fg = colors.fg, bg = colors.bg })
+hi("NormalFloat", { fg = colors.fg, bg = colors.subtle })
+hi("Visual", { fg = colors.bg, bg = colors.accent })
+hi("Comment", { fg = colors.warn, bg = colors.bg, italic = true })
+hi("String", { fg = colors.accent })
+hi("Function", { fg = colors.warn })
+hi("Identifier", { fg = colors.fg })
+hi("CursorLine", { bg = colors.subtle })
+hi("CursorLineNr", { fg = colors.accent, bold = true })
+hi("LineNr", { fg = colors.warn })
+hi("StatusLine", { fg = colors.fg, bg = colors.subtle })
+hi("VertSplit", { fg = colors.subtle })
+hi("Pmenu", { fg = colors.fg, bg = colors.subtle })
+hi("PmenuSel", { fg = colors.bg, bg = colors.accent })
+hi("Error", { fg = colors.error, bold = true })

@@ -1,0 +1,31 @@
+# Osaka Jade palette for Alacritty
+# Matches ghostty.conf color scheme
+
+[colors.primary]
+background = "#0b1314"
+foreground = "#c8f3e4"
+
+[colors.cursor]
+cursor = "#c8f3e4"
+text = "#0b1314"
+
+[colors.normal]
+black = "#1a2324"
+red = "#ff6b6b"
+green = "#3ecf8e"
+yellow = "#ffd166"
+blue = "#4dabf7"
+magenta = "#c792ea"
+cyan = "#64d3e3"
+white = "#e0fbf4"
+
+[colors.bright]
+black = "#26393c"
+red = "#ff8787"
+green = "#52e0a0"
+yellow = "#ffe066"
+blue = "#74c0fc"
+magenta = "#e599f7"
+cyan = "#7ee5f0"
+white = "#f3fff9"
+

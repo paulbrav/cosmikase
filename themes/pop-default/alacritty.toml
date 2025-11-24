@@ -1,0 +1,31 @@
+# Pop!_OS-inspired palette for Alacritty
+# Matches ghostty.conf color scheme
+
+[colors.primary]
+background = "#0c0d11"
+foreground = "#e6e6e6"
+
+[colors.cursor]
+cursor = "#e95420"
+text = "#0c0d11"
+
+[colors.normal]
+black = "#20222b"
+red = "#e95420"
+green = "#48b9c7"
+yellow = "#f6d32d"
+blue = "#4a90e2"
+magenta = "#c061cb"
+cyan = "#34c8bd"
+white = "#e6e6e6"
+
+[colors.bright]
+black = "#2f323d"
+red = "#ff6f3c"
+green = "#5fd7e0"
+yellow = "#ffe168"
+blue = "#71a5f5"
+magenta = "#d59cec"
+cyan = "#54e0d4"
+white = "#ffffff"
+

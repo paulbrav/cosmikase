@@ -1,0 +1,104 @@
+defaults:
+  install: true
+  ghostty: false
+  theme: pop-default
+  run_fw_update: false
+  run_recovery_upgrade: false
+
+apt:
+  core:
+    - name: fzf
+      install: true
+    - name: zoxide
+      install: true
+    - name: ripgrep
+      install: true
+    - name: fd-find
+      alias: fdfind
+      install: true
+    - name: bat
+      install: true
+    - name: btop
+      install: true
+    - name: tmux
+      install: true
+    - name: git
+      install: true
+    - name: neovim
+      install: true
+    - name: curl
+      install: true
+    - name: wget
+      install: true
+    - name: jq
+      install: true
+    - name: build-essential
+      install: true
+    - name: rsync
+      install: true
+    - name: unzip
+      install: true
+    - name: fontconfig
+      install: true
+    - name: tree
+      install: true
+    - name: eza
+      install: false
+  gui: []
+  terminal:
+    - name: ghostty
+      source: deb
+      install: false
+    - name: kitty
+      install: true
+
+flatpak:
+  utility: []
+
+fonts:
+  nerd:
+    - name: JetBrainsMono Nerd Font
+      url: https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+      install: false
+
+installers:
+  runtimes:
+    - name: rust
+      method: script
+      url: https://sh.rustup.rs
+      args: -y
+      check: rustc
+      install: false
+    - name: bun
+      method: script
+      url: https://bun.sh/install
+      check: bun
+      install: false
+    - name: uv
+      method: script
+      url: https://astral.sh/uv/install.sh
+      check: uv
+      install: false
+    - name: julia
+      method: apt
+      check: julia
+      install: false
+    - name: mojo
+      method: manual
+      note: "Requires Modular account; set deb_url to automate"
+      install: false
+  ai_tools: []
+
+scripts: []
+
+themes:
+  default: pop-default
+  available:
+    - osaka-jade
+    - catppuccin
+    - pop-default
+  paths:
+    base: ~/.local/share/omarchy-pop/themes
+
+hp_zbook_ultra:
+  emit_notes: false

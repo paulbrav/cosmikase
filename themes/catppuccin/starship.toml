@@ -1,0 +1,26 @@
+palette = "catppuccin"
+add_newline = false
+format = "$all"
+
+[palettes.catppuccin]
+base = "#1e1e2e"
+text = "#cdd6f4"
+accent = "#89b4fa"
+warn = "#f9e2af"
+err = "#f38ba8"
+
+[character]
+success_symbol = "[➜](accent) "
+error_symbol = "[✗](err) "
+
+[cmd_duration]
+style = "warn"
+
+[directory]
+style = "accent"
+
+[git_branch]
+style = "text"
+
+[git_status]
+style = "warn"

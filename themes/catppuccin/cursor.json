@@ -1,0 +1,8 @@
+{
+  "name": "Catppuccin",
+  "background": "#1e1e2e",
+  "foreground": "#cdd6f4",
+  "accent": "#89b4fa",
+  "error": "#f38ba8",
+  "warning": "#f9e2af"
+}

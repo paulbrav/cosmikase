@@ -1,0 +1,37 @@
+model = "gpt-5.1-codex-max"
+approval_policy = "on-request"    # CLI equivalent: --ask-for-approval on-request
+model_reasoning_effort = "xhigh"
+# sandbox_mode left at default; pass danger-full-access only when you truly need it
+
+[model_providers.lm_studio]
+name = "LM Studio"
+base_url = "http://localhost:1234/v1"
+
+[profiles.gpt-oss-120b-lms]
+model_provider = "lm_studio"
+model = "openai/gpt-oss-120b"
+
+[profiles.qwen3-coder-30b-lms]
+model_provider = "lm_studio"
+model = "qwen/qwen3-coder-30b"
+
+[profiles.gpt-oss-20b-lms]
+model_provider = "lm_studio"
+model = "openai/gpt-oss-20b"
+
+[profiles.oss]
+model_provider = "lm_studio"
+model = "openai/gpt-oss-20b"
+sandbox_mode = "danger-full-access"
+approval_policy = "untrusted"
+
+[notice]
+hide_gpt5_1_migration_prompt = true
+"hide_gpt-5.1-codex-max_migration_prompt" = true
+
+[features]
+web_search_request = true
+
+[sandbox_workspace_write]
+network_access = true
+

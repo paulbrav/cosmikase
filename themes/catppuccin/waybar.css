@@ -1,0 +1,80 @@
+/* Catppuccin-inspired Waybar styling */
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "CaskaydiaMono Nerd Font", "Symbols Nerd Font Mono", monospace;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(30, 30, 46, 0.95);
+    color: #cdd6f4;
+}
+
+#workspaces button {
+    padding: 0 6px;
+    color: #cdd6f4;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: #89b4fa;
+    background: rgba(137, 180, 250, 0.2);
+}
+
+#workspaces button:hover {
+    background: rgba(137, 180, 250, 0.1);
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#bluetooth,
+#tray,
+#custom-omarchy,
+#custom-update {
+    padding: 0 10px;
+    margin: 0 2px;
+    color: #cdd6f4;
+}
+
+#custom-omarchy {
+    color: #cba6f7;
+    font-weight: bold;
+}
+
+#battery.charging {
+    color: #a6e3a1;
+}
+
+#battery.warning:not(.charging) {
+    color: #f9e2af;
+}
+
+#battery.critical:not(.charging) {
+    color: #f38ba8;
+}
+
+#network.disconnected {
+    color: #f38ba8;
+}
+
+#pulseaudio.muted {
+    color: #313244;
+}
+
+tooltip {
+    background: #181825;
+    border: 1px solid #89b4fa;
+    border-radius: 5px;
+}
+
+tooltip label {
+    color: #cdd6f4;
+}
+

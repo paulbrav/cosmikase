@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# omarchy-pop-update
+# Updates all installed software and system components.
+
+set -e
+
+echo "Starting system update..."
+
+# 1. APT
+echo "----------------------------------------------------------------"
+echo "Updating APT packages..."
+sudo apt update
+sudo apt full-upgrade -y
+sudo apt autoremove -y
+
+# 2. Flatpak
+if command -v flatpak &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Updating Flatpak packages..."
+    flatpak update -y
+fi
+
+# 3. Snap
+if command -v snap &> /dev/null; then
+    # Check if snapd is active
+    if systemctl is-active --quiet snapd.service; then
+        echo "----------------------------------------------------------------"
+        echo "Updating Snap packages..."
+        sudo snap refresh
+    fi
+fi
+
+# 4. Firmware
+if command -v fwupdmgr &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Checking for firmware updates..."
+    fwupdmgr get-updates
+    echo "To install firmware updates, run: fwupdmgr update"
+fi
+
+# 5. Rust
+if command -v rustup &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Updating Rust toolchain..."
+    rustup update
+fi
+
+# 6. Bun
+if command -v bun &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Updating Bun..."
+    bun upgrade
+fi
+
+# 7. UV
+if command -v uv &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Updating UV..."
+    uv self update
+    uv tool upgrade --all
+fi
+
+# 8. NPM
+if command -v npm &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Updating global NPM packages..."
+    npm update -g
+fi
+
+# 9. Mojo
+if command -v modular &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Updating Mojo..."
+    modular update mojo
+fi
+
+# 10. Julia
+if command -v juliaup &> /dev/null; then
+    echo "----------------------------------------------------------------"
+    echo "Updating Julia..."
+    juliaup update
+fi
+
+echo "----------------------------------------------------------------"
+echo "System update complete!"

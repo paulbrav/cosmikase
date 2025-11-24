@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+THEMES_DIR="${THEMES_DIR:-$HOME/.local/share/omarchy-pop/themes}"
+CONFIG_DIR="${CONFIG_DIR:-$HOME/.config}"
+
+usage() {
+  echo "Usage: $(basename "$0") <theme-name>" >&2
+  echo "Available themes:" >&2
+  ls "$THEMES_DIR" 2>/dev/null || true
+}
+
+[[ $# -eq 1 ]] || { usage; exit 1; }
+THEME="$1"
+THEME_PATH="$THEMES_DIR/$THEME"
+[[ -d "$THEME_PATH" ]] || { echo "Theme '$THEME' not found in $THEMES_DIR" >&2; usage; exit 1; }
+
+echo "Applying theme: $THEME"
+
+# ------------------------------------------------------------------------------
+# Terminal Emulators
+# ------------------------------------------------------------------------------
+
+# Ghostty
+if [[ -f "$THEME_PATH/ghostty.conf" ]]; then
+  mkdir -p "$CONFIG_DIR/ghostty/themes"
+  cp "$THEME_PATH/ghostty.conf" "$CONFIG_DIR/ghostty/themes/active.conf"
+  local_conf="$CONFIG_DIR/ghostty/config"
+  if [[ ! -f "$local_conf" ]] || ! grep -q "themes/active.conf" "$local_conf"; then
+    mkdir -p "$CONFIG_DIR/ghostty"
+    echo "include themes/active.conf" >> "$local_conf"
+  fi
+  echo "  - Updated Ghostty"
+fi
+
+# Kitty
+if [[ -f "$THEME_PATH/kitty.conf" ]]; then
+  mkdir -p "$CONFIG_DIR/kitty"
+  cp "$THEME_PATH/kitty.conf" "$CONFIG_DIR/kitty/theme.conf"
+  # Ensure kitty.conf includes the theme
+  kitty_conf="$CONFIG_DIR/kitty/kitty.conf"
+  if [[ ! -f "$kitty_conf" ]] || ! grep -q "include theme.conf" "$kitty_conf"; then
+      echo "include theme.conf" >> "$kitty_conf"
+  fi
+  # Reload kitty if running
+  pkill -USR1 kitty || true
+  echo "  - Updated Kitty"
+fi
+
+# Alacritty
+if [[ -f "$THEME_PATH/alacritty.toml" ]]; then
+  mkdir -p "$CONFIG_DIR/alacritty"
+  cp "$THEME_PATH/alacritty.toml" "$CONFIG_DIR/alacritty/theme.toml"
+  # Ensure alacritty.toml imports the theme
+  alacritty_conf="$CONFIG_DIR/alacritty/alacritty.toml"
+  if [[ ! -f "$alacritty_conf" ]]; then
+      echo "import = [\"$CONFIG_DIR/alacritty/theme.toml\"]" > "$alacritty_conf"
+  else
+      # Check for theme.toml in non-comment lines
+      if ! grep -v "^[[:space:]]*#" "$alacritty_conf" | grep -q "theme.toml"; then
+           echo "Warning: alacritty.toml exists but does not seem to import 'theme.toml'."
+           echo "         Please ensure it contains: import = [\"$CONFIG_DIR/alacritty/theme.toml\"]"
+      fi
+  fi
+  echo "  - Updated Alacritty"
+fi
+
+# ------------------------------------------------------------------------------
+# Shell & Prompts
+# ------------------------------------------------------------------------------
+
+# Starship
+if [[ -f "$THEME_PATH/starship.toml" ]]; then
+  # Starship usually lives at ~/.config/starship.toml
+  cp "$THEME_PATH/starship.toml" "$CONFIG_DIR/starship.toml"
+  echo "  - Updated Starship"
+fi
+
+# ------------------------------------------------------------------------------
+# Editors
+# ------------------------------------------------------------------------------
+
+# Neovim
+if [[ -f "$THEME_PATH/nvim.lua" ]]; then
+  mkdir -p "$CONFIG_DIR/nvim/lua/omarchy_pop"
+  cp "$THEME_PATH/nvim.lua" "$CONFIG_DIR/nvim/lua/omarchy_pop/theme.lua"
+  echo "  - Updated Neovim"
+fi
+
+# Cursor (editor)
+if [[ -f "$THEME_PATH/cursor.json" ]]; then
+  mkdir -p "$CONFIG_DIR/Cursor"
+  cp "$THEME_PATH/cursor.json" "$CONFIG_DIR/Cursor/theme.json"
+  echo "  - Updated Cursor"
+fi
+
+# ------------------------------------------------------------------------------
+# System & Desktop
+# ------------------------------------------------------------------------------
+
+# btop
+if [[ -f "$THEME_PATH/btop.theme" ]]; then
+  mkdir -p "$CONFIG_DIR/btop/themes"
+  cp "$THEME_PATH/btop.theme" "$CONFIG_DIR/btop/themes/$THEME.theme"
+  mkdir -p "$CONFIG_DIR/btop"
+  btop_conf="$CONFIG_DIR/btop/btop.conf"
+  if [[ -f "$btop_conf" ]]; then
+    # Robustly replace color_theme using regex to handle whitespace
+    if grep -q "^[[:space:]]*color_theme" "$btop_conf"; then
+      sed -i -E "s/^[[:space:]]*color_theme[[:space:]]*=.*/color_theme = \"$THEME\"/" "$btop_conf" || true
+    else
+      echo "color_theme = \"$THEME\"" >> "$btop_conf"
+    fi
+  else
+    echo "color_theme = \"$THEME\"" > "$btop_conf"
+  fi
+  echo "  - Updated btop"
+fi
+
+# Mako (Notification Daemon)
+if [[ -f "$THEME_PATH/mako.ini" ]]; then
+  mkdir -p "$CONFIG_DIR/mako"
+  cp "$THEME_PATH/mako.ini" "$CONFIG_DIR/mako/config"
+  makoctl reload || true
+  echo "  - Updated Mako"
+fi
+
+# Waybar
+if [[ -f "$THEME_PATH/waybar.css" ]]; then
+  mkdir -p "$CONFIG_DIR/waybar"
+  cp "$THEME_PATH/waybar.css" "$CONFIG_DIR/waybar/style.css"
+  pkill -SIGUSR2 waybar || true
+  echo "  - Updated Waybar"
+fi
+
+# Icons
+if [[ -f "$THEME_PATH/icons.theme" ]]; then
+    # Read the icon theme name from the file
+    ICON_THEME=$(grep "Inherits=" "$THEME_PATH/icons.theme" | cut -d= -f2 || echo "")
+    if [[ -n "$ICON_THEME" ]]; then
+         # Attempt to set via gsettings (Works for GNOME/Pop Shell)
+         gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME" 2>/dev/null || true
+         echo "  - Updated Icon Theme to $ICON_THEME (gsettings)"
+    fi
+fi
+
+# Antigravity (Omarchy AI tool)
+if [[ -f "$THEME_PATH/antigravity.conf" ]]; then
+  mkdir -p "$CONFIG_DIR/antigravity"
+  cp "$THEME_PATH/antigravity.conf" "$CONFIG_DIR/antigravity/theme.conf"
+  echo "  - Updated Antigravity"
+fi
+
+# Opencode
+if [[ -f "$THEME_PATH/opencode.toml" ]]; then
+  mkdir -p "$CONFIG_DIR/opencode"
+  cp "$THEME_PATH/opencode.toml" "$CONFIG_DIR/opencode/theme.toml"
+  echo "  - Updated Opencode"
+fi
+
+# ------------------------------------------------------------------------------
+# COSMIC (Placeholder)
+# ------------------------------------------------------------------------------
+# TODO: Implement COSMIC theme switching when CLI tools are available.
+# Currently COSMIC themes are JSON files in ~/.config/cosmic/com.system76.CosmicTheme/
+# We would need to copy the theme json and set it active.
+
+echo "Theme '$THEME' applied. Restart applications to see changes."

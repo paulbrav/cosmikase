@@ -1,0 +1,26 @@
+palette = "osaka_jade"
+add_newline = false
+format = "$all"
+
+[palettes.osaka_jade]
+base = "#0b1314"
+text = "#c8f3e4"
+accent = "#52e0a0"
+warn = "#ffd166"
+err = "#ff6b6b"
+
+[character]
+success_symbol = "[➜](accent) "
+error_symbol = "[✗](err) "
+
+[cmd_duration]
+style = "warn"
+
+[directory]
+style = "accent"
+
+[git_branch]
+style = "text"
+
+[git_status]
+style = "warn"

@@ -1,0 +1,11 @@
+[appearance]
+theme = "system"
+
+[editor]
+font_family = "JetBrainsMono Nerd Font"
+font_size = 12
+
+[terminal]
+# Opencode's system theme usually adapts to the terminal background
+transparent = true
+
