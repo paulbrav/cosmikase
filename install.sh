@@ -73,7 +73,7 @@ for item in cfg.get(section, {}).get(group, []):
         continue
     name = item.get('name') or item.get('id')
     fields = []
-    for key in ('method','url','args','check','id','deb_url','note'):
+    for key in ('method','url','args','check','id','deb_url','note','npm_package','bun_package'):
         if key in item and item.get(key) is not None:
             fields.append(f"{key}={item[key]}")
     print(name + ("|" + ",".join(fields) if fields else ""))
@@ -418,6 +418,8 @@ install_custom_list() {
     local id="${META[id]:-}"
     local deb_url="${META[deb_url]:-${META[deb]:-}}"
     local note="${META[note]:-}"
+    local npm_package="${META[npm_package]:-$name}"
+    local bun_package="${META[bun_package]:-$name}"
 
     if [[ -n "$check" ]] && command -v "$check" >/dev/null 2>&1; then
       echo "$name already present (check: $check)"
@@ -451,6 +453,30 @@ install_custom_list() {
           $SUDO dpkg -i "$tmpdir/pkg.deb" || $SUDO apt -f install -y
           rm -rf "$tmpdir"
           trap - EXIT
+        fi
+        ;;
+      npm)
+        if [[ -z "$npm_package" ]]; then
+          echo "No npm package specified for $name; skipping"
+        elif ! command -v npm >/dev/null 2>&1; then
+          echo "npm not found; skipping npm install for $name"
+        elif npm list -g "$npm_package" >/dev/null 2>&1; then
+          echo "npm package $npm_package already installed"
+        else
+          echo "Installing npm package $npm_package for $name"
+          npm install -g "$npm_package"
+        fi
+        ;;
+      bun)
+        if [[ -z "$bun_package" ]]; then
+          echo "No bun package specified for $name; skipping"
+        elif ! command -v bun >/dev/null 2>&1; then
+          echo "bun not found; skipping bun install for $name"
+        elif bun pm ls -g "$bun_package" >/dev/null 2>&1; then
+          echo "bun package $bun_package already installed"
+        else
+          echo "Installing bun package $bun_package for $name"
+          bun add -g "$bun_package" || bun install -g "$bun_package" || echo "bun install for $bun_package failed"
         fi
         ;;
       script)
