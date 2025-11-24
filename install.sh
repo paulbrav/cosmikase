@@ -400,14 +400,22 @@ apply_theme() {
 run_fw_steps() {
   local fw_flag="$1" recovery_flag="$2"
   if [[ "$fw_flag" == "true" ]]; then
-    echo "Running firmware updates (fwupdmgr)..."
-    $SUDO fwupdmgr get-devices || true
-    $SUDO fwupdmgr get-updates || true
-    $SUDO fwupdmgr update || true
+    if command -v fwupdmgr >/dev/null 2>&1; then
+      echo "Running firmware updates (fwupdmgr)..."
+      $SUDO fwupdmgr get-devices || true
+      $SUDO fwupdmgr get-updates || true
+      $SUDO fwupdmgr update || true
+    else
+      echo "fwupdmgr not found; skipping firmware updates. Install fwupd and re-run if desired."
+    fi
   fi
   if [[ "$recovery_flag" == "true" ]]; then
-    echo "Updating Pop recovery partition..."
-    $SUDO pop-upgrade recovery upgrade from-release || true
+    if command -v pop-upgrade >/dev/null 2>&1; then
+      echo "Updating Pop recovery partition..."
+      $SUDO pop-upgrade recovery upgrade from-release || true
+    else
+      echo "pop-upgrade not found; skipping Pop recovery upgrade. Install pop-upgrade and re-run if desired."
+    fi
   fi
 }
 
@@ -625,8 +633,6 @@ main() {
 
   echo "== omarchy-pop install =="
 
-  run_fw_steps "$run_fw" "$run_recovery"
-
   mapfile -t apt_core < <(yaml_list apt core)
   mapfile -t apt_gui < <(yaml_list apt gui)
   mapfile -t apt_terminal < <(yaml_list apt terminal)
@@ -650,6 +656,8 @@ main() {
       install_apt_list "terminal" "kitty"
     fi
   fi
+
+  run_fw_steps "$run_fw" "$run_recovery"
 
   install_flatpaks
   install_bin_scripts
