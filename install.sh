@@ -62,6 +62,26 @@ if isinstance(items, list):
 PY
 }
 
+yaml_npm_packages() {
+  python3 - <<'PY' "$CONFIG_FILE"
+import sys, yaml
+cfg = yaml.safe_load(open(sys.argv[1]))
+items = cfg.get('npm', [])
+for item in items:
+    if isinstance(item, dict):
+        if not item.get('install', True):
+            continue
+        name = item.get('name')
+        version = item.get('version')
+        if not name:
+            continue
+        suffix = f"|version={version}" if version else ''
+        print(f"{name}{suffix}")
+    elif item:
+        print(item)
+PY
+}
+
 yaml_installers() {
   local section="$1" group="$2"
   python3 - <<'PY' "$CONFIG_FILE" "$section" "$group"
@@ -496,6 +516,35 @@ install_uv_tools() {
   done
 }
 
+install_npm_packages() {
+  mapfile -t npm_packages < <(yaml_npm_packages)
+  [[ ${#npm_packages[@]} -eq 0 ]] && return
+
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm not installed; skipping npm packages"
+    return
+  fi
+
+  for entry in "${npm_packages[@]}"; do
+    [[ -z "$entry" ]] && continue
+    local name version pkg_spec
+    name="${entry%%|*}"
+    version=""
+    if [[ "$entry" == *"|"* ]]; then
+      version="$(echo "$entry" | awk -F'version=' '{print $2}')"
+    fi
+    pkg_spec="$name"
+    [[ -n "$version" ]] && pkg_spec+="@$version"
+
+    if npm list -g --depth=0 "$name" >/dev/null 2>&1; then
+      echo "npm package $name already installed"
+    else
+      echo "Installing npm package $pkg_spec"
+      npm install -g "$pkg_spec" || echo "Failed to install npm package $pkg_spec"
+    fi
+  done
+}
+
 install_power_management() {
   echo "Configuring power management (udev + powerprofilesctl)..."
   local helper_src="$REPO_DIR/bin/omarchy-power-helper"
@@ -587,6 +636,7 @@ main() {
   install_custom_list installers ai_tools
   install_custom_list installers security
   install_uv_tools
+  install_npm_packages
   install_power_management
 
   local preferred_terminal="ghostty"
