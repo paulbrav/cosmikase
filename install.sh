@@ -6,6 +6,7 @@ CONFIG_FILE="${CONFIG_FILE:-$REPO_DIR/omarchy-pop.yaml}"
 TARGET_BIN="$HOME/.local/bin"
 TARGET_THEMES="$HOME/.local/share/omarchy-pop/themes"
 TARGET_CONFIG="$HOME/.config"
+DRY_RUN=${DRY_RUN:-false}
 SUDO="sudo"
 APT_CACHE_READY=false
 if [[ "$(id -u)" -eq 0 ]]; then
@@ -13,6 +14,22 @@ if [[ "$(id -u)" -eq 0 ]]; then
 elif ! command -v sudo >/dev/null 2>&1; then
   SUDO=""
 fi
+
+run_cmd() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] $*"
+    return 0
+  fi
+  "$@"
+}
+
+sudo_cmd() {
+  if [[ -n "$SUDO" ]]; then
+    run_cmd "$SUDO" "$@"
+  else
+    run_cmd "$@"
+  fi
+}
 
 error() { echo "[omarchy-pop] $*" >&2; }
 
@@ -23,8 +40,8 @@ need_file() { [[ -f "$1" ]] || die "Missing config file: $1"; }
 ensure_pyyaml() {
   if ! python3 -c "import yaml" 2>/dev/null; then
     echo "Installing python3-yaml (requires sudo)..."
-    $SUDO apt update
-    $SUDO apt install -y python3-yaml
+    sudo_cmd apt update
+    sudo_cmd apt install -y python3-yaml
   fi
 }
 
@@ -129,7 +146,7 @@ install_apt_list() {
   local label="$1"; shift
   local pkgs=("$@")
   if [[ "$APT_CACHE_READY" != "true" ]]; then
-    $SUDO apt update
+    sudo_cmd apt update
     APT_CACHE_READY=true
   fi
   local to_install=()
@@ -145,7 +162,7 @@ install_apt_list() {
   done
   if ((${#to_install[@]})); then
     echo "Installing APT ($label): ${to_install[*]}"
-    $SUDO apt install -y "${to_install[@]}"
+    sudo_cmd apt install -y "${to_install[@]}"
   else
     echo "APT ($label): nothing to do"
   fi
@@ -156,13 +173,13 @@ install_flatpaks() {
   if ! command -v flatpak >/dev/null 2>&1; then
     echo "Installing flatpak (requires sudo)..."
     if [[ "$APT_CACHE_READY" != "true" ]]; then
-      $SUDO apt update
+      sudo_cmd apt update
       APT_CACHE_READY=true
     fi
-    $SUDO apt install -y flatpak
+    sudo_cmd apt install -y flatpak
   fi
   if ! flatpak remotes | grep -q flathub; then
-    $SUDO flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    sudo_cmd flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
   fi
   for app in "${flatpaks[@]}"; do
     [[ -z "$app" ]] && continue
@@ -192,9 +209,9 @@ install_ghostty() {
       return 1
   fi
 
-  if ! $SUDO dpkg -i "$tmpdir/ghostty.deb"; then
+  if ! sudo_cmd dpkg -i "$tmpdir/ghostty.deb"; then
       echo "dpkg error encountered; attempting fix with 'apt -f install'..."
-      if ! $SUDO apt -f install -y; then
+      if ! sudo_cmd apt -f install -y; then
           echo "Error: Failed to install Ghostty dependencies"
           rm -rf "$tmpdir"
           trap - EXIT
@@ -211,32 +228,39 @@ install_dangerzone() {
     return 0
   fi
   echo "Installing Dangerzone..."
-  
+
   if [[ "$APT_CACHE_READY" != "true" ]]; then
-    $SUDO apt update
+    sudo_cmd apt update
     APT_CACHE_READY=true
   fi
-  $SUDO apt install -y gpg ca-certificates
+  sudo_cmd apt install -y gpg ca-certificates
 
   # Keyring setup
   if [[ ! -f /etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg ]]; then
       echo "Setting up Dangerzone GPG key..."
-      $SUDO mkdir -p /etc/apt/keyrings
+      sudo_cmd mkdir -p /etc/apt/keyrings
       
       local tmp_home
       tmp_home=$(mktemp -d)
       chmod 700 "$tmp_home"
       
-      if ! $SUDO gpg --keyserver hkps://keys.openpgp.org \
-        --no-default-keyring --no-permission-warning --homedir "$tmp_home" \
-        --keyring gnupg-ring:/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg \
-        --recv-keys DE28AB241FA48260FAC9B8BAA7C9B38522604281; then
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "[dry-run] gpg --keyserver hkps://keys.openpgp.org --no-default-keyring --no-permission-warning --homedir $tmp_home --keyring gnupg-ring:/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg --recv-keys DE28AB241FA48260FAC9B8BAA7C9B38522604281"
+        gpg_success=true
+      else
+        sudo_cmd gpg --keyserver hkps://keys.openpgp.org \
+          --no-default-keyring --no-permission-warning --homedir "$tmp_home" \
+          --keyring gnupg-ring:/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg \
+          --recv-keys DE28AB241FA48260FAC9B8BAA7C9B38522604281
+        gpg_success=$?
+      fi
+      if [[ "${gpg_success:-0}" -ne 0 ]]; then
          echo "Failed to receive GPG key"
          rm -rf "$tmp_home"
          return 1
       fi
       rm -rf "$tmp_home"
-      $SUDO chmod +r /etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg
+      sudo_cmd chmod +r /etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg
   fi
   
   # Repo source
@@ -244,15 +268,18 @@ install_dangerzone() {
       echo "Adding Dangerzone repository..."
       . /etc/os-release
       local code="${VERSION_CODENAME:-jammy}"
-      echo "deb [signed-by=/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg] \
-        https://packages.freedom.press/apt-tools-prod $code main" \
-        | $SUDO tee /etc/apt/sources.list.d/fpf-apt-tools.list > /dev/null
-      
-      $SUDO apt update
+      local repo_line="deb [signed-by=/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg] https://packages.freedom.press/apt-tools-prod $code main"
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "[dry-run] add repository: $repo_line"
+      else
+        echo "$repo_line" | sudo_cmd tee /etc/apt/sources.list.d/fpf-apt-tools.list > /dev/null
+      fi
+
+      sudo_cmd apt update
       APT_CACHE_READY=true
   fi
-  
-  $SUDO apt install -y dangerzone
+
+  sudo_cmd apt install -y dangerzone
 }
 
 install_antigravity() {
@@ -262,37 +289,45 @@ install_antigravity() {
   fi
   echo "Installing Antigravity..."
 
-  $SUDO mkdir -p /etc/apt/keyrings
+  sudo_cmd mkdir -p /etc/apt/keyrings
   
   if [[ ! -f /etc/apt/keyrings/antigravity-repo-key.gpg ]]; then
       echo "Setting up Antigravity GPG key..."
-      if ! curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | \
-           $SUDO gpg --dearmor -o /etc/apt/keyrings/antigravity-repo-key.gpg; then
-          echo "Failed to download/install Antigravity GPG key"
-          return 1
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "[dry-run] curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | $SUDO gpg --dearmor -o /etc/apt/keyrings/antigravity-repo-key.gpg"
+      else
+        if ! curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | \
+             sudo_cmd gpg --dearmor -o /etc/apt/keyrings/antigravity-repo-key.gpg; then
+            echo "Failed to download/install Antigravity GPG key"
+            return 1
+        fi
       fi
   fi
 
   if [[ ! -f /etc/apt/sources.list.d/antigravity.list ]]; then
       echo "Adding Antigravity repository..."
-      echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" | \
-        $SUDO tee /etc/apt/sources.list.d/antigravity.list > /dev/null
-      
-      $SUDO apt update
+      local ag_repo="deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main"
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "[dry-run] add repository: $ag_repo"
+      else
+        echo "$ag_repo" | sudo_cmd tee /etc/apt/sources.list.d/antigravity.list > /dev/null
+      fi
+
+      sudo_cmd apt update
       APT_CACHE_READY=true
   fi
 
-  $SUDO apt install -y antigravity
+  sudo_cmd apt install -y antigravity
 }
 
 install_fonts() {
   if ! command -v unzip >/dev/null 2>&1; then
     echo "Installing unzip (required for fonts)..."
     if [[ "$APT_CACHE_READY" != "true" ]]; then
-      $SUDO apt update
+      sudo_cmd apt update
       APT_CACHE_READY=true
     fi
-    $SUDO apt install -y unzip
+    sudo_cmd apt install -y unzip
   fi
 
   mapfile -t fonts < <(yaml_list fonts nerd)
@@ -310,7 +345,11 @@ symlink_with_backup() {
   local dst="$2"
   local backup_suffix="${3:-.omarchy-pop.bak}"
 
-  mkdir -p "$(dirname "$dst")"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] ensure directory $(dirname "$dst")"
+  else
+    mkdir -p "$(dirname "$dst")"
+  fi
 
   if [[ -L "$dst" ]]; then
     local current_target
@@ -320,14 +359,26 @@ symlink_with_backup() {
       return 0
     fi
     echo "Updating symlink: $dst -> $src"
-    rm "$dst"
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[dry-run] rm $dst"
+    else
+      rm "$dst"
+    fi
   elif [[ -e "$dst" ]]; then
     echo "Backing up existing $dst to $dst$backup_suffix"
-    mv "$dst" "$dst$backup_suffix"
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[dry-run] mv $dst $dst$backup_suffix"
+    else
+      mv "$dst" "$dst$backup_suffix"
+    fi
   fi
 
-  ln -s "$src" "$dst"
-  echo "Symlinked $dst -> $src"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] ln -s $src $dst"
+  else
+    ln -s "$src" "$dst"
+    echo "Symlinked $dst -> $src"
+  fi
 }
 
 sync_dotfiles() {
@@ -335,9 +386,13 @@ sync_dotfiles() {
   local config_dir="$TARGET_CONFIG"
 
   echo "Symlinking dotfiles to $config_dir..."
-  
+
   # Ensure alias directory exists in ~/.config/shell/aliases/
-  mkdir -p "$config_dir/shell/aliases"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] mkdir -p $config_dir/shell/aliases"
+  else
+    mkdir -p "$config_dir/shell/aliases"
+  fi
 
   for item in "$src_dir"/*; do
     local name
@@ -362,14 +417,31 @@ sync_home_dotfiles() {
 }
 
 sync_themes() {
-  mkdir -p "$TARGET_THEMES"
-  rsync -av "$REPO_DIR/themes/" "$TARGET_THEMES/"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] mkdir -p $TARGET_THEMES"
+  else
+    mkdir -p "$TARGET_THEMES"
+  fi
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] rsync -av $REPO_DIR/themes/ $TARGET_THEMES/"
+  else
+    rsync -av "$REPO_DIR/themes/" "$TARGET_THEMES/"
+  fi
 }
 
 install_bin_scripts() {
-  mkdir -p "$TARGET_BIN"
-  install -m 755 "$REPO_DIR/bin/omarchy-pop-theme" "$TARGET_BIN/omarchy-pop-theme"
-  install -m 755 "$REPO_DIR/bin/omarchy-pop-fonts" "$TARGET_BIN/omarchy-pop-fonts"
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] mkdir -p $TARGET_BIN"
+  else
+    mkdir -p "$TARGET_BIN"
+  fi
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] install -m 755 $REPO_DIR/bin/omarchy-pop-theme $TARGET_BIN/omarchy-pop-theme"
+    echo "[dry-run] install -m 755 $REPO_DIR/bin/omarchy-pop-fonts $TARGET_BIN/omarchy-pop-fonts"
+  else
+    install -m 755 "$REPO_DIR/bin/omarchy-pop-theme" "$TARGET_BIN/omarchy-pop-theme"
+    install -m 755 "$REPO_DIR/bin/omarchy-pop-fonts" "$TARGET_BIN/omarchy-pop-fonts"
+  fi
 }
 
 append_shell_snippet() {
@@ -378,12 +450,16 @@ append_shell_snippet() {
   for rc in "${rc_files[@]}"; do
     [[ -f "$rc" ]] || continue
     if ! grep -q "omarchy-pop" "$rc" 2>/dev/null; then
-      {
-        printf '\n# omarchy-pop\n'
-        printf 'export PATH="%s:$PATH"\n' "$TARGET_BIN"
-        printf 'export TERMINAL=%s\n' "$terminal"
-        printf '[ -f "%s" ] && source "%s"\n' "$TARGET_CONFIG/shell/omarchy-pop.sh" "$TARGET_CONFIG/shell/omarchy-pop.sh"
-      } >> "$rc"
+      if [[ "$DRY_RUN" == "true" ]]; then
+        echo "[dry-run] append omarchy-pop snippet to $rc"
+      else
+        {
+          printf '\n# omarchy-pop\n'
+          printf 'export PATH="%s:$PATH"\n' "$TARGET_BIN"
+          printf 'export TERMINAL=%s\n' "$terminal"
+          printf '[ -f "%s" ] && source "%s"\n' "$TARGET_CONFIG/shell/omarchy-pop.sh" "$TARGET_CONFIG/shell/omarchy-pop.sh"
+        } >> "$rc"
+      fi
     fi
   done
 }
@@ -391,7 +467,11 @@ append_shell_snippet() {
 apply_theme() {
   local theme="$1"
   if command -v omarchy-pop-theme >/dev/null 2>&1; then
-    omarchy-pop-theme "$theme"
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "[dry-run] omarchy-pop-theme $theme"
+    else
+      omarchy-pop-theme "$theme"
+    fi
   else
     echo "omarchy-pop-theme not found on PATH; skipping theme apply"
   fi
@@ -402,9 +482,9 @@ run_fw_steps() {
   if [[ "$fw_flag" == "true" ]]; then
     if command -v fwupdmgr >/dev/null 2>&1; then
       echo "Running firmware updates (fwupdmgr)..."
-      $SUDO fwupdmgr get-devices || true
-      $SUDO fwupdmgr get-updates || true
-      $SUDO fwupdmgr update || true
+      sudo_cmd fwupdmgr get-devices || true
+      sudo_cmd fwupdmgr get-updates || true
+      sudo_cmd fwupdmgr update || true
     else
       echo "fwupdmgr not found; skipping firmware updates. Install fwupd and re-run if desired."
     fi
@@ -412,7 +492,7 @@ run_fw_steps() {
   if [[ "$recovery_flag" == "true" ]]; then
     if command -v pop-upgrade >/dev/null 2>&1; then
       echo "Updating Pop recovery partition..."
-      $SUDO pop-upgrade recovery upgrade from-release || true
+      sudo_cmd pop-upgrade recovery upgrade from-release || true
     else
       echo "pop-upgrade not found; skipping Pop recovery upgrade. Install pop-upgrade and re-run if desired."
     fi
@@ -462,7 +542,7 @@ install_custom_list() {
         if [[ -n "$id" ]]; then
           if ! flatpak list | awk '{print $1}' | grep -qx "$id"; then
             echo "Installing Flatpak $id for $name"
-            flatpak install -y flathub "$id"
+            run_cmd flatpak install -y flathub "$id"
           else
             echo "Flatpak $id already installed"
           fi
@@ -477,8 +557,12 @@ install_custom_list() {
           tmpdir=$(mktemp -d)
           trap 'rm -rf "$tmpdir"' EXIT
           echo "Installing $name from deb: $deb_url"
-          (cd "$tmpdir" && curl -fsSLo pkg.deb "$deb_url")
-          $SUDO dpkg -i "$tmpdir/pkg.deb" || $SUDO apt -f install -y
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "[dry-run] download deb from $deb_url into $tmpdir/pkg.deb"
+          else
+            (cd "$tmpdir" && curl -fsSLo pkg.deb "$deb_url")
+          fi
+          sudo_cmd dpkg -i "$tmpdir/pkg.deb" || sudo_cmd apt -f install -y
           rm -rf "$tmpdir"
           trap - EXIT
         fi
@@ -512,10 +596,14 @@ install_custom_list() {
           echo "No script URL for $name; skipping"
         else
           echo "Running installer script for $name from $url"
-          if [[ -n "$args" ]]; then
-            curl -fsSL "$url" | bash -s -- $args
+          if [[ "$DRY_RUN" == "true" ]]; then
+            echo "[dry-run] curl -fsSL $url | bash ${args:+-s -- $args}"
           else
-            curl -fsSL "$url" | bash
+            if [[ -n "$args" ]]; then
+              curl -fsSL "$url" | bash -s -- $args
+            else
+              curl -fsSL "$url" | bash
+            fi
           fi
         fi
         ;;
@@ -590,7 +678,7 @@ install_power_management() {
   if [[ -f "$helper_src" ]]; then
     if [[ ! -f "$helper_dst" ]] || ! cmp -s "$helper_src" "$helper_dst"; then
       echo "Installing $helper_dst..."
-      $SUDO install -m 755 "$helper_src" "$helper_dst"
+      sudo_cmd install -m 755 "$helper_src" "$helper_dst"
     fi
   else
     echo "Warning: $helper_src not found"
@@ -601,7 +689,7 @@ install_power_management() {
   if [[ -f "$rules_src" ]]; then
     if [[ ! -f "$rules_dst" ]] || ! cmp -s "$rules_src" "$rules_dst"; then
       echo "Installing $rules_dst..."
-      $SUDO install -m 644 "$rules_src" "$rules_dst"
+      sudo_cmd install -m 644 "$rules_src" "$rules_dst"
       rules_changed=true
     fi
   else
@@ -610,28 +698,72 @@ install_power_management() {
 
   if [[ "$rules_changed" == "true" ]]; then
     echo "Reloading udev rules..."
-    $SUDO udevadm control --reload-rules
-    $SUDO udevadm trigger
+    sudo_cmd udevadm control --reload-rules
+    sudo_cmd udevadm trigger
   fi
 
   # Apply current state once
   if [[ -x "$helper_dst" ]]; then
     echo "Applying initial power profile..."
-    $SUDO "$helper_dst" --apply || echo "Failed to apply power profile"
+    sudo_cmd "$helper_dst" --apply || echo "Failed to apply power profile"
   fi
 }
 
+print_usage() {
+  cat <<'EOF'
+Usage: install.sh [--config PATH] [--dry-run]
+
+Options:
+  --config PATH  Use an alternate omarchy-pop YAML configuration file.
+  --dry-run      Print the operations that would be performed without
+                 making system changes. This can also be enabled by
+                 setting DRY_RUN=true in the environment.
+EOF
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config)
+        [[ $# -lt 2 ]] && die "--config requires a path"
+        CONFIG_FILE="$2"
+        shift
+        ;;
+      --dry-run|--test)
+        DRY_RUN=true
+        ;;
+      -h|--help)
+        print_usage
+        exit 0
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        die "Unknown argument: $1"
+        ;;
+    esac
+    shift
+  done
+}
+
 main() {
+  parse_args "$@"
   need_file "$CONFIG_FILE"
   ensure_pyyaml
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "== omarchy-pop install (dry-run; no changes will be made) =="
+  else
+    echo "== omarchy-pop install =="
+  fi
 
   local default_theme run_fw run_recovery ghostty_enabled
   default_theme="$(yaml_value defaults.theme osaka-jade)"
   run_fw="$(yaml_value defaults.run_fw_update false)"
   run_recovery="$(yaml_value defaults.run_recovery_upgrade false)"
   ghostty_enabled="$(yaml_value defaults.ghostty true)"
-
-  echo "== omarchy-pop install =="
 
   mapfile -t apt_core < <(yaml_list apt core)
   mapfile -t apt_gui < <(yaml_list apt gui)
