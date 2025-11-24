@@ -2,6 +2,8 @@ defaults:
   install: true
   ghostty: true
   theme: osaka-jade
+  # Firmware/recovery steps run after core apt installs; they require fwupd (fwupdmgr)
+  # and pop-upgrade to be present on PATH.
   run_fw_update: true
   run_recovery_upgrade: false
 

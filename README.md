@@ -14,6 +14,11 @@ Pop!_OS 24 target with COSMIC hotkeys intact, apt + Flatpak only, Ghostty as def
    omarchy-pop-theme osaka-jade   # or catppuccin
    ```
 
+## Firmware and recovery updates
+- Controlled via `defaults.run_fw_update` and `defaults.run_recovery_upgrade` in `omarchy-pop.yaml`.
+- Runs after core apt packages so `fwupd`/`pop-upgrade` can be installed first.
+- If `fwupdmgr` or `pop-upgrade` are missing, the installer logs a skip message instead of failing.
+
 ## What the installer does
 - Uses `omarchy-pop.yaml` to drive per-component installs (apt + Flatpak including Brave/Bitwarden/ProtonVPN), runtimes (rust/bun/uv/julia), uv tool installs (`ruff`, `pyrefly` by default), and optional AI tool installers (manual by default; set URLs to automate).
 - Prefers Ghostty via upstream `.deb` (set `GHOSTTY_DEB_URL` to override); falls back to kitty if Ghostty disabled or fails.
