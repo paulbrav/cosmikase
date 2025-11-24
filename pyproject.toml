@@ -1,0 +1,15 @@
+[project]
+name = "omarchy-pop-theme-tui"
+version = "0.1.0"
+description = "Textual TUI for browsing and applying omarchy-pop themes"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "textual>=0.76,<0.90",
+]
+
+[project.scripts]
+theme-tui = "omarchy_pop.theme_tui:run"
+
+[tool.uv]
+package = true

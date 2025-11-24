@@ -1,0 +1,1 @@
+"""omarchy-pop TUI package."""
