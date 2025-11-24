@@ -235,6 +235,36 @@ install_dangerzone() {
   $SUDO apt install -y dangerzone
 }
 
+install_antigravity() {
+  if have_pkg antigravity; then
+    echo "Antigravity already installed"
+    return 0
+  fi
+  echo "Installing Antigravity..."
+
+  $SUDO mkdir -p /etc/apt/keyrings
+  
+  if [[ ! -f /etc/apt/keyrings/antigravity-repo-key.gpg ]]; then
+      echo "Setting up Antigravity GPG key..."
+      if ! curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | \
+           $SUDO gpg --dearmor -o /etc/apt/keyrings/antigravity-repo-key.gpg; then
+          echo "Failed to download/install Antigravity GPG key"
+          return 1
+      fi
+  fi
+
+  if [[ ! -f /etc/apt/sources.list.d/antigravity.list ]]; then
+      echo "Adding Antigravity repository..."
+      echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" | \
+        $SUDO tee /etc/apt/sources.list.d/antigravity.list > /dev/null
+      
+      $SUDO apt update
+      APT_CACHE_READY=true
+  fi
+
+  $SUDO apt install -y antigravity
+}
+
 install_fonts() {
   if ! command -v unzip >/dev/null 2>&1; then
     echo "Installing unzip (required for fonts)..."
@@ -438,6 +468,9 @@ install_custom_list() {
       custom_dangerzone)
         install_dangerzone
         ;;
+      custom_antigravity)
+        install_antigravity
+        ;;
       manual|*)
         echo "Manual install for $name: ${note:-'no note provided'}"
         ;;
@@ -461,6 +494,48 @@ install_uv_tools() {
       uv tool install "$tool" || echo "uv tool install $tool failed"
     fi
   done
+}
+
+install_power_management() {
+  echo "Configuring power management (udev + powerprofilesctl)..."
+  local helper_src="$REPO_DIR/bin/omarchy-power-helper"
+  local helper_dst="/usr/local/bin/omarchy-power-helper"
+  local rules_src="$REPO_DIR/omarchy/udev/99-omarchy-power.rules"
+  local rules_dst="/etc/udev/rules.d/99-omarchy-power.rules"
+
+  # Install helper
+  if [[ -f "$helper_src" ]]; then
+    if [[ ! -f "$helper_dst" ]] || ! cmp -s "$helper_src" "$helper_dst"; then
+      echo "Installing $helper_dst..."
+      $SUDO install -m 755 "$helper_src" "$helper_dst"
+    fi
+  else
+    echo "Warning: $helper_src not found"
+  fi
+
+  # Install udev rules
+  local rules_changed=false
+  if [[ -f "$rules_src" ]]; then
+    if [[ ! -f "$rules_dst" ]] || ! cmp -s "$rules_src" "$rules_dst"; then
+      echo "Installing $rules_dst..."
+      $SUDO install -m 644 "$rules_src" "$rules_dst"
+      rules_changed=true
+    fi
+  else
+    echo "Warning: $rules_src not found"
+  fi
+
+  if [[ "$rules_changed" == "true" ]]; then
+    echo "Reloading udev rules..."
+    $SUDO udevadm control --reload-rules
+    $SUDO udevadm trigger
+  fi
+
+  # Apply current state once
+  if [[ -x "$helper_dst" ]]; then
+    echo "Applying initial power profile..."
+    "$helper_dst" --apply || echo "Failed to apply power profile"
+  fi
 }
 
 main() {
@@ -512,6 +587,7 @@ main() {
   install_custom_list installers ai_tools
   install_custom_list installers security
   install_uv_tools
+  install_power_management
 
   local preferred_terminal="ghostty"
   if [[ "$ghostty_enabled" != "true" || "$ghostty_done" != true ]]; then

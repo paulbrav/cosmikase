@@ -156,7 +156,7 @@ apt:
     - name: steam-installer
       desc: Installer for the Steam software distribution service
       install: true
-    - name: firefox
+    - name: firefox  # TODO why is this here?
       desc: Fast, private and safe web browser
       install: true
 
@@ -244,11 +244,6 @@ installers:
       method: apt
       check: julia
       install: true
-    - name: mojo
-      desc: Programming language for AI developers
-      method: manual
-      note: "Mojo requires Modular account and installer; set deb_url to automate."
-      install: false
   ai_tools:
     - name: cursor
       desc: The AI Code Editor
@@ -257,12 +252,10 @@ installers:
       check: cursor
       install: true
     - name: antigravity
-      desc: Unknown tool (placeholder)
-      method: deb
-      deb_url: ""
+      desc: Google Antigravity
+      method: custom_antigravity
       check: antigravity
-      note: "Provide deb_url or script if available."
-      install: false
+      install: true
     - name: codex
       desc: AI coding tool
       method: npm
@@ -326,13 +319,28 @@ uv_tools:
   - name: pls
     desc: Prettier List command
     install: true
+  - name: mojo
+    desc: Programming language for AI developers
+    install: true
 
 themes:
   default: osaka-jade
   available:
-    - osaka-jade
     - catppuccin
+    - catppuccin-latte
+    - ethereal
+    - everforest
+    - flexoki-light
+    - gruvbox
+    - hackerman
+    - kanagawa
+    - matte-black
+    - nord
+    - osaka-jade
     - pop-default
+    - ristretto
+    - rose-pine
+    - tokyo-night
   paths:
     base: ~/.local/share/omarchy-pop/themes
 
