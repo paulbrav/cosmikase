@@ -284,6 +284,11 @@ installers:
       method: manual
       note: "Check https://ampcode.com for install instructions (often requires waitlist/login)."
       install: false
+  security:
+    - name: dangerzone
+      desc: Convert potentially dangerous PDFs/docs to safe PDFs
+      method: custom_dangerzone
+      install: true
 
 npm:
   - name: "@openai/codex"

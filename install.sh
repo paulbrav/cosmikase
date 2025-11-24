@@ -185,6 +185,56 @@ install_ghostty() {
   trap - EXIT
 }
 
+install_dangerzone() {
+  if have_pkg dangerzone; then
+    echo "Dangerzone already installed"
+    return 0
+  fi
+  echo "Installing Dangerzone..."
+  
+  if [[ "$APT_CACHE_READY" != "true" ]]; then
+    $SUDO apt update
+    APT_CACHE_READY=true
+  fi
+  $SUDO apt install -y gpg ca-certificates
+
+  # Keyring setup
+  if [[ ! -f /etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg ]]; then
+      echo "Setting up Dangerzone GPG key..."
+      $SUDO mkdir -p /etc/apt/keyrings
+      
+      local tmp_home
+      tmp_home=$(mktemp -d)
+      chmod 700 "$tmp_home"
+      
+      if ! $SUDO gpg --keyserver hkps://keys.openpgp.org \
+        --no-default-keyring --no-permission-warning --homedir "$tmp_home" \
+        --keyring gnupg-ring:/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg \
+        --recv-keys DE28AB241FA48260FAC9B8BAA7C9B38522604281; then
+         echo "Failed to receive GPG key"
+         rm -rf "$tmp_home"
+         return 1
+      fi
+      rm -rf "$tmp_home"
+      $SUDO chmod +r /etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg
+  fi
+  
+  # Repo source
+  if [[ ! -f /etc/apt/sources.list.d/fpf-apt-tools.list ]]; then
+      echo "Adding Dangerzone repository..."
+      . /etc/os-release
+      local code="${VERSION_CODENAME:-jammy}"
+      echo "deb [signed-by=/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg] \
+        https://packages.freedom.press/apt-tools-prod $code main" \
+        | $SUDO tee /etc/apt/sources.list.d/fpf-apt-tools.list > /dev/null
+      
+      $SUDO apt update
+      APT_CACHE_READY=true
+  fi
+  
+  $SUDO apt install -y dangerzone
+}
+
 install_fonts() {
   if ! command -v unzip >/dev/null 2>&1; then
     echo "Installing unzip (required for fonts)..."
@@ -385,6 +435,9 @@ install_custom_list() {
           fi
         fi
         ;;
+      custom_dangerzone)
+        install_dangerzone
+        ;;
       manual|*)
         echo "Manual install for $name: ${note:-'no note provided'}"
         ;;
@@ -457,6 +510,7 @@ main() {
 
   install_custom_list installers runtimes
   install_custom_list installers ai_tools
+  install_custom_list installers security
   install_uv_tools
 
   local preferred_terminal="ghostty"

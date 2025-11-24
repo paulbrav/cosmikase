@@ -1,5 +1,5 @@
 # Dynamic theme colors
-config-file = ?"~/.config/ghostty/themes/active.conf"
+config-file = ?"~/.config/omarchy/current/theme/ghostty.conf"
 
 # Font
 font-family = "JetBrainsMono Nerd Font"
