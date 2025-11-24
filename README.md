@@ -12,6 +12,7 @@ Pop!_OS 24 target with COSMIC hotkeys intact, apt + Flatpak only, Ghostty as def
 3. Switch themes anytime:
    ```bash
    omarchy-pop-theme osaka-jade   # or catppuccin
+   theme-tui                      # Textual picker installed via uv
    ```
 
 ## Firmware and recovery updates
@@ -33,6 +34,7 @@ Pop!_OS 24 target with COSMIC hotkeys intact, apt + Flatpak only, Ghostty as def
   - **Official Omarchy Themes:** `tokyo-night`, `nord`, `gruvbox`, `kanagawa`, `everforest`, `rose-pine`, `catppuccin-latte`, `matte-black`, `ristretto`, `ethereal`, `flexoki-light`, `hackerman`
 - Each theme includes wallpapers in `backgrounds/` directories
 - Apply with `omarchy-pop-theme <name>`; default comes from `defaults.theme` in YAML.
+- Alternatively, run `theme-tui` (Textual TUI installed via `uv tool install`) to browse and apply themes.
 - See `themes/README.md` for complete theme documentation and usage instructions.
 
 ## HP ZBook Ultra G1a notes
@@ -43,3 +45,8 @@ Pop!_OS 24 target with COSMIC hotkeys intact, apt + Flatpak only, Ghostty as def
 ## Testing
 - For a quick container smoke test (Ubuntu 24 base, no Ghostty/Flatpak/fonts/runtimes): `./tests/container-smoke.sh` (set `ENGINE=docker` if needed).
 - For full-stack validation, run inside a Pop!_OS 24 VM, edit `omarchy-pop.yaml`, and rerun `./install.sh`; switch themes with `omarchy-pop-theme <name>`.
+
+## Documentation
+- [Running Brave or Firefox inside Firejail](docs/firejail-browsers.md) - Step-by-step guide for sandboxing browsers on Pop!_OS/Ubuntu.
+- [Pop!_OS Backup Strategy](docs/backup-strategy.md) - Comprehensive guide for rsync scripts, Timeshift snapshots, and restic backups.
+- [YubiKey Setup Guide](docs/yubikey-setup.md) - Instructions for local PAM (sudo/polkit) integration and SSH 2FA with FIDO2 keys.
