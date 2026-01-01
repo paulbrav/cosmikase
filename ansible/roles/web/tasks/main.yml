@@ -1,0 +1,59 @@
+# Web role: Install web applications as desktop entries
+---
+# ============================================================================
+# Helper variables
+# ============================================================================
+
+- name: Set enabled web apps list
+  ansible.builtin.set_fact:
+    enabled_web_apps: "{{ web.apps | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + web.apps | default([]) | rejectattr('install', 'defined') | list }}"
+
+# ============================================================================
+# Create directories
+# ============================================================================
+
+- name: Create applications directory
+  ansible.builtin.file:
+    path: "{{ local_share }}/applications"
+    state: directory
+    mode: "0755"
+
+- name: Create web app icons directory
+  ansible.builtin.file:
+    path: "{{ local_share }}/icons/web2app"
+    state: directory
+    mode: "0755"
+
+# ============================================================================
+# Install web applications
+# ============================================================================
+
+- name: Download web app icons
+  loop: "{{ enabled_web_apps | selectattr('icon_url', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  ansible.builtin.get_url:
+    url: "{{ item.icon_url }}"
+    dest: "{{ local_share }}/icons/web2app/{{ item.name | lower | replace(' ', '-') }}.png"
+    mode: "0644"
+  register: icon_downloads
+  failed_when: false
+
+- name: Create desktop entries for web apps
+  loop: "{{ enabled_web_apps }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    safe_name: "{{ item.name | lower | replace(' ', '-') }}"
+    icon_path: "{{ local_share }}/icons/web2app/{{ safe_name }}.png"
+  ansible.builtin.copy:
+    content: |
+      [Desktop Entry]
+      Name={{ item.name }}
+      Exec=xdg-open {{ item.url }}
+      Icon={{ icon_path if item.icon_url is defined else 'web-browser' }}
+      Type=Application
+      Categories=Network;WebBrowser;
+      StartupNotify=true
+    dest: "{{ local_share }}/applications/{{ safe_name }}.desktop"
+    mode: "0755"
