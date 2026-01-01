@@ -1,7 +1,7 @@
 # Documentation Review
 
 **Date**: 2025-01-27  
-**Scope**: Comprehensive review of all documentation in the omarchy-for-popos repository
+**Scope**: Comprehensive review of all documentation in the cosmikase repository
 
 ## Executive Summary
 
@@ -64,7 +64,7 @@ The repository has **good foundational documentation** with 7 detailed guides co
    - Keybinding notes
    - **Status**: Basic but adequate
 
-8. **docs/omarchy-pop-menu.md** - Interactive menu
+8. **docs/cosmikase-menu.md** - Interactive menu
    - Usage instructions
    - Optional software installation
    - Docker databases
@@ -93,7 +93,7 @@ The repository has **good foundational documentation** with 7 detailed guides co
 
 ### ⚠️ Partially Documented Topics
 
-1. **Configuration System** (`omarchy-pop.yaml`)
+1. **Configuration System** (`cosmikase.yaml`)
    - Basic examples in README
    - Missing: Full schema reference, all available options, validation rules
    - **Gap**: No comprehensive config reference
@@ -124,8 +124,8 @@ The repository has **good foundational documentation** with 7 detailed guides co
 - `omarchy-chezmoi` - Update chezmoi data
 - `omarchy-validate-ron` - Validate RON files
 - `omarchy-themes-dir` - Get themes directory
-- `omarchy-pop-theme` - Full command reference (only basic usage in README)
-- `omarchy-pop-update` - System update script
+- `cosmikase-theme` - Full command reference (only basic usage in README)
+- `cosmikase-update` - System update script
 - `omarchy-power-helper` - Power profile management
 - `omarchy-cursor-extensions` - Extension management (basic docs exist)
 
@@ -138,7 +138,7 @@ The repository has **good foundational documentation** with 7 detailed guides co
 
 ### 2. Configuration Reference (HIGH PRIORITY)
 
-**Missing**: Complete `omarchy-pop.yaml` schema documentation
+**Missing**: Complete `cosmikase.yaml` schema documentation
 
 **Should Include**:
 - All available sections (apt, flatpak, runtimes, etc.)
@@ -258,7 +258,7 @@ The repository has **good foundational documentation** with 7 detailed guides co
    - Exit codes
 
 2. **docs/configuration-reference.md**
-   - Full `omarchy-pop.yaml` schema
+   - Full `cosmikase.yaml` schema
    - All sections and options
    - Validation rules
    - Examples
@@ -337,7 +337,7 @@ The repository has **good foundational documentation** with 7 detailed guides co
 - ⚠️ Very basic
 - **Recommendation**: Expand with more examples, keybinding reference, layout guide
 
-### docs/omarchy-pop-menu.md
+### docs/cosmikase-menu.md
 - ✅ Good coverage
 - ⚠️ Could add: Screenshots, more examples
 
@@ -356,7 +356,7 @@ docs/
 ├── cosmic-theming.md
 ├── editor-theming.md
 ├── firejail-browsers.md
-├── omarchy-pop-menu.md
+├── cosmikase-menu.md
 ├── yubikey-setup.md
 └── zellij.md
 ```
@@ -370,7 +370,7 @@ docs/
 │   └── first-steps.md
 ├── configuration/
 │   ├── configuration-reference.md (NEW)
-│   ├── omarchy-pop-yaml.md (NEW)
+│   ├── cosmikase-yaml.md (NEW)
 │   └── customization.md (NEW)
 ├── guides/
 │   ├── backup-strategy.md

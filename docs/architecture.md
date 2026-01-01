@@ -1,6 +1,6 @@
 # Architecture Guide
 
-System architecture and component interactions in omarchy-for-popos.
+System architecture and component interactions in cosmikase.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ System architecture and component interactions in omarchy-for-popos.
 
 ## Overview
 
-omarchy-for-popos is a configuration management system for Pop!_OS that combines:
+cosmikase is a configuration management system for Pop!_OS that combines:
 
 - **Ansible** for system-level package installation and configuration
 - **chezmoi** for user dotfile management with templating
@@ -26,7 +26,7 @@ omarchy-for-popos is a configuration management system for Pop!_OS that combines
 
 ```mermaid
 flowchart TD
-    User[User] --> Config[omarchy-pop.yaml]
+    User[User] --> Config[cosmikase.yaml]
     Config --> Ansible[Ansible Playbook]
     Config --> PythonTools[Python CLI Tools]
     
@@ -54,7 +54,7 @@ flowchart TD
 
 ## System Components
 
-### 1. Configuration File (`omarchy-pop.yaml`)
+### 1. Configuration File (`cosmikase.yaml`)
 
 **Purpose:** Central configuration file that controls what gets installed and configured.
 
@@ -110,7 +110,7 @@ make dry-run  # Check mode (no changes)
 
 ### 4. Python CLI Tools
 
-**Location:** `src/omarchy_pop/`
+**Location:** `src/cosmikase/`
 
 **Tools:**
 - `omarchy-config`: Query YAML configuration
@@ -126,11 +126,11 @@ make dry-run  # Check mode (no changes)
 **Location:** `bin/`
 
 **Scripts:**
-- `omarchy-pop`: Interactive menu
-- `omarchy-pop-theme`: Theme switching
-- `omarchy-pop-update`: System updates
-- `omarchy-pop-install`: Optional software installer
-- `omarchy-pop-databases`: Docker database setup
+- `cosmikase`: Interactive menu
+- `cosmikase-theme`: Theme switching
+- `cosmikase-update`: System updates
+- `cosmikase-install`: Optional software installer
+- `cosmikase-databases`: Docker database setup
 - `omarchy-cursor-extensions`: Extension management
 - `omarchy-power-helper`: Power profile management
 
@@ -188,7 +188,7 @@ sequenceDiagram
     participant Dotfiles
     participant Apps
 
-    User->>ThemeScript: omarchy-pop-theme nord
+    User->>ThemeScript: cosmikase-theme nord
     ThemeScript->>PythonTool: omarchy-chezmoi nord <dir>
     PythonTool->>Chezmoi: Update chezmoi.toml
     ThemeScript->>Chezmoi: chezmoi apply
@@ -208,7 +208,7 @@ sequenceDiagram
     participant Output
 
     Script->>PythonTool: omarchy-config list apt core
-    PythonTool->>YAML: Load omarchy-pop.yaml
+    PythonTool->>YAML: Load cosmikase.yaml
     YAML->>PythonTool: Parse YAML
     PythonTool->>PythonTool: Filter enabled items
     PythonTool->>Output: Print results
@@ -227,7 +227,7 @@ sequenceDiagram
    - `chezmoi` (installed if missing)
 
 2. **Load configuration:**
-   - Read `omarchy-pop.yaml`
+   - Read `cosmikase.yaml`
    - Extract sections and defaults
    - Validate structure
 
@@ -276,7 +276,7 @@ sequenceDiagram
    - Initialize source directory
 
 2. **Sync themes:**
-   - Copy themes from repo to `~/.local/share/omarchy-pop/themes/`
+   - Copy themes from repo to `~/.local/share/cosmikase/themes/`
 
 3. **Install scripts:**
    - Copy shell scripts to `~/.local/bin/`
@@ -289,7 +289,7 @@ sequenceDiagram
 
 5. **Shell integration:**
    - Add PATH to `.bashrc`/`.zshrc`
-   - Source omarchy-pop scripts
+   - Source cosmikase scripts
 
 ---
 
@@ -319,7 +319,7 @@ themes/
 
 ```mermaid
 flowchart LR
-    ThemeSwitch[omarchy-pop-theme] --> UpdateData[Update chezmoi.toml]
+    ThemeSwitch[cosmikase-theme] --> UpdateData[Update chezmoi.toml]
     UpdateData --> ChezmoiApply[chezmoi apply]
     ChezmoiApply --> ProcessTemplates[Process Templates]
     
@@ -340,7 +340,7 @@ flowchart LR
 ### Theme Data Flow
 
 1. **Theme Selection:**
-   - User runs `omarchy-pop-theme <name>`
+   - User runs `cosmikase-theme <name>`
    - Script validates theme exists
 
 2. **Chezmoi Update:**
@@ -370,7 +370,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    YAMLFile[omarchy-pop.yaml] --> Parser[YAML Parser]
+    YAMLFile[cosmikase.yaml] --> Parser[YAML Parser]
     Parser --> ConfigDict[Config Dictionary]
     
     ConfigDict --> AnsibleVars[Ansible Variables]
@@ -392,7 +392,7 @@ Items are filtered based on `install` flag:
 
 2. **Explicit flags:**
    - `install: true` → Include in installation
-   - `install: false` → Skip (available via `omarchy-pop-install`)
+   - `install: false` → Skip (available via `cosmikase-install`)
 
 3. **Filtering logic:**
    ```python
@@ -547,7 +547,7 @@ Items are filtered based on `install` flag:
 ```toml
 [data]
 theme = "nord"
-themes_dir = "/home/user/.local/share/omarchy-pop/themes"
+themes_dir = "/home/user/.local/share/cosmikase/themes"
 font_family = "JetBrainsMono Nerd Font"
 font_size = 9
 padding = 14
@@ -577,7 +577,7 @@ padding = 14
 
 ```mermaid
 graph TD
-    Config[omarchy-pop.yaml] --> Ansible[Ansible]
+    Config[cosmikase.yaml] --> Ansible[Ansible]
     Config --> PythonTools[Python Tools]
     
     Ansible --> Packages[System Packages]
@@ -609,7 +609,7 @@ graph TD
 
 | File | Location | Purpose |
 |------|----------|---------|
-| `omarchy-pop.yaml` | Repository root | Main configuration |
+| `cosmikase.yaml` | Repository root | Main configuration |
 | `~/.config/chezmoi/chezmoi.toml` | User config | Chezmoi data |
 | `ansible/playbook.yml` | Repository | Ansible playbook |
 | `ansible/inventory.yml` | Repository | Ansible inventory |
@@ -621,7 +621,7 @@ graph TD
 | `~/.config/Cursor/User/settings.json` | User config | `chezmoi/dot_config/Cursor/User/settings.json.tmpl` |
 | `~/.config/cosmic/...` | User config | `chezmoi/dot_config/cosmic/...` |
 | `~/.config/zellij/config.kdl` | User config | `chezmoi/dot_config/zellij/config.kdl.tmpl` |
-| `~/.config/shell/omarchy-pop.sh` | User config | `chezmoi/dot_config/shell/omarchy-pop.sh.tmpl` |
+| `~/.config/shell/cosmikase.sh` | User config | `chezmoi/dot_config/shell/cosmikase.sh.tmpl` |
 
 ### Scripts and Tools
 
@@ -629,7 +629,7 @@ graph TD
 |------|----------|---------|
 | Shell scripts | `~/.local/bin/` | User executables |
 | Python tools | Via `uv` | CLI utilities |
-| Themes | `~/.local/share/omarchy-pop/themes/` | Theme files |
+| Themes | `~/.local/share/cosmikase/themes/` | Theme files |
 
 ---
 
@@ -644,7 +644,7 @@ graph TD
 
 ### Adding New Packages
 
-1. Add to `omarchy-pop.yaml` in appropriate section
+1. Add to `cosmikase.yaml` in appropriate section
 2. Ansible role will install automatically
 3. No code changes needed
 

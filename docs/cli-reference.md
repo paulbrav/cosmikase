@@ -1,15 +1,15 @@
 # CLI Reference
 
-Complete reference for all command-line utilities in the omarchy-for-popos project.
+Complete reference for all command-line utilities in the cosmikase project.
 
 ## Table of Contents
 
 - [Shell Scripts](#shell-scripts)
-  - [omarchy-pop](#omarchy-pop)
-  - [omarchy-pop-theme](#omarchy-pop-theme)
-  - [omarchy-pop-update](#omarchy-pop-update)
-  - [omarchy-pop-install](#omarchy-pop-install)
-  - [omarchy-pop-databases](#omarchy-pop-databases)
+  - [cosmikase](#cosmikase)
+  - [cosmikase-theme](#cosmikase-theme)
+  - [cosmikase-update](#cosmikase-update)
+  - [cosmikase-install](#cosmikase-install)
+  - [cosmikase-databases](#cosmikase-databases)
   - [omarchy-cursor-extensions](#omarchy-cursor-extensions)
   - [omarchy-power-helper](#omarchy-power-helper)
 - [Python CLI Tools](#python-cli-tools)
@@ -23,13 +23,13 @@ Complete reference for all command-line utilities in the omarchy-for-popos proje
 
 ## Shell Scripts
 
-### omarchy-pop
+### cosmikase
 
-Interactive menu entrypoint for common omarchy-pop actions.
+Interactive menu entrypoint for common cosmikase actions.
 
 **Usage:**
 ```bash
-omarchy-pop
+cosmikase
 ```
 
 **Description:**
@@ -46,9 +46,9 @@ Provides a text-based menu interface using `gum` for:
 
 **Menu Options:**
 - **Change Theme**: Launches `theme-tui` if available, otherwise prompts for theme selection
-- **Install Optional Software**: Runs `omarchy-pop-install`
-- **Setup Docker Databases**: Runs `omarchy-pop-databases`
-- **Update Everything**: Runs `omarchy-pop-update`
+- **Install Optional Software**: Runs `cosmikase-install`
+- **Setup Docker Databases**: Runs `cosmikase-databases`
+- **Update Everything**: Runs `cosmikase-update`
 - **Power Settings**: Runs `omarchy-power-helper`
 - **Cursor Extensions**: Runs `omarchy-cursor-extensions`
 - **Exit**: Closes the menu
@@ -56,7 +56,7 @@ Provides a text-based menu interface using `gum` for:
 **Examples:**
 ```bash
 # Launch interactive menu
-omarchy-pop
+cosmikase
 ```
 
 **Exit Codes:**
@@ -65,14 +65,14 @@ omarchy-pop
 
 ---
 
-### omarchy-pop-theme
+### cosmikase-theme
 
 Switch themes by updating chezmoi configuration and applying theme changes to running applications.
 
 **Usage:**
 ```bash
-omarchy-pop-theme <theme-name> [options]
-omarchy-pop-theme --rollback
+cosmikase-theme <theme-name> [options]
+cosmikase-theme --rollback
 ```
 
 **Description:**
@@ -96,23 +96,23 @@ Switches the active theme by:
 **Examples:**
 ```bash
 # Switch to nord theme
-omarchy-pop-theme nord
+cosmikase-theme nord
 
 # Switch theme but skip Cursor update
-omarchy-pop-theme tokyo-night --no-cursor
+cosmikase-theme tokyo-night --no-cursor
 
 # Only update running apps (don't regenerate dotfiles)
-omarchy-pop-theme catppuccin --no-chezmoi
+cosmikase-theme catppuccin --no-chezmoi
 
 # Roll back to previous theme
-omarchy-pop-theme --rollback
+cosmikase-theme --rollback
 
 # Quiet mode (minimal output)
-omarchy-pop-theme nord --quiet
+cosmikase-theme nord --quiet
 ```
 
 **Theme History:**
-The script maintains a history file at `~/.local/share/omarchy-pop/theme-history.txt` to enable rollback functionality.
+The script maintains a history file at `~/.local/share/cosmikase/theme-history.txt` to enable rollback functionality.
 
 **Exit Codes:**
 - `0`: Success
@@ -124,13 +124,13 @@ The script maintains a history file at `~/.local/share/omarchy-pop/theme-history
 
 ---
 
-### omarchy-pop-update
+### cosmikase-update
 
 Updates all installed software and system components.
 
 **Usage:**
 ```bash
-omarchy-pop-update
+cosmikase-update
 ```
 
 **Description:**
@@ -160,7 +160,7 @@ Comprehensive system update script that updates:
 **Examples:**
 ```bash
 # Run full system update
-omarchy-pop-update
+cosmikase-update
 ```
 
 **Notes:**
@@ -174,36 +174,36 @@ omarchy-pop-update
 
 ---
 
-### omarchy-pop-install
+### cosmikase-install
 
-Interactive installer for optional software marked as `install: false` in `omarchy-pop.yaml`.
+Interactive installer for optional software marked as `install: false` in `cosmikase.yaml`.
 
 **Usage:**
 ```bash
-omarchy-pop-install [--config PATH]
+cosmikase-install [--config PATH]
 ```
 
 **Description:**
 Scans the configuration file for items marked `install: false` and allows interactive selection and installation via `gum`.
 
 **Options:**
-- `--config PATH`: Path to `omarchy-pop.yaml` (default: `./omarchy-pop.yaml` or `$OMARCHY_POP_CONFIG`)
+- `--config PATH`: Path to `cosmikase.yaml` (default: `./cosmikase.yaml` or `$COSMIKASE_CONFIG`)
 - `-h`, `--help`: Show help message
 
 **Environment Variables:**
-- `OMARCHY_POP_CONFIG`: Path to configuration file
+- `COSMIKASE_CONFIG`: Path to configuration file
 
 **Examples:**
 ```bash
 # Install optional software (run from repo root)
-omarchy-pop-install
+cosmikase-install
 
 # Use custom config file
-omarchy-pop-install --config /path/to/omarchy-pop.yaml
+cosmikase-install --config /path/to/cosmikase.yaml
 
 # Using environment variable
-export OMARCHY_POP_CONFIG=/path/to/omarchy-pop.yaml
-omarchy-pop-install
+export COSMIKASE_CONFIG=/path/to/cosmikase.yaml
+cosmikase-install
 ```
 
 **What It Installs:**
@@ -230,17 +230,17 @@ flatpak uninstall <app-id>
 
 **See Also:**
 - [Configuration Reference](configuration-reference.md)
-- [omarchy-pop-menu.md](omarchy-pop-menu.md)
+- [cosmikase-menu.md](cosmikase-menu.md)
 
 ---
 
-### omarchy-pop-databases
+### cosmikase-databases
 
 Setup development databases via Docker containers.
 
 **Usage:**
 ```bash
-omarchy-pop-databases
+cosmikase-databases
 ```
 
 **Description:**
@@ -271,7 +271,7 @@ Interactive script to create and start Docker containers for common development 
 **Examples:**
 ```bash
 # Launch interactive database setup
-omarchy-pop-databases
+cosmikase-databases
 
 # Verify containers are running
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
@@ -291,7 +291,7 @@ docker volume rm omarchy-postgres-data omarchy-mysql-data omarchy-redis-data oma
 - `1`: Error (docker/gum not found, password empty)
 
 **See Also:**
-- [omarchy-pop-menu.md](omarchy-pop-menu.md)
+- [cosmikase-menu.md](cosmikase-menu.md)
 
 ---
 
@@ -412,7 +412,7 @@ The script is designed to be called by udev rules (see `omarchy/udev/99-omarchy-
 
 ### omarchy-config
 
-Query the `omarchy-pop.yaml` configuration file from shell scripts.
+Query the `cosmikase.yaml` configuration file from shell scripts.
 
 **Usage:**
 ```bash
@@ -423,7 +423,7 @@ omarchy-config [--config PATH] <command> [options]
 Python CLI tool for querying the YAML configuration file. Used by shell scripts to extract configuration values.
 
 **Global Options:**
-- `--config PATH`, `-c PATH`: Path to config file (default: `omarchy-pop.yaml`)
+- `--config PATH`, `-c PATH`: Path to config file (default: `cosmikase.yaml`)
 
 **Commands:**
 
@@ -507,7 +507,7 @@ omarchy-chezmoi <theme> <themes-dir>
 ```
 
 **Description:**
-Internal utility used by `omarchy-pop-theme` to safely update `~/.config/chezmoi/chezmoi.toml` with theme data. Performs atomic writes to prevent corruption.
+Internal utility used by `cosmikase-theme` to safely update `~/.config/chezmoi/chezmoi.toml` with theme data. Performs atomic writes to prevent corruption.
 
 **Arguments:**
 - `theme`: Theme name to set
@@ -523,15 +523,15 @@ themes_dir = "/path/to/themes"
 
 **Examples:**
 ```bash
-# Update chezmoi config (typically called by omarchy-pop-theme)
-omarchy-chezmoi nord ~/.local/share/omarchy-pop/themes
+# Update chezmoi config (typically called by cosmikase-theme)
+omarchy-chezmoi nord ~/.local/share/cosmikase/themes
 ```
 
 **Exit Codes:**
 - `0`: Success
 - `1`: Error (invalid TOML, permission denied, write failed)
 
-**Note:** This command is typically called automatically by `omarchy-pop-theme`. Direct usage is rarely needed.
+**Note:** This command is typically called automatically by `cosmikase-theme`. Direct usage is rarely needed.
 
 ---
 
@@ -591,13 +591,13 @@ Discovers the themes directory by checking multiple locations and prints the pri
 1. `$THEMES_DIR` environment variable
 2. `themes/` directory in repo root
 3. `./themes` in current directory
-4. `~/.local/share/omarchy-pop/themes`
+4. `~/.local/share/cosmikase/themes`
 
 **Examples:**
 ```bash
 # Print primary themes directory
 omarchy-themes-dir
-# Output: /home/user/.local/share/omarchy-pop/themes
+# Output: /home/user/.local/share/cosmikase/themes
 
 # List all theme directories
 omarchy-themes-dir --all
@@ -643,7 +643,7 @@ Text-based user interface built with Textual for browsing available themes, prev
 **Requirements:**
 - Python 3.10+
 - Textual library (installed via `uv sync`)
-- `omarchy-pop-theme` script must be available
+- `cosmikase-theme` script must be available
 
 **Examples:**
 ```bash
@@ -675,7 +675,7 @@ theme-tui
 Most commands are installed to `~/.local/bin` after running `make install`. Verify with:
 
 ```bash
-which omarchy-pop-theme
+which cosmikase-theme
 which omarchy-config
 ```
 
@@ -697,7 +697,7 @@ Several commands respect environment variables:
 export THEMES_DIR=/custom/path/to/themes
 
 # Config file
-export OMARCHY_POP_CONFIG=/path/to/config.yaml
+export COSMIKASE_CONFIG=/path/to/config.yaml
 
 # Extensions file
 export EXTENSIONS_FILE=~/.config/Cursor/extensions.txt
@@ -713,7 +713,7 @@ export CURSOR_CMD=cursor
 Most commands support `--help` or `-h`:
 
 ```bash
-omarchy-pop-theme --help
+cosmikase-theme --help
 omarchy-config --help
 omarchy-cursor-extensions --help
 ```

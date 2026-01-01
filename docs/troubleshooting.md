@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Common issues and solutions for omarchy-for-popos.
+Common issues and solutions for cosmikase.
 
 ## Table of Contents
 
@@ -86,13 +86,13 @@ make setup
 
 **Symptom:**
 ```
-Permission denied: /home/user/.local/bin/omarchy-pop-theme
+Permission denied: /home/user/.local/bin/cosmikase-theme
 ```
 
 **Solution:**
 ```bash
 # Make scripts executable
-chmod +x ~/.local/bin/omarchy-pop-*
+chmod +x ~/.local/bin/cosmikase-*
 
 # Or re-run installation
 make install
@@ -152,10 +152,10 @@ Error: Theme 'xyz' not found
 omarchy-themes-dir --list
 
 # Or check themes directory
-ls -la ~/.local/share/omarchy-pop/themes/
+ls -la ~/.local/share/cosmikase/themes/
 
 # Verify theme exists
-ls -la ~/.local/share/omarchy-pop/themes/nord/
+ls -la ~/.local/share/cosmikase/themes/nord/
 ```
 
 **Check theme name:** Theme names are case-sensitive and must match directory names exactly.
@@ -196,7 +196,7 @@ ls -la ~/.local/share/omarchy-pop/themes/nord/
 
 ### COSMIC Theme Not Updating
 
-**Symptom:** Desktop theme doesn't change after `omarchy-pop-theme`.
+**Symptom:** Desktop theme doesn't change after `cosmikase-theme`.
 
 **Solutions:**
 1. **Check COSMIC settings daemon:**
@@ -212,7 +212,7 @@ ls -la ~/.local/share/omarchy-pop/themes/nord/
 
 3. **Check theme file exists:**
    ```bash
-   ls -la ~/.local/share/omarchy-pop/themes/nord/cosmic.ron
+   ls -la ~/.local/share/cosmikase/themes/nord/cosmic.ron
    ```
 
 4. **Log out and back in** (sometimes required for full theme application)
@@ -254,10 +254,10 @@ Error: No theme history found to roll back
 **Solution:**
 ```bash
 # Check history file
-cat ~/.local/share/omarchy-pop/theme-history.txt
+cat ~/.local/share/cosmikase/theme-history.txt
 
 # Manually switch to previous theme
-omarchy-pop-theme <previous-theme-name>
+cosmikase-theme <previous-theme-name>
 ```
 
 **Note:** History is created automatically on first theme switch. If missing, rollback won't work.
@@ -270,7 +270,7 @@ omarchy-pop-theme <previous-theme-name>
 
 **Symptom:**
 ```
-omarchy-pop-theme: command not found
+cosmikase-theme: command not found
 ```
 
 **Solutions:**
@@ -281,7 +281,7 @@ omarchy-pop-theme: command not found
 
 2. **Verify installation:**
    ```bash
-   ls -la ~/.local/bin/omarchy-pop-*
+   ls -la ~/.local/bin/cosmikase-*
    ```
 
 3. **Re-run installation:**
@@ -300,20 +300,20 @@ omarchy-pop-theme: command not found
 
 **Symptom:**
 ```
-Config file not found: omarchy-pop.yaml
+Config file not found: cosmikase.yaml
 ```
 
 **Solutions:**
 ```bash
 # Run from repository root
-cd ~/Repos/omarchy-for-popos
+cd ~/Repos/cosmikase
 omarchy-config list apt core
 
 # Or specify config path
-omarchy-config --config /path/to/omarchy-pop.yaml list apt core
+omarchy-config --config /path/to/cosmikase.yaml list apt core
 
 # Or set environment variable
-export OMARCHY_POP_CONFIG=/path/to/config.yaml
+export COSMIKASE_CONFIG=/path/to/config.yaml
 omarchy-config list apt core
 ```
 
@@ -331,8 +331,8 @@ Error: gum is not installed
 # Install gum
 sudo apt install gum
 
-# Or via omarchy-pop (if already partially installed)
-omarchy-pop-install  # Select gum from optional software
+# Or via cosmikase (if already partially installed)
+cosmikase-install  # Select gum from optional software
 ```
 
 ---
@@ -357,7 +357,7 @@ omarchy-config: command not found
 
 3. **Check installation:**
    ```bash
-   uv run python -m omarchy_pop.config --help
+   uv run python -m cosmikase.config --help
    ```
 
 ---
@@ -368,16 +368,16 @@ omarchy-config: command not found
 
 **Symptom:**
 ```
-ERROR! the file '/path/to/omarchy-pop.yaml' was not found
+ERROR! the file '/path/to/cosmikase.yaml' was not found
 ```
 
 **Solution:**
 ```bash
 # Run from repository root
-cd ~/Repos/omarchy-for-popos
+cd ~/Repos/cosmikase
 
 # Or specify config file
-make install CONFIG_FILE=/path/to/omarchy-pop.yaml
+make install CONFIG_FILE=/path/to/cosmikase.yaml
 ```
 
 ---
@@ -521,7 +521,7 @@ Error: chezmoi.toml has invalid TOML syntax
 cp ~/.config/chezmoi/chezmoi.toml ~/.config/chezmoi/chezmoi.toml.bak
 
 # Regenerate config
-omarchy-chezmoi nord ~/.local/share/omarchy-pop/themes
+omarchy-chezmoi nord ~/.local/share/cosmikase/themes
 
 # Or edit manually
 nano ~/.config/chezmoi/chezmoi.toml
@@ -567,13 +567,13 @@ python3 -c "import tomli; tomli.load(open('~/.config/chezmoi/chezmoi.toml', 'rb'
 
 **Symptom:**
 ```
-ERROR! YAML syntax error in omarchy-pop.yaml
+ERROR! YAML syntax error in cosmikase.yaml
 ```
 
 **Solution:**
 ```bash
 # Validate YAML
-python3 -c "import yaml; yaml.safe_load(open('omarchy-pop.yaml'))"
+python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
 
 # Or use online validator
 # https://www.yamllint.com/
@@ -600,7 +600,7 @@ Error: Section 'xyz' not found in config
 omarchy-config list apt  # Will show error with available sections
 
 # Check config structure
-cat omarchy-pop.yaml | grep -E "^[a-z_]+:"
+cat cosmikase.yaml | grep -E "^[a-z_]+:"
 ```
 
 **Common Mistakes:**
@@ -645,13 +645,13 @@ cat omarchy-pop.yaml | grep -E "^[a-z_]+:"
 **Solution:**
 ```bash
 # Use rollback if available
-omarchy-pop-theme --rollback
+cosmikase-theme --rollback
 
 # Or manually switch to previous theme
-omarchy-pop-theme <previous-theme-name>
+cosmikase-theme <previous-theme-name>
 
 # Check theme history
-cat ~/.local/share/omarchy-pop/theme-history.txt
+cat ~/.local/share/cosmikase/theme-history.txt
 ```
 
 ---
@@ -669,7 +669,7 @@ chezmoi diff
 chezmoi purge
 
 # Re-initialize
-chezmoi init --source ~/Repos/omarchy-for-popos/chezmoi
+chezmoi init --source ~/Repos/cosmikase/chezmoi
 chezmoi apply
 ```
 
@@ -680,13 +680,13 @@ chezmoi apply
 **Solution:**
 ```bash
 # Backup current config
-cp omarchy-pop.yaml omarchy-pop.yaml.bak
+cp cosmikase.yaml cosmikase.yaml.bak
 
 # Restore from repository
-git checkout omarchy-pop.yaml
+git checkout cosmikase.yaml
 
 # Or start fresh
-cp omarchy-pop.yaml.example omarchy-pop.yaml
+cp cosmikase.yaml.example cosmikase.yaml
 ```
 
 ---
@@ -699,13 +699,13 @@ cp omarchy-pop.yaml.example omarchy-pop.yaml
 chezmoi purge
 
 # Remove scripts
-rm -rf ~/.local/bin/omarchy-pop-*
+rm -rf ~/.local/bin/cosmikase-*
 
 # Remove themes
-rm -rf ~/.local/share/omarchy-pop
+rm -rf ~/.local/share/cosmikase
 
 # Remove shell integration (edit manually)
-# Remove OMARCHY-POP MANAGED BLOCK from ~/.bashrc and ~/.zshrc
+# Remove COSMIKASE MANAGED BLOCK from ~/.bashrc and ~/.zshrc
 
 # Remove chezmoi config
 rm -rf ~/.config/chezmoi
@@ -728,7 +728,7 @@ omarchy-config list flatpak utility --names-only | xargs flatpak uninstall
 
 ```bash
 # Verify scripts are installed
-ls -la ~/.local/bin/omarchy-pop-*
+ls -la ~/.local/bin/cosmikase-*
 
 # Check Python tools
 uv run omarchy-config --help
@@ -746,7 +746,7 @@ chezmoi status
 
 ```bash
 # Validate YAML syntax
-python3 -c "import yaml; yaml.safe_load(open('omarchy-pop.yaml'))"
+python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
 
 # Check config structure
 omarchy-config get defaults.theme
@@ -770,7 +770,7 @@ chezmoi diff
 cat ~/.config/chezmoi/chezmoi.toml
 
 # Verify templates
-chezmoi execute-template < ~/.local/share/chezmoi/dot_config/shell/omarchy-pop.sh.tmpl
+chezmoi execute-template < ~/.local/share/chezmoi/dot_config/shell/cosmikase.sh.tmpl
 ```
 
 ---
@@ -785,13 +785,13 @@ omarchy-config get defaults.theme
 omarchy-themes-dir --list
 
 # Check theme files
-ls -la ~/.local/share/omarchy-pop/themes/nord/
+ls -la ~/.local/share/cosmikase/themes/nord/
 
 # Verify chezmoi data
 cat ~/.config/chezmoi/chezmoi.toml | grep theme
 
 # Check theme history
-cat ~/.local/share/omarchy-pop/theme-history.txt
+cat ~/.local/share/cosmikase/theme-history.txt
 ```
 
 ---
@@ -856,7 +856,7 @@ uname -a
 lsb_release -a
 
 # Installation status
-which omarchy-pop-theme
+which cosmikase-theme
 omarchy-config --version 2>/dev/null || uv run omarchy-config --help
 
 # Configuration
@@ -885,11 +885,11 @@ uv run theme-tui
 
 ### Manual Theme Application
 
-If `omarchy-pop-theme` fails:
+If `cosmikase-theme` fails:
 
 ```bash
 # Update chezmoi manually
-omarchy-chezmoi nord ~/.local/share/omarchy-pop/themes
+omarchy-chezmoi nord ~/.local/share/cosmikase/themes
 
 # Apply dotfiles
 chezmoi apply
@@ -905,13 +905,13 @@ Use flags to skip failing steps:
 
 ```bash
 # Skip Cursor update
-omarchy-pop-theme nord --no-cursor
+cosmikase-theme nord --no-cursor
 
 # Skip COSMIC update
-omarchy-pop-theme nord --no-cosmic
+cosmikase-theme nord --no-cosmic
 
 # Skip chezmoi (only update running apps)
-omarchy-pop-theme nord --no-chezmoi
+cosmikase-theme nord --no-chezmoi
 ```
 
 ---

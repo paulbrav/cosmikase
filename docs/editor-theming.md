@@ -16,12 +16,12 @@ A comprehensive guide to theming Cursor and Antigravity within the omarchy ecosy
 
 ## Omarchy Theme System Overview
 
-The omarchy system provides unified theming across multiple applications with a single command. When you run `omarchy-pop-theme`, it updates configurations for COSMIC desktop, terminals (Ghostty, Kitty, Alacritty), Cursor, Antigravity, and other tools simultaneously.
+The omarchy system provides unified theming across multiple applications with a single command. When you run `cosmikase-theme`, it updates configurations for COSMIC desktop, terminals (Ghostty, Kitty, Alacritty), Cursor, Antigravity, and other tools simultaneously.
 
 ### How Theme Switching Works
 
 ```bash
-omarchy-pop-theme <theme-name>
+cosmikase-theme <theme-name>
 ```
 
 This command:
@@ -112,7 +112,7 @@ The extension list is managed in `~/.config/Cursor/extensions.txt`.
 
 ### After Theme Switch
 
-When you run `omarchy-pop-theme`, Cursor needs a window reload:
+When you run `cosmikase-theme`, Cursor needs a window reload:
 
 1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
 2. Type "reload"
@@ -238,7 +238,7 @@ omarchy-cursor-extensions install
 ### 5. Test the Theme
 
 ```bash
-omarchy-pop-theme my-new-theme
+cosmikase-theme my-new-theme
 ```
 
 ---
@@ -329,9 +329,9 @@ Override syntax highlighting colors:
 2. Verify the theme extension is installed: `View → Extensions` → search for theme name
 3. Check the exact theme name matches in settings.json (case-sensitive)
 
-### Cursor Shows Wrong Theme After omarchy-pop-theme
+### Cursor Shows Wrong Theme After cosmikase-theme
 
-**Symptom**: You ran `omarchy-pop-theme` but Cursor still shows old theme.
+**Symptom**: You ran `cosmikase-theme` but Cursor still shows old theme.
 
 **Solutions**:
 1. Reload window in Cursor

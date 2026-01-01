@@ -1,10 +1,10 @@
 # Zellij Terminal Multiplexer
 
-Complete guide to using Zellij in the omarchy-for-popos setup.
+Complete guide to using Zellij in the cosmikase setup.
 
 ## Overview
 
-This repository supports both **tmux** and **Zellij** as terminal multiplexers. Zellij is installed via APT (if enabled in `omarchy-pop.yaml`) and configured via chezmoi with a modal keybinding approach inspired by Omakub.
+This repository supports both **tmux** and **Zellij** as terminal multiplexers. Zellij is installed via APT (if enabled in `cosmikase.yaml`) and configured via chezmoi with a modal keybinding approach inspired by Omakub.
 
 ## Installation
 
@@ -243,7 +243,7 @@ copy_on_select true      // Copy on selection
 
 ### Theme
 
-The theme is automatically set based on your active omarchy-pop theme:
+The theme is automatically set based on your active cosmikase theme:
 
 ```kdl
 theme "nord"  // Set via chezmoi template
@@ -441,7 +441,7 @@ Zellij sessions persist across terminal restarts. Use `zellij attach` to reconne
 The theme is set via chezmoi template. Update it:
 
 ```bash
-omarchy-pop-theme <theme-name>
+cosmikase-theme <theme-name>
 ```
 
 Or manually:

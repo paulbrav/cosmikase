@@ -1,6 +1,6 @@
 # Development Guide
 
-Guide for developers contributing to omarchy-for-popos.
+Guide for developers contributing to cosmikase.
 
 ## Table of Contents
 
@@ -32,8 +32,8 @@ Guide for developers contributing to omarchy-for-popos.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/paulbrav/omarchy-for-popos.git
-   cd omarchy-for-popos
+   git clone https://github.com/paulbrav/cosmikase.git
+   cd cosmikase
    ```
 
 2. **Set up development environment:**
@@ -142,7 +142,7 @@ chezmoi edit ~/.config/zellij/config.kdl
 **Template Testing:**
 ```bash
 # Test template rendering
-chezmoi execute-template < chezmoi/dot_config/shell/omarchy-pop.sh.tmpl
+chezmoi execute-template < chezmoi/dot_config/shell/cosmikase.sh.tmpl
 ```
 
 ---
@@ -150,7 +150,7 @@ chezmoi execute-template < chezmoi/dot_config/shell/omarchy-pop.sh.tmpl
 ## Project Structure
 
 ```
-omarchy-for-popos/
+cosmikase/
 ├── ansible/              # Ansible playbook and roles
 │   ├── playbook.yml     # Main playbook
 │   ├── inventory.yml    # Inventory (localhost)
@@ -162,14 +162,14 @@ omarchy-for-popos/
 │       ├── tools/        # AI tools installation
 │       └── dotfiles/     # Dotfile management
 ├── bin/                  # Shell scripts
-│   ├── omarchy-pop       # Main menu
-│   ├── omarchy-pop-theme # Theme switching
+│   ├── cosmikase       # Main menu
+│   ├── cosmikase-theme # Theme switching
 │   └── ...
 ├── chezmoi/              # Chezmoi source directory
 │   └── dot_config/       # Dotfile templates
 ├── docs/                 # Documentation
 ├── src/                  # Python source code
-│   └── omarchy_pop/      # Python package
+│   └── cosmikase/      # Python package
 │       ├── config.py     # Config utilities
 │       ├── chezmoi.py    # Chezmoi helpers
 │       ├── themes.py     # Theme discovery
@@ -178,7 +178,7 @@ omarchy-for-popos/
 ├── tests/                # Test files
 ├── pyproject.toml        # Python project config
 ├── Makefile              # Development commands
-└── omarchy-pop.yaml      # Main configuration
+└── cosmikase.yaml      # Main configuration
 ```
 
 ---
@@ -231,7 +231,7 @@ omarchy-for-popos/
 
 5. **Test the theme:**
    ```bash
-   omarchy-pop-theme my-new-theme
+   cosmikase-theme my-new-theme
    ```
 
 6. **Update config** (optional):
@@ -297,9 +297,9 @@ omarchy-for-popos/
 
 ### Adding a New Python CLI Tool
 
-1. **Create module in `src/omarchy_pop/`:**
+1. **Create module in `src/cosmikase/`:**
    ```python
-   # src/omarchy_pop/my_tool.py
+   # src/cosmikase/my_tool.py
    """My new CLI tool."""
    
    def _main() -> None:
@@ -316,7 +316,7 @@ omarchy-for-popos/
 2. **Add entry point in `pyproject.toml`:**
    ```toml
    [project.scripts]
-   omarchy-my-tool = "omarchy_pop.my_tool:_main"
+   omarchy-my-tool = "cosmikase.my_tool:_main"
    ```
 
 3. **Install:**
@@ -384,7 +384,7 @@ uv run pytest tests/ -v
 ```python
 # tests/test_my_module.py
 import pytest
-from omarchy_pop.my_module import my_function
+from cosmikase.my_module import my_function
 
 def test_my_function():
     assert my_function("input") == "expected_output"
@@ -609,10 +609,10 @@ apt:
 
 ```bash
 # Run with debug output
-uv run python -m omarchy_pop.config list apt core
+uv run python -m cosmikase.config list apt core
 
 # Use Python debugger
-uv run python -m pdb -m omarchy_pop.config list apt core
+uv run python -m pdb -m cosmikase.config list apt core
 ```
 
 ### Ansible
@@ -636,7 +636,7 @@ uv run ansible-playbook -i inventory.yml playbook.yml --check
 set -x  # Add to script
 
 # Or run with bash -x
-bash -x bin/omarchy-pop-theme nord
+bash -x bin/cosmikase-theme nord
 ```
 
 ### Chezmoi
@@ -652,7 +652,7 @@ chezmoi diff
 chezmoi doctor -v
 
 # Test template
-chezmoi execute-template < chezmoi/dot_config/shell/omarchy-pop.sh.tmpl
+chezmoi execute-template < chezmoi/dot_config/shell/cosmikase.sh.tmpl
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Complete reference for the `omarchy-pop.yaml` configuration file schema.
+Complete reference for the `cosmikase.yaml` configuration file schema.
 
 ## Table of Contents
 
@@ -24,11 +24,11 @@ Complete reference for the `omarchy-pop.yaml` configuration file schema.
 
 ## Overview
 
-The `omarchy-pop.yaml` file controls what gets installed and configured by the Ansible playbook. It uses a simple YAML structure with sections for different package types and installation methods.
+The `cosmikase.yaml` file controls what gets installed and configured by the Ansible playbook. It uses a simple YAML structure with sections for different package types and installation methods.
 
 **File Location:**
-- Default: `omarchy-pop.yaml` in repository root
-- Can be overridden with `--config` flag or `OMARCHY_POP_CONFIG` environment variable
+- Default: `cosmikase.yaml` in repository root
+- Can be overridden with `--config` flag or `COSMIKASE_CONFIG` environment variable
 
 **Basic Structure:**
 ```yaml
@@ -176,7 +176,7 @@ flatpak:
       install: true
     - id: com.spotify.Client
       desc: Music streaming service
-      install: false  # Optional - can install via omarchy-pop-install
+      install: false  # Optional - can install via cosmikase-install
 ```
 
 **Querying:**
@@ -440,7 +440,7 @@ themes:
     - tokyo-night
     # ... more themes
   paths:
-    base: ~/.local/share/omarchy-pop/themes
+    base: ~/.local/share/cosmikase/themes
 ```
 
 **Querying:**
@@ -502,7 +502,7 @@ Most items in the configuration follow a common schema:
 ### Optional Fields
 
 - `install`: Boolean flag (default: `true` if `defaults.install` is `true`)
-  - Set to `false` to mark as optional (can install via `omarchy-pop-install`)
+  - Set to `false` to mark as optional (can install via `cosmikase-install`)
 - `desc`: Human-readable description
 - `version`: Version constraint (NPM packages)
 - `alias`: Alternative command name (APT packages)
@@ -593,7 +593,7 @@ flatpak:
   utility:
     - id: com.spotify.Client
       desc: Music streaming
-      install: false  # Available via omarchy-pop-install
+      install: false  # Available via cosmikase-install
 ```
 
 ### Custom Installer
@@ -611,7 +611,7 @@ installers:
 
 ### Complete Example
 
-See [omarchy-pop.yaml](../omarchy-pop.yaml) in the repository root for a complete example with all sections populated.
+See [cosmikase.yaml](../cosmikase.yaml) in the repository root for a complete example with all sections populated.
 
 ---
 
@@ -646,9 +646,9 @@ omarchy-config list npm --json
 The configuration file is searched in this order:
 
 1. `--config` flag value
-2. `$OMARCHY_POP_CONFIG` environment variable
-3. `./omarchy-pop.yaml` (current directory)
-4. Repository root `omarchy-pop.yaml`
+2. `$COSMIKASE_CONFIG` environment variable
+3. `./cosmikase.yaml` (current directory)
+4. Repository root `cosmikase.yaml`
 
 **Examples:**
 ```bash
@@ -659,7 +659,7 @@ make install
 make install CONFIG_FILE=/path/to/config.yaml
 
 # Using environment variable
-export OMARCHY_POP_CONFIG=/path/to/config.yaml
+export COSMIKASE_CONFIG=/path/to/config.yaml
 make install
 ```
 
@@ -667,7 +667,7 @@ make install
 
 ## Best Practices
 
-1. **Version Control**: Keep `omarchy-pop.yaml` in version control
+1. **Version Control**: Keep `cosmikase.yaml` in version control
 2. **Comments**: Use YAML comments (`#`) to document choices
 3. **Grouping**: Keep related packages in the same group
 4. **Descriptions**: Always include `desc` fields for clarity
@@ -682,7 +682,7 @@ make install
 
 ```bash
 # Check if file exists
-ls -la omarchy-pop.yaml
+ls -la cosmikase.yaml
 
 # Verify path
 omarchy-config --config /path/to/config.yaml get defaults.theme
@@ -692,7 +692,7 @@ omarchy-config --config /path/to/config.yaml get defaults.theme
 
 ```bash
 # Validate YAML syntax
-python3 -c "import yaml; yaml.safe_load(open('omarchy-pop.yaml'))"
+python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
 ```
 
 ### Query Errors

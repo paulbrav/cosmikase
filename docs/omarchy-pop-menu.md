@@ -1,49 +1,49 @@
-# omarchy-pop Menu (gum)
+# cosmikase Menu (gum)
 
-This repo provides a single interactive entrypoint, `omarchy-pop`, built with
+This repo provides a single interactive entrypoint, `cosmikase`, built with
 [Charm gum](https://github.com/charmbracelet/gum), to make common actions discoverable.
 
 ## Requirements
 
 - `gum` installed (`sudo apt install gum`)
-- `omarchy-pop` scripts on your `PATH` (after `make install`, they are installed to `~/.local/bin`)
+- `cosmikase` scripts on your `PATH` (after `make install`, they are installed to `~/.local/bin`)
 
 Verify:
 
 ```bash
-command -v omarchy-pop
+command -v cosmikase
 command -v gum
 ```
 
 ## Run
 
 ```bash
-omarchy-pop
+cosmikase
 ```
 
 Options include:
-- **Change Theme**: launches `theme-tui` if installed; otherwise prompts for a theme and runs `omarchy-pop-theme`.
-- **Install Optional Software**: installs items marked `install: false` in `omarchy-pop.yaml`.
+- **Change Theme**: launches `theme-tui` if installed; otherwise prompts for a theme and runs `cosmikase-theme`.
+- **Install Optional Software**: installs items marked `install: false` in `cosmikase.yaml`.
 - **Setup Docker Databases**: starts PostgreSQL, MySQL, Redis, and/or MongoDB in Docker containers.
-- **Update Everything**: runs `omarchy-pop-update`.
+- **Update Everything**: runs `cosmikase-update`.
 
 ## Optional Software Installation
 
-`omarchy-pop-install` reads **disabled** items from your config file and then installs the ones you select.
+`cosmikase-install` reads **disabled** items from your config file and then installs the ones you select.
 
 ### Config file location
 
 Run from the repo root (recommended), or pass the path explicitly:
 
 ```bash
-omarchy-pop-install --config /path/to/omarchy-pop.yaml
+cosmikase-install --config /path/to/cosmikase.yaml
 ```
 
 Or set an environment variable:
 
 ```bash
-export OMARCHY_POP_CONFIG=/path/to/omarchy-pop.yaml
-omarchy-pop-install
+export COSMIKASE_CONFIG=/path/to/cosmikase.yaml
+cosmikase-install
 ```
 
 ### Undo
@@ -62,7 +62,7 @@ flatpak uninstall <app-id>
 
 ## Docker Databases
 
-`omarchy-pop-databases` starts containers named:
+`cosmikase-databases` starts containers named:
 - `omarchy-postgres`
 - `omarchy-mysql`
 - `omarchy-redis`
@@ -94,7 +94,7 @@ docker volume rm omarchy-postgres-data omarchy-mysql-data omarchy-redis-data oma
 ## Troubleshooting
 
 - **`gum` not found**: install it with `sudo apt install gum`.
-- **`omarchy-pop` not found**: ensure `~/.local/bin` is on PATH and re-open your shell, or re-run `make install`.
+- **`cosmikase` not found**: ensure `~/.local/bin` is on PATH and re-open your shell, or re-run `make install`.
 - **`theme-tui` not found**: run `make setup` (dev) or `make install` (full), which installs the Python CLI tools via `uv`.
 
 
