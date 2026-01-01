@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# omarchy-pop-databases - Setup development databases via Docker
+
+set -euo pipefail
+
+die() {
+    echo "Error: $*" >&2
+    exit 1
+}
+
+# Check for docker
+if ! command -v docker >/dev/null 2>&1; then
+    die "docker is not installed. Please install it first."
+fi
+
+# Check for gum
+if ! command -v gum >/dev/null 2>&1; then
+    die "gum is not installed."
+fi
+
+container_exists() {
+    local name="$1"
+    docker inspect "$name" >/dev/null 2>&1
+}
+
+ensure_running() {
+    local name="$1"
+    if container_exists "$name"; then
+        if [[ "$(docker inspect -f '{{.State.Running}}' "$name")" == "true" ]]; then
+            echo "  - $name is already running."
+        else
+            echo "  - Starting existing container: $name"
+            docker start "$name" >/dev/null
+        fi
+        return 0
+    fi
+    return 1
+}
+
+echo "Select databases to spin up (Docker):"
+SELECTED=$(gum choose --no-limit \
+    "PostgreSQL (Port 5432)" \
+    "MySQL (Port 3306)" \
+    "Redis (Port 6379)" \
+    "MongoDB (Port 27017)")
+
+if [[ -z "$SELECTED" ]]; then
+    echo "No databases selected."
+    exit 0
+fi
+
+if gum confirm "Start selected databases in Docker?"; then
+    [[ "$SELECTED" == *"PostgreSQL"* ]] && {
+        echo "PostgreSQL:"
+        if ! ensure_running "omarchy-postgres"; then
+            POSTGRES_PASSWORD="$(gum input --password --prompt "  Postgres password: ")"
+            [[ -z "$POSTGRES_PASSWORD" ]] && die "Password cannot be empty"
+            docker volume create omarchy-postgres-data >/dev/null
+            echo "  - Creating container: omarchy-postgres"
+            docker run \
+                --name omarchy-postgres \
+                -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+                -p 5432:5432 \
+                -v omarchy-postgres-data:/var/lib/postgresql/data \
+                --restart unless-stopped \
+                -d postgres:latest >/dev/null
+        fi
+        echo "  Connect: postgres://postgres:<password>@localhost:5432/postgres"
+    }
+    
+    [[ "$SELECTED" == *"MySQL"* ]] && {
+        echo "MySQL:"
+        if ! ensure_running "omarchy-mysql"; then
+            MYSQL_ROOT_PASSWORD="$(gum input --password --prompt "  MySQL root password: ")"
+            [[ -z "$MYSQL_ROOT_PASSWORD" ]] && die "Password cannot be empty"
+            docker volume create omarchy-mysql-data >/dev/null
+            echo "  - Creating container: omarchy-mysql"
+            docker run \
+                --name omarchy-mysql \
+                -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
+                -p 3306:3306 \
+                -v omarchy-mysql-data:/var/lib/mysql \
+                --restart unless-stopped \
+                -d mysql:latest >/dev/null
+        fi
+        echo "  Connect: mysql -h 127.0.0.1 -P 3306 -u root -p"
+    }
+    
+    [[ "$SELECTED" == *"Redis"* ]] && {
+        echo "Redis:"
+        if ! ensure_running "omarchy-redis"; then
+            docker volume create omarchy-redis-data >/dev/null
+            echo "  - Creating container: omarchy-redis"
+            docker run \
+                --name omarchy-redis \
+                -p 6379:6379 \
+                -v omarchy-redis-data:/data \
+                --restart unless-stopped \
+                -d redis:latest >/dev/null
+        fi
+        echo "  Connect: redis-cli -h 127.0.0.1 -p 6379"
+    }
+    
+    [[ "$SELECTED" == *"MongoDB"* ]] && {
+        echo "MongoDB:"
+        if ! ensure_running "omarchy-mongodb"; then
+            docker volume create omarchy-mongodb-data >/dev/null
+            echo "  - Creating container: omarchy-mongodb"
+            docker run \
+                --name omarchy-mongodb \
+                -p 27017:27017 \
+                -v omarchy-mongodb-data:/data/db \
+                --restart unless-stopped \
+                -d mongo:latest >/dev/null
+        fi
+        echo "  Connect: mongosh mongodb://127.0.0.1:27017"
+    }
+    
+    echo ""
+    echo "Databases ready. Use 'docker ps' to see them."
+    echo "Stop/remove: docker rm -f omarchy-postgres omarchy-mysql omarchy-redis omarchy-mongodb"
+else
+    echo "Aborted."
+fi
+
