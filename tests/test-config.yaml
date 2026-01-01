@@ -44,6 +44,14 @@ apt:
       install: true
     - name: eza
       install: false
+    - name: lazygit
+      install: false
+    - name: lazydocker
+      install: false
+    - name: ffmpeg
+      install: false
+    - name: gh
+      install: false
   gui: []
   terminal:
     - name: ghostty
@@ -90,6 +98,12 @@ installers:
   ai_tools: []
 
 scripts: []
+
+uv_tools:
+  - name: mojo
+    install: false
+  - name: vllm
+    install: false
 
 themes:
   default: pop-default

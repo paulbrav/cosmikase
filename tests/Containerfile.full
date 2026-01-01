@@ -1,0 +1,53 @@
+# Containerfile.full - Full end-to-end test container for cosmikase
+# Uses Ubuntu 24.04 base (compatible with Pop!_OS packages) for actual install testing
+#
+# Build: podman build -f tests/Containerfile.full -t cosmikase-full .
+# Run:   podman run --rm --privileged -v $(pwd):/workspace cosmikase-full
+
+FROM ubuntu:24.04
+
+LABEL maintainer="cosmikase"
+LABEL description="Full install test container for cosmikase end-to-end validation"
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+ENV HOME=/root
+
+# Install base dependencies required for the full install
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    curl \
+    rsync \
+    unzip \
+    python3 \
+    python3-pip \
+    python3-venv \
+    git \
+    software-properties-common \
+    fontconfig \
+    build-essential \
+    wget \
+    jq \
+    tree \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (Python package manager used by the project)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Install chezmoi
+RUN curl -sfL https://get.chezmoi.io | BINDIR=/root/.local/bin sh
+
+# Create necessary directories
+RUN mkdir -p /root/.local/bin /root/.local/share /root/.config
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy the entrypoint script
+COPY tests/container-full-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Default entrypoint runs the full test
+ENTRYPOINT ["/entrypoint.sh"]
+

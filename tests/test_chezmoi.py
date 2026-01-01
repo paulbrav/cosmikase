@@ -1,9 +1,8 @@
-"""Tests for omarchy_pop.chezmoi module."""
+"""Tests for cosmikase.chezmoi module."""
 
-import pytest
 from pathlib import Path
 
-from omarchy_pop.chezmoi import update_chezmoi_data
+from cosmikase.chezmoi import update_chezmoi_data
 
 
 class TestUpdateChezmoiData:

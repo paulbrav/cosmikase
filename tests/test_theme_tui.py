@@ -1,6 +1,7 @@
-import pytest
 from pathlib import Path
-from omarchy_pop.themes import _unique_dirs, list_themes
+
+from cosmikase.themes import _unique_dirs, list_themes
+
 
 def test_unique_dirs(tmp_path):
     dir1 = tmp_path / "dir1"

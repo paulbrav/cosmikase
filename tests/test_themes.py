@@ -1,12 +1,13 @@
+import json
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
-import tempfile
-import shutil
-import yaml
-import json
 
-from omarchy_pop.themes import load_manifest, ThemeManifest
-from omarchy_pop.validate import validate_ron
+import yaml
+
+from cosmikase.themes import load_manifest
+from cosmikase.validate import validate_ron
 
 
 class TestThemeLogic(unittest.TestCase):

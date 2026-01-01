@@ -1,7 +1,9 @@
+
 import pytest
 import yaml
-from pathlib import Path
-from omarchy_pop.config import load_config, get_value, enabled_items, package_names, enabled_top_level
+
+from cosmikase.config import enabled_items, enabled_top_level, get_value, load_config, package_names
+
 
 @pytest.fixture
 def sample_config_dict():

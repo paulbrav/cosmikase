@@ -1,0 +1,52 @@
+# Containerfile.smoke - Fast smoke test container for cosmikase
+# Pre-bakes Ansible and Python dependencies for faster test runs
+#
+# Build: podman build -f tests/Containerfile.smoke -t cosmikase-smoke .
+# Run:   podman run --rm -v $(pwd):/workspace:ro cosmikase-smoke
+
+FROM ubuntu:24.04
+
+LABEL maintainer="cosmikase"
+LABEL description="Smoke test container for cosmikase Ansible playbook validation"
+
+# Avoid interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install base dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    curl \
+    rsync \
+    unzip \
+    python3 \
+    python3-pip \
+    python3-venv \
+    git \
+    software-properties-common \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Ansible and required Python packages
+RUN pip3 install --break-system-packages \
+    ansible \
+    pyyaml
+
+# Install Ansible collections
+RUN ansible-galaxy collection install community.general ansible.posix
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command runs the smoke test
+CMD ["/bin/bash", "-c", "\
+    echo '=== Running Ansible playbook (check mode) ===' && \
+    cd /workspace/ansible && \
+    ansible-playbook -i inventory.yml playbook.yml --check \
+        -e \"config_file=${CONFIG_FILE:-/workspace/tests/test-config.yaml}\" \
+        --skip-tags ghostty,dotfiles \
+        -v && \
+    echo '=== Verifying Python module ===' && \
+    cd /workspace && \
+    python3 -c \"from src.cosmikase.config import load_config, get_value; print('Python module OK')\" && \
+    echo '=== Smoke test passed! ===' \
+"]
+
