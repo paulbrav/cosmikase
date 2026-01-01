@@ -1,128 +1,293 @@
 #!/usr/bin/env bash
-# cosmikase-install - Optional software installer for Cosmikase on Pop!_OS
-# Reads disabled items from cosmikase.yaml and allows interactive installation.
-
+# ═══════════════════════════════════════════════════════════════════════════════
+# cosmikase-install - Japanese cyberpunk themed system installer
+# ═══════════════════════════════════════════════════════════════════════════════
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+CONFIG_FILE="${CONFIG_FILE:-$REPO_DIR/cosmikase.yaml}"
+LOG_FILE="/tmp/cosmikase-install-$(date +%Y%m%d-%H%M%S).log"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Colors - Cyberpunk Palette
+# ═══════════════════════════════════════════════════════════════════════════════
+NEON_PINK="212"
+NEON_CYAN="51"
+NEON_PURPLE="99"
+NEON_GREEN="82"
+NEON_ORANGE="208"
+NEON_RED="196"
+DIM="241"
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Check for gum
-if ! command -v gum >/dev/null 2>&1; then
-    echo "Error: gum is not installed."
-    exit 1
+# ═══════════════════════════════════════════════════════════════════════════════
+if ! command -v gum &>/dev/null; then
+    echo "gum not found. Installing..."
+    go install github.com/charmbracelet/gum@latest
+    export PATH="$HOME/go/bin:$PATH"
 fi
 
-usage() {
-    cat <<'EOF'
-Usage: cosmikase-install [--config PATH]
+# ═══════════════════════════════════════════════════════════════════════════════
+# Helper Functions
+# ═══════════════════════════════════════════════════════════════════════════════
+banner() {
+    local p="\033[38;5;${NEON_PURPLE}m"
+    local r="\033[0m"
+    
+    clear
+    echo ""
+    echo -e "  ${p}╔════════════════════════════════════════════════════════════════════════════╗${r}"
+    
+    # Use gum to render the inner part of the banner (width 76 inside the borders)
+    local inner_ascii
+    inner_ascii=$(gum style --foreground "$NEON_PINK" --width 76 --align center \
+        "░█████╗░░█████╗░░██████╗███╗░░░███╗██╗██╗░░██╗░█████╗░░██████╗███████╗" \
+        "██╔══██╗██╔══██╗██╔════╝████╗░████║██║██║░██╔╝██╔══██╗██╔════╝██╔════╝" \
+        "██║░░╚═╝██║░░██║╚█████╗░██╔████╔██║██║█████═╝░███████║╚█████╗░█████╗░░" \
+        "██║░░██╗██║░░██║░╚═══██╗██║╚██╔╝██║██║██╔═██╗░██╔══██║░╚═══██╗██╔══╝░░" \
+        "╚█████╔╝╚█████╔╝██████╔╝██║░╚═╝░██║██║██║░╚██╗██║░░██║██████╔╝███████╗" \
+        "░╚════╝░░╚════╝░╚═════╝░╚═╝░░░░░╚═╝╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝")
 
-Installs optional (install:false) apps from cosmikase.yaml interactively.
+    # Split into lines and add borders
+    while IFS= read -r line; do
+        echo -e "  ${p}║${r}${line}${p}║${r}"
+    done <<< "$inner_ascii"
 
-Options:
-  --config PATH   Path to cosmikase.yaml (or set COSMIKASE_CONFIG)
-  -h, --help      Show this help
-EOF
+    echo -e "  ${p}╠════════════════════════════════════════════════════════════════════════════╣${r}"
+
+    local inner_text
+    inner_text=$(gum style --width 76 --align center \
+        "$(echo -e "\033[38;5;${NEON_CYAN}m⛩️  システム設定  ⛩️\033[0m")" \
+        "$(echo -e "\033[38;5;${DIM}mSystem Configuration\033[0m")")
+
+    while IFS= read -r line; do
+        echo -e "  ${p}║${r}${line}${p}║${r}"
+    done <<< "$inner_text"
+
+    echo -e "  ${p}╚════════════════════════════════════════════════════════════════════════════╝${r}"
+    echo ""
 }
 
-CONFIG_FILE="${COSMIKASE_CONFIG:-}"
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --config)
-            CONFIG_FILE="${2:-}"
-            shift 2
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        *)
-            echo "Unknown argument: $1" >&2
-            usage
-            exit 1
-            ;;
-    esac
-done
-
-if [[ -z "$CONFIG_FILE" ]]; then
-    if [[ -f "./cosmikase.yaml" ]]; then
-        CONFIG_FILE="./cosmikase.yaml"
-    else
-        echo "Error: config file not found. Run from the repo root or pass --config PATH." >&2
-        exit 1
-    fi
-fi
-
-CONFIG_BIN="cosmikase-config"
-if ! command -v cosmikase-config >/dev/null 2>&1; then
-    if command -v uv >/dev/null 2>&1; then
-        CONFIG_BIN="uv run cosmikase-config"
-    else
-        echo "Error: cosmikase-config not found (and uv not found). Run 'make setup' or 'make install'." >&2
-        exit 1
-    fi
-fi
-
-echo "Scanning for optional software..."
-
-# Get list of disabled apps from different sections
-# We'll combine them into a list for gum
-APPS_LIST=$(mktemp)
-trap 'rm -f "$APPS_LIST"' EXIT
-
-# Sections to scan
-SECTIONS=(
-    "flatpak.utility"
-    "apt.core"
-    "apt.gui"
-    "apt.terminal"
-)
-
-for section_group in "${SECTIONS[@]}"; do
-    section="${section_group%.*}"
-    group="${section_group#*.}"
+phase_header() {
+    local num="$1"
+    local total="$2"
+    local title="$3"
+    local subtitle="$4"
     
-    # Use our new --disabled flag
-    $CONFIG_BIN --config "$CONFIG_FILE" list "$section" "$group" --disabled >> "$APPS_LIST" || true
-done
+    local c="\033[38;5;${NEON_CYAN}m"
+    local r="\033[0m"
 
-if [[ ! -s "$APPS_LIST" ]]; then
-    echo "No optional software found (all items in cosmikase.yaml are already enabled)."
-    exit 0
-fi
-
-echo "Select software to install (Space to toggle, Enter to confirm):"
-SELECTED=$(gum choose --no-limit < "$APPS_LIST")
-
-if [[ -z "$SELECTED" ]]; then
-    echo "No software selected."
-    exit 0
-fi
-
-echo "You selected:"
-echo "$SELECTED"
-echo ""
-
-if gum confirm "Install selected software?"; then
-    # For each selected item, we need to know how to install it.
-    # A simple way is to just call 'apt install' or 'flatpak install'
-    # but it's better to update the YAML and run ansible, or just run direct commands.
+    echo ""
+    echo -e "  ${c}┌────────────────────────────────────────────────────────────────────────────┐${r}"
     
-    while IFS= read -r item; do
-        name="${item%%:*}"
-        echo "Installing $name..."
+    local inner_phase
+    inner_phase=$(gum style --width 76 --align left \
+        "$(echo -e "  \033[38;5;${NEON_PINK}m[$num/$total] $title\033[0m")" \
+        "$(echo -e "        \033[38;5;${DIM}m$subtitle\033[0m")")
         
-        # Determine if it's a flatpak (contains dots usually) or apt
-        if [[ "$name" == *"."* ]]; then
-            if ! command -v flatpak >/dev/null 2>&1; then
-                echo "Flatpak not found; installing it first..." >&2
-                sudo apt update && sudo apt install -y flatpak
-            fi
-            flatpak install -y "$name" || echo "Failed to install flatpak $name"
-        else
-            sudo apt install -y "$name" || echo "Failed to install apt package $name"
-        fi
-    done <<< "$SELECTED"
+    while IFS= read -r line; do
+        echo -e "  ${c}│${r}${line}${c}│${r}"
+    done <<< "$inner_phase"
     
-    echo "Installation complete!"
-else
-    echo "Aborted."
-fi
+    echo -e "  ${c}└────────────────────────────────────────────────────────────────────────────┘${r}"
+}
 
+run_ansible() {
+    local tags="$1"
+    local desc="$2"
+    
+    cd "$REPO_DIR/ansible"
+    
+    if gum spin \
+        --spinner.foreground "$NEON_PINK" \
+        --title.foreground "$NEON_CYAN" \
+        --spinner dot \
+        --title "  処理中... $desc" \
+        -- bash -c "uv run ansible-playbook -i inventory.yml playbook.yml \
+            -e 'config_file=$CONFIG_FILE' \
+            --become-password-file '$ANSIBLE_BECOME_PASSWORD_FILE' \
+            --tags '$tags' >> '$LOG_FILE' 2>&1"; then
+        gum style --foreground "$NEON_GREEN" "  ✓ 完了"
+        return 0
+    else
+        gum style --foreground "$NEON_RED" "  ✗ 失敗 - $LOG_FILE"
+        return 1
+    fi
+}
+
+fix_flatpak_icons() {
+    # Fix Flatpak icons not appearing in launcher
+    gum spin \
+        --spinner.foreground "$NEON_PINK" \
+        --title.foreground "$NEON_CYAN" \
+        --spinner dot \
+        --title "  処理中... Flatpak icons" \
+        -- bash -c "
+            if [[ -d /var/lib/flatpak/exports/share/icons/hicolor ]]; then
+                sudo gtk-update-icon-cache -f /var/lib/flatpak/exports/share/icons/hicolor/ 2>/dev/null || true
+                sudo gtk4-update-icon-cache -f /var/lib/flatpak/exports/share/icons/hicolor/ 2>/dev/null || true
+            fi
+            if [[ -d \$HOME/.local/share/flatpak/exports/share/icons/hicolor ]]; then
+                gtk-update-icon-cache -f \"\$HOME/.local/share/flatpak/exports/share/icons/hicolor/\" 2>/dev/null || true
+                gtk4-update-icon-cache -f \"\$HOME/.local/share/flatpak/exports/share/icons/hicolor/\" 2>/dev/null || true
+            fi
+        " >> "$LOG_FILE" 2>&1
+    gum style --foreground "$NEON_GREEN" "  ✓ 完了"
+}
+
+success_banner() {
+    local g="\033[38;5;${NEON_GREEN}m"
+    local r="\033[0m"
+    
+    echo ""
+    echo ""
+    echo -e "  ${g}╔════════════════════════════════════════════════════════════════════════════╗${r}"
+    
+    local inner_success
+    inner_success=$(gum style --foreground "$NEON_GREEN" --width 76 --align center \
+        "██████╗  ██████╗ ███╗   ██╗███████╗ ██╗" \
+        "██╔══██╗██╔═══██╗████╗  ██║██╔════╝ ██║" \
+        "██║  ██║██║   ██║██╔██╗ ██║█████╗   ██║" \
+        "██║  ██║██║   ██║██║╚██╗██║██╔══╝   ╚═╝" \
+        "██████╔╝╚██████╔╝██║ ╚████║███████╗ ██╗" \
+        "╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚══════╝ ╚═╝")
+
+    while IFS= read -r line; do
+        echo -e "  ${g}║${r}${line}${g}║${r}"
+    done <<< "$inner_success"
+
+    echo -e "  ${g}╠════════════════════════════════════════════════════════════════════════════╣${r}"
+    
+    local inner_text
+    inner_text=$(gum style --width 76 --align center \
+        "$(echo -e "\033[38;5;${NEON_CYAN}m🌸 インストール完了 🌸\033[0m")" \
+        "$(echo -e "\033[38;5;${DIM}mInstallation Complete\033[0m")")
+
+    while IFS= read -r line; do
+        echo -e "  ${g}║${r}${line}${g}║${r}"
+    done <<< "$inner_text"
+
+    echo -e "  ${g}╚════════════════════════════════════════════════════════════════════════════╝${r}"
+    echo ""
+    echo ""
+    gum style --foreground "$NEON_CYAN" "  次のステップ:"
+    echo ""
+    gum style --foreground "$DIM" "    cosmikase-theme <name>  テーマを変更"
+    gum style --foreground "$DIM" "    cosmikase               メニュー"
+    gum style --foreground "$DIM" "    $LOG_FILE"
+    echo ""
+}
+
+error_banner() {
+    local red="\033[38;5;${NEON_RED}m"
+    local r="\033[0m"
+    
+    echo ""
+    echo ""
+    echo -e "  ${red}╔════════════════════════════════════════════════════════════════════════════╗${r}"
+    
+    local inner_error
+    inner_error=$(gum style --width 76 --align center \
+        "$(echo -e "\033[38;5;${NEON_RED}mエラーが発生しました\033[0m")" \
+        "$(echo -e "\033[38;5;${DIM}mAn error occurred\033[0m")")
+
+    while IFS= read -r line; do
+        echo -e "  ${red}║${r}${line}${red}║${r}"
+    done <<< "$inner_error"
+    
+    echo -e "  ${red}╚════════════════════════════════════════════════════════════════════════════╝${r}"
+    echo ""
+    gum style --foreground "$DIM" "  $LOG_FILE"
+    echo ""
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Main Installation
+# ═══════════════════════════════════════════════════════════════════════════════
+main() {
+    banner
+    
+    gum style --foreground "$DIM" "  設定: $CONFIG_FILE"
+    echo ""
+    
+    if ! gum confirm \
+        --prompt.foreground "$NEON_CYAN" \
+        --selected.background "$NEON_PURPLE" \
+        "  インストールを開始しますか?"; then
+        gum style --foreground "$NEON_ORANGE" "  キャンセル"
+        exit 0
+    fi
+    
+    echo ""
+    # Styled sudo input using gum header
+    BECOME_PASS=$(gum input --password --header "$(echo -e "\033[38;5;${NEON_CYAN}m🔐 sudo パスワードを入力してください (Enter sudo password):\033[0m")")
+    
+    # Validate password
+    if ! echo "$BECOME_PASS" | sudo -S true 2>/dev/null; then
+        gum style --foreground "$NEON_RED" "  パスワードが違います"
+        exit 1
+    fi
+    
+    # Create secure temp file for ansible become password
+    PASS_FILE=$(mktemp)
+    chmod 600 "$PASS_FILE"
+    echo "$BECOME_PASS" > "$PASS_FILE"
+    trap 'rm -f "$PASS_FILE"' EXIT
+    export ANSIBLE_BECOME_PASSWORD_FILE="$PASS_FILE"
+    
+    # Keep sudo alive
+    while true; do echo "$BECOME_PASS" | sudo -S true 2>/dev/null; sleep 50; kill -0 "$$" || exit; done &
+    
+    {
+        echo "=== COSMIKASE INSTALL LOG ==="
+        echo "Started: $(date)"
+        echo "Config: $CONFIG_FILE"
+        echo ""
+    } > "$LOG_FILE"
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 1: Packages
+    # ─────────────────────────────────────────────────────────────────────────
+    phase_header "1" "6" "パッケージ" "APT, Flatpak, fonts"
+    run_ansible "packages" "packages" || { error_banner; exit 1; }
+    fix_flatpak_icons
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 2: Runtimes  
+    # ─────────────────────────────────────────────────────────────────────────
+    phase_header "2" "6" "ランタイム" "Rust, Go, Zig, Node, Python, Julia"
+    run_ansible "runtimes" "runtimes" || { error_banner; exit 1; }
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 3: Ghostty
+    # ─────────────────────────────────────────────────────────────────────────
+    phase_header "3" "6" "ゴースティ" "Building terminal from source"
+    run_ansible "ghostty" "ghostty" || { error_banner; exit 1; }
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 4: Tools
+    # ─────────────────────────────────────────────────────────────────────────
+    phase_header "4" "6" "ツール" "AI tools, security apps"
+    run_ansible "tools" "tools" || { error_banner; exit 1; }
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 5: Web Apps
+    # ─────────────────────────────────────────────────────────────────────────
+    phase_header "5" "6" "ウェブ" "Desktop shortcuts"
+    run_ansible "web" "web" || { error_banner; exit 1; }
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 6: Dotfiles
+    # ─────────────────────────────────────────────────────────────────────────
+    phase_header "6" "6" "設定" "Shell, editor configs"
+    run_ansible "dotfiles" "dotfiles" || { error_banner; exit 1; }
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # Complete
+    # ─────────────────────────────────────────────────────────────────────────
+    success_banner
+}
+
+main "$@"

@@ -61,6 +61,17 @@ fi
 [[ -d "$HOME/.local/bin" ]] && export PATH="$HOME/.local/bin:$PATH"
 [[ -d "$HOME/bin" ]] && export PATH="$HOME/bin:$PATH"
 
+# ============================================================================
+# Flatpak XDG integration (icons and .desktop files)
+# ============================================================================
+if command -v flatpak >/dev/null 2>&1; then
+    # Add Flatpak export directories so icons and apps appear in launcher
+    [[ -d /var/lib/flatpak/exports/share ]] && \
+        export XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share:/usr/share}:/var/lib/flatpak/exports/share"
+    [[ -d "$HOME/.local/share/flatpak/exports/share" ]] && \
+        export XDG_DATA_DIRS="${XDG_DATA_DIRS}:$HOME/.local/share/flatpak/exports/share"
+fi
+
 # Cargo (Rust)
 [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 
