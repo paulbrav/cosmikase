@@ -1,0 +1,380 @@
+#!/usr/bin/env bash
+# omarchy-pop-theme-cursor - Apply theme to Cursor, VS Code, and Antigravity
+# This script reads cursor.json from a theme and applies it to VS Code forks
+set -euo pipefail
+
+# Find themes directory - check multiple locations
+find_themes_dir() {
+    # 1. Environment variable override
+    if [[ -n "${THEMES_DIR:-}" ]] && [[ -d "$THEMES_DIR" ]]; then
+        echo "$THEMES_DIR"
+        return
+    fi
+    
+    # 2. Installed location
+    local installed="$HOME/.local/share/omarchy-pop/themes"
+    if [[ -d "$installed" ]]; then
+        echo "$installed"
+        return
+    fi
+    
+    # 3. Repo location (relative to this script)
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local repo_themes="$script_dir/../themes"
+    if [[ -d "$repo_themes" ]]; then
+        echo "$(cd "$repo_themes" && pwd)"
+        return
+    fi
+    
+    # 4. Current working directory
+    if [[ -d "./themes" ]]; then
+        echo "$(cd "./themes" && pwd)"
+        return
+    fi
+    
+    # Fallback to default (will fail later with helpful message)
+    echo "$HOME/.local/share/omarchy-pop/themes"
+}
+
+# Detect editor commands
+find_editor_cmd() {
+    local name="$1"
+    if command -v "$name" >/dev/null 2>&1; then
+        echo "$name"
+    else
+        echo ""
+    fi
+}
+
+# Send notification
+notify() {
+    local title="$1"
+    local message="$2"
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -a "omarchy-pop" "$title" "$message" 2>/dev/null || true
+    fi
+}
+
+usage() {
+    echo "Usage: $(basename "$0") <theme-name> [options]"
+    echo ""
+    echo "Apply a theme to Cursor, VS Code, and Antigravity by updating settings"
+    echo "and installing extensions."
+    echo ""
+    echo "Options:"
+    echo "  --no-install       Skip extension installation"
+    echo "  --no-reload        Skip reload attempt"
+    echo "  --cursor-only      Only update Cursor"
+    echo "  --code-only        Only update VS Code"
+    echo "  --antigravity-only Only update Antigravity"
+    echo "  --quiet            Suppress output"
+    echo "  -h, --help         Show this help message"
+    echo ""
+    echo "Supported editors:"
+    echo "  - Cursor       (~/.config/Cursor/User/settings.json)"
+    echo "  - VS Code      (~/.config/Code/User/settings.json)"
+    echo "  - Antigravity  (~/.config/Antigravity/User/settings.json)"
+    echo ""
+    echo "Examples:"
+    echo "  $(basename "$0") catppuccin"
+    echo "  $(basename "$0") tokyo-night --no-reload"
+    echo "  $(basename "$0") gruvbox --cursor-only"
+}
+
+# Parse arguments
+THEME=""
+INSTALL_EXTENSION=true
+ATTEMPT_RELOAD=true
+QUIET=false
+UPDATE_CURSOR=true
+UPDATE_CODE=true
+UPDATE_ANTIGRAVITY=true
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --no-install)
+            INSTALL_EXTENSION=false
+            shift
+            ;;
+        --no-reload)
+            ATTEMPT_RELOAD=false
+            shift
+            ;;
+        --cursor-only)
+            UPDATE_CODE=false
+            UPDATE_ANTIGRAVITY=false
+            shift
+            ;;
+        --code-only)
+            UPDATE_CURSOR=false
+            UPDATE_ANTIGRAVITY=false
+            shift
+            ;;
+        --antigravity-only)
+            UPDATE_CURSOR=false
+            UPDATE_CODE=false
+            shift
+            ;;
+        --quiet|-q)
+            QUIET=true
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            usage
+            exit 1
+            ;;
+        *)
+            if [[ -z "$THEME" ]]; then
+                THEME="$1"
+            else
+                echo "Error: Multiple theme names provided" >&2
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Require theme argument
+if [[ -z "$THEME" ]]; then
+    usage
+    exit 1
+fi
+
+log() {
+    if [[ "$QUIET" != "true" ]]; then
+        echo "$@"
+    fi
+}
+
+THEMES_DIR="$(find_themes_dir)"
+THEME_PATH="$THEMES_DIR/$THEME"
+CURSOR_JSON="$THEME_PATH/cursor.json"
+
+# Validate theme exists
+if [[ ! -d "$THEME_PATH" ]]; then
+    echo "Error: Theme '$THEME' not found in $THEMES_DIR" >&2
+    exit 1
+fi
+
+# Check for cursor.json
+if [[ ! -f "$CURSOR_JSON" ]]; then
+    log "No cursor.json found for theme '$THEME', skipping editor configuration"
+    exit 0
+fi
+
+# Parse cursor.json using jq or python
+parse_json() {
+    local key="$1"
+    if command -v jq >/dev/null 2>&1; then
+        jq -r ".$key // empty" "$CURSOR_JSON"
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 -c "import json; d=json.load(open('$CURSOR_JSON')); print(d.get('$key', ''))"
+    else
+        echo "Error: Neither jq nor python3 available for JSON parsing" >&2
+        exit 1
+    fi
+}
+
+COLOR_THEME=$(parse_json "colorTheme")
+EXTENSION_ID=$(parse_json "extension")
+
+if [[ -z "$COLOR_THEME" ]]; then
+    echo "Error: No colorTheme found in $CURSOR_JSON" >&2
+    exit 1
+fi
+
+log "Applying editor theme: $COLOR_THEME"
+
+# Install extension for each editor
+install_extension() {
+    local cmd="$1"
+    local app_name="$2"
+    
+    if [[ -z "$cmd" ]] || [[ -z "$EXTENSION_ID" ]]; then
+        return
+    fi
+    
+    log "  - Checking extension for $app_name: $EXTENSION_ID"
+    
+    # Check if extension is already installed
+    if ! "$cmd" --list-extensions 2>/dev/null | grep -qi "^${EXTENSION_ID}$"; then
+        log "  - Installing extension for $app_name: $EXTENSION_ID"
+        if "$cmd" --install-extension "$EXTENSION_ID" --force >/dev/null 2>&1; then
+            log "  - Extension installed successfully in $app_name"
+        else
+            log "  - Warning: Failed to install extension in $app_name (may already exist or be unavailable)"
+        fi
+    else
+        log "  - Extension already installed in $app_name"
+    fi
+}
+
+# Update settings.json for a VS Code fork
+update_settings() {
+    local settings_file="$1"
+    local app_name="$2"
+    
+    if [[ ! -d "$(dirname "$settings_file")" ]]; then
+        log "  - $app_name config directory not found, skipping"
+        return 1
+    fi
+    
+    # Create settings file if it doesn't exist
+    if [[ ! -f "$settings_file" ]]; then
+        mkdir -p "$(dirname "$settings_file")"
+        echo '{}' > "$settings_file"
+    fi
+    
+    # Update settings using jq or python
+    if command -v jq >/dev/null 2>&1; then
+        local tmp_file
+        tmp_file=$(mktemp)
+        jq --arg theme "$COLOR_THEME" '.["workbench.colorTheme"] = $theme' "$settings_file" > "$tmp_file"
+        mv "$tmp_file" "$settings_file"
+    elif command -v python3 >/dev/null 2>&1; then
+        python3 << EOF
+import json
+import os
+
+settings_file = "$settings_file"
+color_theme = "$COLOR_THEME"
+
+try:
+    with open(settings_file, 'r') as f:
+        settings = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    settings = {}
+
+settings["workbench.colorTheme"] = color_theme
+
+with open(settings_file, 'w') as f:
+    json.dump(settings, f, indent=4)
+EOF
+    else
+        echo "Error: Neither jq nor python3 available for JSON editing" >&2
+        return 1
+    fi
+    
+    log "  - Updated $app_name settings"
+    return 0
+}
+
+# Track which editors were updated for reload notification
+UPDATED_EDITORS=()
+
+# Process Cursor
+if [[ "$UPDATE_CURSOR" == "true" ]]; then
+    CURSOR_CMD=$(find_editor_cmd "cursor")
+    CURSOR_SETTINGS="$HOME/.config/Cursor/User/settings.json"
+    
+    if [[ -d "$HOME/.config/Cursor" ]]; then
+        if [[ "$INSTALL_EXTENSION" == "true" ]] && [[ -n "$CURSOR_CMD" ]]; then
+            install_extension "$CURSOR_CMD" "Cursor"
+        fi
+        if update_settings "$CURSOR_SETTINGS" "Cursor"; then
+            UPDATED_EDITORS+=("Cursor")
+        fi
+    fi
+fi
+
+# Process VS Code
+if [[ "$UPDATE_CODE" == "true" ]]; then
+    CODE_CMD=$(find_editor_cmd "code")
+    CODE_SETTINGS="$HOME/.config/Code/User/settings.json"
+    
+    if [[ -d "$HOME/.config/Code" ]]; then
+        if [[ "$INSTALL_EXTENSION" == "true" ]] && [[ -n "$CODE_CMD" ]]; then
+            install_extension "$CODE_CMD" "VS Code"
+        fi
+        if update_settings "$CODE_SETTINGS" "VS Code"; then
+            UPDATED_EDITORS+=("VS Code")
+        fi
+    fi
+fi
+
+# Process Antigravity
+if [[ "$UPDATE_ANTIGRAVITY" == "true" ]]; then
+    ANTIGRAVITY_CMD=$(find_editor_cmd "antigravity")
+    ANTIGRAVITY_SETTINGS="$HOME/.config/Antigravity/User/settings.json"
+    
+    if [[ -d "$HOME/.config/Antigravity" ]]; then
+        if [[ "$INSTALL_EXTENSION" == "true" ]] && [[ -n "$ANTIGRAVITY_CMD" ]]; then
+            install_extension "$ANTIGRAVITY_CMD" "Antigravity"
+        fi
+        if update_settings "$ANTIGRAVITY_SETTINGS" "Antigravity"; then
+            UPDATED_EDITORS+=("Antigravity")
+        fi
+    fi
+fi
+
+# Attempt to reload editors
+if [[ "$ATTEMPT_RELOAD" == "true" ]] && [[ ${#UPDATED_EDITORS[@]} -gt 0 ]]; then
+    # Check if any of the editors are running
+    running_editors=()
+    
+    if [[ " ${UPDATED_EDITORS[*]} " =~ " Cursor " ]]; then
+        if pgrep -f "cursor" >/dev/null 2>&1 || pgrep -f "Cursor" >/dev/null 2>&1; then
+            running_editors+=("Cursor")
+        fi
+    fi
+    
+    if [[ " ${UPDATED_EDITORS[*]} " =~ " VS Code " ]]; then
+        if pgrep -f "^code$" >/dev/null 2>&1 || pgrep -f "Code" >/dev/null 2>&1; then
+            running_editors+=("VS Code")
+        fi
+    fi
+    
+    if [[ " ${UPDATED_EDITORS[*]} " =~ " Antigravity " ]]; then
+        if pgrep -f "antigravity" >/dev/null 2>&1 || pgrep -f "Antigravity" >/dev/null 2>&1; then
+            running_editors+=("Antigravity")
+        fi
+    fi
+    
+    if [[ ${#running_editors[@]} -gt 0 ]]; then
+        reloaded=false
+        
+        # Try using xdotool on X11
+        if [[ -z "${WAYLAND_DISPLAY:-}" ]] && command -v xdotool >/dev/null 2>&1; then
+            for editor in "${running_editors[@]}"; do
+                editor_window=$(xdotool search --name "$editor" 2>/dev/null | head -1 || true)
+                if [[ -n "$editor_window" ]]; then
+                    log "  - Attempting $editor reload via xdotool..."
+                    xdotool windowactivate --sync "$editor_window" 2>/dev/null || true
+                    sleep 0.2
+                    xdotool key --window "$editor_window" ctrl+shift+p 2>/dev/null || true
+                    sleep 0.3
+                    xdotool type --window "$editor_window" "Developer: Reload Window" 2>/dev/null || true
+                    sleep 0.2
+                    xdotool key --window "$editor_window" Return 2>/dev/null || true
+                    reloaded=true
+                fi
+            done
+        fi
+        
+        if [[ "$reloaded" != "true" ]]; then
+            editors_list=$(IFS=', '; echo "${running_editors[*]}")
+            notify "Theme Applied" "Theme set to $COLOR_THEME. Press Ctrl+Shift+P → 'Developer: Reload Window' in: $editors_list"
+            log "  - Running editors: $editors_list"
+            log "  - Reload with: Ctrl+Shift+P → 'Developer: Reload Window'"
+        else
+            log "  - Editor reload triggered"
+        fi
+    else
+        log "  - No editors running, theme will apply on next launch"
+    fi
+fi
+
+if [[ ${#UPDATED_EDITORS[@]} -gt 0 ]]; then
+    editors_list=$(IFS=', '; echo "${UPDATED_EDITORS[*]}")
+    log "Editor theme '$COLOR_THEME' applied to: $editors_list"
+else
+    log "No editors configured, skipping"
+fi

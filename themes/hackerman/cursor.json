@@ -1,8 +1,11 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "SynthWave '84",
+  "extension": "robbowen.synthwave-vscode",
+  "colors": {
+    "background": "#0b0c16",
+    "foreground": "#ddf7ff",
+    "accent": "#50f7d4",
+    "error": "#ff6b6b",
+    "warning": "#ffd166"
+  }
 }

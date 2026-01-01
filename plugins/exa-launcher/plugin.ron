@@ -1,0 +1,17 @@
+(
+    name: "Exa Search",
+    description: "AI-powered web search via Exa.ai",
+    bin: (
+        path: "exa-launcher",
+    ),
+    icon: Name("web-browser"),
+    query: (
+        isolate: true,
+        regex: "^exa ",
+    )
+)
+
+
+
+
+

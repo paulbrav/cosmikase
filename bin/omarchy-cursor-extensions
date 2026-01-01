@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# Manage Cursor/VS Code extensions from a list
+set -euo pipefail
+
+EXTENSIONS_FILE="${EXTENSIONS_FILE:-$HOME/.config/Cursor/extensions.txt}"
+CURSOR_CMD="${CURSOR_CMD:-cursor}"
+
+# Check if cursor command exists, fall back to code
+if ! command -v "$CURSOR_CMD" >/dev/null 2>&1; then
+    if command -v code >/dev/null 2>&1; then
+        CURSOR_CMD="code"
+        EXTENSIONS_FILE="${EXTENSIONS_FILE:-$HOME/.config/Code/extensions.txt}"
+    else
+        echo "Error: Neither 'cursor' nor 'code' command found." >&2
+        exit 1
+    fi
+fi
+
+usage() {
+    cat << EOF
+Usage: $(basename "$0") <command>
+
+Commands:
+  install     Install all extensions from the list
+  export      Export currently installed extensions to the list
+  list        Show extensions that would be installed
+  diff        Show extensions in list but not installed (and vice versa)
+
+Options:
+  -f FILE     Use a different extensions file (default: $EXTENSIONS_FILE)
+  -h, --help  Show this help message
+
+Examples:
+  $(basename "$0") install              # Install all extensions
+  $(basename "$0") export               # Save current extensions to file
+  $(basename "$0") diff                 # See what's missing
+EOF
+}
+
+# Parse extensions file, ignoring comments and empty lines
+parse_extensions() {
+    grep -v '^\s*#' "$EXTENSIONS_FILE" 2>/dev/null | grep -v '^\s*$' | tr -d ' '
+}
+
+# Get currently installed extensions
+get_installed() {
+    "$CURSOR_CMD" --list-extensions 2>/dev/null | sort
+}
+
+cmd_install() {
+    if [[ ! -f "$EXTENSIONS_FILE" ]]; then
+        echo "Extensions file not found: $EXTENSIONS_FILE"
+        echo "Run '$(basename "$0") export' first to create it, or create manually."
+        exit 1
+    fi
+
+    echo "Installing extensions from $EXTENSIONS_FILE..."
+    local count=0
+    local failed=0
+
+    while IFS= read -r ext; do
+        [[ -z "$ext" ]] && continue
+        echo -n "  Installing $ext... "
+        if "$CURSOR_CMD" --install-extension "$ext" --force >/dev/null 2>&1; then
+            echo "✓"
+            ((count++))
+        else
+            echo "✗"
+            ((failed++))
+        fi
+    done < <(parse_extensions)
+
+    echo ""
+    echo "Installed: $count extensions"
+    [[ $failed -gt 0 ]] && echo "Failed: $failed extensions"
+}
+
+cmd_export() {
+    echo "Exporting installed extensions to $EXTENSIONS_FILE..."
+    
+    # Create directory if needed
+    mkdir -p "$(dirname "$EXTENSIONS_FILE")"
+    
+    # Write header and extensions
+    {
+        echo "# Cursor/VS Code Extensions"
+        echo "# Exported on $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "# Install with: $(basename "$0") install"
+        echo ""
+        get_installed
+    } > "$EXTENSIONS_FILE"
+    
+    local count
+    count=$(get_installed | wc -l)
+    echo "Exported $count extensions to $EXTENSIONS_FILE"
+}
+
+cmd_list() {
+    if [[ ! -f "$EXTENSIONS_FILE" ]]; then
+        echo "Extensions file not found: $EXTENSIONS_FILE"
+        exit 1
+    fi
+    
+    echo "Extensions in $EXTENSIONS_FILE:"
+    echo ""
+    parse_extensions | while read -r ext; do
+        echo "  $ext"
+    done
+}
+
+cmd_diff() {
+    if [[ ! -f "$EXTENSIONS_FILE" ]]; then
+        echo "Extensions file not found: $EXTENSIONS_FILE"
+        exit 1
+    fi
+    
+    local in_list in_installed
+    in_list=$(parse_extensions | sort)
+    in_installed=$(get_installed)
+    
+    echo "Extensions in list but NOT installed:"
+    comm -23 <(echo "$in_list") <(echo "$in_installed") | while read -r ext; do
+        echo "  + $ext"
+    done
+    
+    echo ""
+    echo "Extensions installed but NOT in list:"
+    comm -13 <(echo "$in_list") <(echo "$in_installed") | while read -r ext; do
+        echo "  - $ext"
+    done
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -f)
+            EXTENSIONS_FILE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        install|export|list|diff)
+            COMMAND="$1"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+# Run command
+case "${COMMAND:-}" in
+    install) cmd_install ;;
+    export)  cmd_export ;;
+    list)    cmd_list ;;
+    diff)    cmd_diff ;;
+    *)
+        usage
+        exit 1
+        ;;
+esac
+
+
+
+
+

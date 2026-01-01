@@ -1,0 +1,178 @@
+# Runtimes role: Install development runtimes (Rust, Bun, uv, nvm, Julia)
+---
+- name: Set runtimes list
+  ansible.builtin.set_fact:
+    enabled_runtimes: "{{ installers.runtimes | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.runtimes | default([]) | rejectattr('install', 'defined') | list }}"
+
+# ============================================================================
+# Rust via rustup
+# ============================================================================
+
+- name: Check if Rust is installed
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
+  register: rust_installed
+
+- name: Install Rust via rustup
+  ansible.builtin.shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  args:
+    creates: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'rust') | list | length > 0
+    - not rust_installed.stat.exists
+
+# ============================================================================
+# Bun
+# ============================================================================
+
+- name: Check if Bun is installed
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.bun/bin/bun"
+  register: bun_installed
+
+- name: Install Bun
+  ansible.builtin.shell: |
+    curl -fsSL https://bun.sh/install | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.bun/bin/bun"
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'bun') | list | length > 0
+    - not bun_installed.stat.exists
+
+# ============================================================================
+# uv (Python package manager)
+# ============================================================================
+
+- name: Check if uv is installed
+  ansible.builtin.stat:
+    path: "{{ local_bin }}/uv"
+  register: uv_installed
+
+- name: Install uv
+  ansible.builtin.shell: |
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+  args:
+    creates: "{{ local_bin }}/uv"
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'uv') | list | length > 0
+    - not uv_installed.stat.exists
+
+# ============================================================================
+# nvm (Node Version Manager)
+# ============================================================================
+
+- name: Check if nvm is installed
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+  register: nvm_installed
+
+- name: Install nvm
+  ansible.builtin.shell: |
+    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'nvm') | list | length > 0
+    - not nvm_installed.stat.exists
+
+- name: Install Node.js LTS via nvm
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    nvm install --lts
+  args:
+    executable: /bin/bash
+    creates: "{{ ansible_env.HOME }}/.nvm/versions/node"
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'nvm') | list | length > 0
+
+# ============================================================================
+# Starship prompt
+# ============================================================================
+
+- name: Check if Starship is installed
+  ansible.builtin.stat:
+    path: "{{ local_bin }}/starship"
+  register: starship_installed
+
+- name: Install Starship
+  ansible.builtin.shell: |
+    curl -sS https://starship.rs/install.sh | sh -s -- -y -b {{ local_bin }}
+  args:
+    creates: "{{ local_bin }}/starship"
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'starship') | list | length > 0
+    - not starship_installed.stat.exists
+
+# ============================================================================
+# Julia
+# ============================================================================
+
+- name: Check if Julia is installed
+  ansible.builtin.command:
+    cmd: which julia
+  register: julia_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Julia
+  ansible.builtin.shell: |
+    curl -fsSL https://install.julialang.org | sh -s -- -y
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'julia') | list | length > 0
+    - julia_check.rc != 0
+  failed_when: false
+  register: julia_install
+
+- name: Note Julia installation status
+  ansible.builtin.debug:
+    msg: "Julia installation {{ 'succeeded' if julia_install.rc == 0 else 'failed (can retry manually: curl -fsSL https://install.julialang.org | sh)' }}"
+  when: julia_install is defined
+
+# ============================================================================
+# uv tools (Python CLI tools)
+# ============================================================================
+
+- name: Install uv tools
+  ansible.builtin.shell: |
+    {{ local_bin }}/uv tool install {{ item.name }}
+  loop: "{{ uv_tools }}"
+  when:
+    - uv_tools is defined and uv_tools | length > 0
+    - item.install | default(true)
+  loop_control:
+    label: "{{ item.name }}"
+  register: uv_tool_result
+  changed_when: "'Installed' in uv_tool_result.stdout"
+  failed_when: false
+
+# ============================================================================
+# npm global packages
+# ============================================================================
+
+- name: Check if npm is available
+  ansible.builtin.command:
+    cmd: which npm
+  register: npm_check
+  changed_when: false
+  failed_when: false
+
+- name: Install npm global packages
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm install -g {{ item.name }}{% if item.version is defined %}@{{ item.version }}{% endif %}
+  args:
+    executable: /bin/bash
+  loop: "{{ npm_packages }}"
+  when:
+    - npm_packages is defined and npm_packages | length > 0
+    - item.install | default(true)
+    - npm_check.rc == 0 or nvm_installed.stat.exists
+  loop_control:
+    label: "{{ item.name }}"
+  register: npm_result
+  changed_when: "'added' in npm_result.stdout"
+  failed_when: false
+

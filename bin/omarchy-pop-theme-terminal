@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# omarchy-pop-theme-terminal - Reload terminal emulators after theme change
+# This script sends reload signals to running terminal emulators
+set -euo pipefail
+
+usage() {
+    echo "Usage: $(basename "$0") [options]"
+    echo ""
+    echo "Send reload signals to running terminal emulators (kitty, ghostty)."
+    echo "These terminals support live config reload via SIGUSR1."
+    echo ""
+    echo "Options:"
+    echo "  --quiet, -q    Suppress output"
+    echo "  -h, --help     Show this help message"
+    echo ""
+    echo "Supported terminals:"
+    echo "  - kitty     (SIGUSR1 reload)"
+    echo "  - ghostty   (SIGUSR1 reload)"
+    echo ""
+    echo "Note: Alacritty auto-reloads config files via inotify."
+}
+
+QUIET=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --quiet|-q)
+            QUIET=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+log() {
+    if [[ "$QUIET" != "true" ]]; then
+        echo "$@"
+    fi
+}
+
+log "Reloading terminal emulators..."
+
+# Reload kitty if running
+if pgrep -x kitty >/dev/null 2>&1; then
+    if pkill -USR1 kitty 2>/dev/null; then
+        log "  - Reloaded kitty"
+    else
+        log "  - Failed to reload kitty"
+    fi
+else
+    log "  - kitty not running"
+fi
+
+# Reload ghostty if running
+if pgrep -x ghostty >/dev/null 2>&1; then
+    if pkill -USR1 ghostty 2>/dev/null; then
+        log "  - Reloaded ghostty"
+    else
+        log "  - Failed to reload ghostty"
+    fi
+else
+    log "  - ghostty not running"
+fi
+
+# Note: Alacritty auto-reloads via inotify, no signal needed
+if pgrep -x alacritty >/dev/null 2>&1; then
+    log "  - alacritty running (auto-reloads via inotify)"
+fi
+
+# Note: COSMIC Terminal watches config files via inotify
+if pgrep -f "cosmic-term" >/dev/null 2>&1; then
+    log "  - cosmic-term running (auto-reloads via inotify)"
+fi
+
+log "Terminal reload complete!"
+

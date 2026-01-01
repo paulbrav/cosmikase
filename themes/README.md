@@ -46,14 +46,17 @@ Each theme directory contains configuration files for various applications:
 - `nvim.lua` / `neovim.lua` - Neovim color scheme
 - `btop.theme` - Resource monitor theming
 - `starship.toml` - Shell prompt configuration
-- `vscode.json` - VS Code color theme (where available)
+
+### Editor/IDE Integration
+- `cursor.json` - Cursor/VS Code theme config (see schema below)
+- `antigravity.conf` - Antigravity launcher colors
 
 ### System Integration
-- `cursor.json` - Cursor theme definitions
+- `cosmic.ron` - COSMIC desktop theme
+- `cosmic-term.ron` - COSMIC Terminal theme
 - `icons.theme` - Preferred icon theme name
 - `chromium.theme` - Browser theme color (RGB format)
 - `light.mode` - Light theme indicator (if present)
-- `antigravity.conf` - Custom launcher configuration
 
 ### Wallpapers
 - `backgrounds/` - Directory containing wallpaper images
@@ -98,6 +101,43 @@ import = /path/to/omarchy-for-popos/themes/tokyo-night/ghostty.conf
 **For Neovim**, source the theme file in your init.lua:
 ```lua
 dofile("/path/to/omarchy-for-popos/themes/tokyo-night/nvim.lua")
+```
+
+## cursor.json Schema
+
+Each theme's `cursor.json` defines the Cursor/VS Code theme configuration:
+
+```json
+{
+  "colorTheme": "Theme Name",      // VS Code theme name (required)
+  "extension": "publisher.ext-id", // Extension ID (null if built-in)
+  "light": true,                   // Light theme flag (optional, default: false)
+  "colors": {
+    "background": "#1e1e2e",       // Primary background color
+    "foreground": "#cdd6f4",       // Primary text color
+    "accent": "#89b4fa",           // Accent/highlight color
+    "error": "#f38ba8",            // Error color
+    "warning": "#f9e2af"           // Warning color
+  }
+}
+```
+
+The chezmoi templates read from this file to:
+- Set the correct `workbench.colorTheme` in Cursor settings
+- Apply colors to Antigravity launcher
+- Generate consistent color overrides across tools
+
+## antigravity.conf Format
+
+Simple key-value format for the Antigravity launcher:
+
+```ini
+# Theme Name palette
+background=#1e1e2e
+foreground=#cdd6f4
+accent=#89b4fa
+warning=#f9e2af
+error=#f38ba8
 ```
 
 ## Theme Consistency

@@ -1,8 +1,11 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "Monokai Pro (Filter Ristretto)",
+  "extension": "monokai.theme-monokai-pro-vscode",
+  "colors": {
+    "background": "#2c2525",
+    "foreground": "#fff1f3",
+    "accent": "#85dacc",
+    "error": "#fd6883",
+    "warning": "#f9cc6c"
+  }
 }

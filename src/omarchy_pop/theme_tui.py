@@ -31,12 +31,12 @@ def _unique_dirs(candidates: Iterable[Path]) -> List[Path]:
 
 def discover_theme_dirs() -> List[Path]:
     env_dir = os.environ.get("THEMES_DIR")
-    repo_dir = os.environ.get("OMARCHY_POP_THEMES")
+    repo_root = _find_repo_root()
     candidates = [
         Path(env_dir) if env_dir else None,
-        Path.home() / ".local" / "share" / "omarchy-pop" / "themes",
-        Path(repo_dir) if repo_dir else None,
+        repo_root / "themes" if repo_root else None,
         Path.cwd() / "themes",
+        Path.home() / ".local" / "share" / "omarchy-pop" / "themes",
     ]
     return _unique_dirs(path for path in candidates if path is not None)
 
@@ -47,9 +47,27 @@ def list_theme_names(base: Optional[Path]) -> List[str]:
     return sorted(entry.name for entry in base.iterdir() if entry.is_dir())
 
 
+def _find_repo_root() -> Optional[Path]:
+    """Walk up from this file to find the repo root (contains themes/ and bin/)."""
+    current = Path(__file__).resolve().parent
+    for _ in range(5):  # Limit search depth
+        if (current / "themes").is_dir() and (current / "bin").is_dir():
+            return current
+        if current.parent == current:
+            break
+        current = current.parent
+    # Also check cwd
+    cwd = Path.cwd()
+    if (cwd / "themes").is_dir() and (cwd / "bin").is_dir():
+        return cwd
+    return None
+
+
 def find_theme_cli() -> Optional[str]:
+    repo_root = _find_repo_root()
     candidates = [
         os.environ.get("THEME_CLI"),
+        str(repo_root / "bin" / "omarchy-pop-theme") if repo_root else None,
         shutil.which("omarchy-pop-theme"),
         str(Path.home() / ".local" / "bin" / "omarchy-pop-theme"),
     ]
@@ -78,9 +96,8 @@ class ThemeTui(App):
         height: 70%;
         max-height: 40;
         border: round $secondary;
-        padding: 1 1;
+        padding: 1 2;
         layout: vertical;
-        row-gap: 1;
     }
 
     #path {
@@ -117,12 +134,12 @@ class ThemeTui(App):
             path_text = (
                 f"Themes directory: {self.active_dir}"
                 if self.active_dir
-                else "No theme directory found. Set THEMES_DIR or run install.sh."
+                else "No theme directory found. Set THEMES_DIR or run 'make install'."
             )
             yield Static(path_text, id="path")
             self.option_list = OptionList()
             yield self.option_list
-            yield Static(self.status, id="status")
+            yield Static("Select a theme and press Enter to apply.", id="status")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -130,7 +147,10 @@ class ThemeTui(App):
         self.option_list.focus()
 
     def watch_status(self, status: str) -> None:
-        self.query_one("#status", Static).update(status)
+        try:
+            self.query_one("#status", Static).update(status)
+        except Exception:
+            pass  # Widget not yet mounted
 
     def _reload_options(self) -> None:
         self.option_list.clear_options()
@@ -138,7 +158,7 @@ class ThemeTui(App):
         for name in names:
             self.option_list.add_option(Option(name, id=name))
         if not names:
-            self.status = "No themes available. Run install.sh to populate themes."
+            self.status = "No themes available. Run 'make install' to populate themes."
 
     def action_refresh(self) -> None:
         self.theme_dirs = discover_theme_dirs()
@@ -146,7 +166,7 @@ class ThemeTui(App):
         path_text = (
             f"Themes directory: {self.active_dir}"
             if self.active_dir
-            else "No theme directory found. Set THEMES_DIR or run install.sh."
+            else "No theme directory found. Set THEMES_DIR or run 'make install'."
         )
         self.query_one("#path", Static).update(path_text)
         self.status = "Theme list refreshed."
@@ -155,7 +175,7 @@ class ThemeTui(App):
     def _apply_theme(self, theme: str) -> None:
         cli = find_theme_cli()
         if not cli:
-            self.status = "omarchy-pop-theme not found. Run install.sh first."
+            self.status = "omarchy-pop-theme not found. Run 'make install' first."
             return
         self.status = f"Applying '{theme}'..."
         result = subprocess.run([cli, theme], capture_output=True, text=True)

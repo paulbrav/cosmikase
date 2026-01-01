@@ -1,0 +1,34 @@
+# Files and directories to ignore during chezmoi apply
+
+# README and documentation
+README.md
+*.md
+
+# License files
+LICENSE*
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Editor/IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Python cache
+__pycache__
+*.pyc
+.pytest_cache
+
+
+
+
+

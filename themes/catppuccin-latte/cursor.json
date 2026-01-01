@@ -1,8 +1,12 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "Catppuccin Latte",
+  "extension": "catppuccin.catppuccin-vsc",
+  "light": true,
+  "colors": {
+    "background": "#eff1f5",
+    "foreground": "#4c4f69",
+    "accent": "#1e66f5",
+    "error": "#d20f39",
+    "warning": "#df8e1d"
+  }
 }

@@ -1,8 +1,11 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "Abyss",
+  "extension": null,
+  "colors": {
+    "background": "#121212",
+    "foreground": "#bebebe",
+    "accent": "#ffc107",
+    "error": "#d35f5f",
+    "warning": "#ffc107"
+  }
 }

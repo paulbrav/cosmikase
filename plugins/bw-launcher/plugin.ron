@@ -1,0 +1,13 @@
+(
+    name: "Bitwarden",
+    description: "Search your Bitwarden vault",
+    bin: (
+        path: "bw-launcher",
+    ),
+    icon: Name("bitwarden"),
+    query: (
+        isolate: true,
+        regex: "^bw ",
+    )
+)
+

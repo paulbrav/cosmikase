@@ -1,0 +1,122 @@
+# Packages role: Install apt packages and Flatpak applications
+---
+# ============================================================================
+# APT Packages
+# ============================================================================
+
+- name: Install core apt packages
+  become: true
+  ansible.builtin.apt:
+    name: "{{ apt.core | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | map(attribute='name') | list + apt.core | default([]) | rejectattr('install', 'defined') | map(attribute='name') | list }}"
+    state: present
+  when: apt.core is defined and apt.core | length > 0
+
+- name: Install GUI apt packages
+  become: true
+  ansible.builtin.apt:
+    name: "{{ apt.gui | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | map(attribute='name') | list + apt.gui | default([]) | rejectattr('install', 'defined') | map(attribute='name') | list }}"
+    state: present
+  when: apt.gui is defined and apt.gui | length > 0
+
+- name: Install terminal apt packages (excluding ghostty)
+  become: true
+  ansible.builtin.apt:
+    name: "{{ item.name }}"
+    state: present
+  loop: "{{ apt.terminal | default([]) }}"
+  when:
+    - apt.terminal is defined
+    - item.name != 'ghostty'
+    - item.install | default(true)
+
+- name: Install YubiKey packages
+  become: true
+  ansible.builtin.apt:
+    name: "{{ apt.yubikey | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | map(attribute='name') | list + apt.yubikey | default([]) | rejectattr('install', 'defined') | map(attribute='name') | list }}"
+    state: present
+  when:
+    - defaults.yubikey_setup | default(false)
+    - apt.yubikey is defined and apt.yubikey | length > 0
+
+# ============================================================================
+# Flatpak
+# ============================================================================
+
+- name: Ensure flatpak is installed
+  become: true
+  ansible.builtin.apt:
+    name: flatpak
+    state: present
+
+- name: Add Flathub remote
+  community.general.flatpak_remote:
+    name: flathub
+    flatpakrepo_url: https://flathub.org/repo/flathub.flatpakrepo
+    state: present
+
+- name: Install Flatpak applications
+  community.general.flatpak:
+    name: "{{ item.id }}"
+    state: present
+  loop: "{{ flatpak.utility | default([]) }}"
+  when:
+    - flatpak.utility is defined
+    - item.install | default(true)
+  loop_control:
+    label: "{{ item.id }}"
+
+# ============================================================================
+# NPM Global Packages
+# ============================================================================
+
+- name: Install npm global packages
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm install -g {{ item.name }}@{{ item.version | default('latest') }}
+  args:
+    executable: /bin/bash
+  loop: "{{ npm | default([]) }}"
+  when:
+    - npm is defined
+    - item.install | default(true)
+  loop_control:
+    label: "{{ item.name }}"
+  register: npm_install
+  changed_when: "'added' in npm_install.stdout or 'updated' in npm_install.stdout"
+  failed_when: false
+
+# ============================================================================
+# Fonts
+# ============================================================================
+
+- name: Ensure unzip is installed for font extraction
+  become: true
+  ansible.builtin.apt:
+    name: unzip
+    state: present
+
+- name: Create fonts directory
+  ansible.builtin.file:
+    path: "{{ local_share }}/fonts"
+    state: directory
+    mode: "0755"
+
+- name: Download and install Nerd Fonts
+  ansible.builtin.unarchive:
+    src: "{{ item.url }}"
+    dest: "{{ local_share }}/fonts"
+    remote_src: true
+    creates: "{{ local_share }}/fonts/JetBrainsMonoNerdFont-Regular.ttf"
+  loop: "{{ fonts.nerd | default([]) }}"
+  when:
+    - fonts.nerd is defined
+    - item.install | default(true)
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Refresh font cache
+  ansible.builtin.command:
+    cmd: fc-cache -f
+  changed_when: false
+

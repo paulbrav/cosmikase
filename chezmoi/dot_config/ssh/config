@@ -1,0 +1,27 @@
+# SSH client configuration
+# See ssh_config(5) for more information
+
+Host *
+    # Use modern ciphers
+    Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr
+    
+    # Compression for slow connections
+    Compression yes
+    
+    # Keep connections alive
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    
+    # Share connections
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 600
+    
+    # Security
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+
+
+
+
+

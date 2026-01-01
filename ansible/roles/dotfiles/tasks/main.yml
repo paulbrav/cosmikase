@@ -1,0 +1,159 @@
+# Dotfiles role: Install and apply dotfiles using chezmoi
+---
+# ============================================================================
+# Install chezmoi
+# ============================================================================
+
+- name: Check if chezmoi is installed
+  ansible.builtin.command:
+    cmd: which chezmoi
+  register: chezmoi_check
+  changed_when: false
+  failed_when: false
+
+- name: Install chezmoi
+  ansible.builtin.shell: |
+    curl -sfL https://get.chezmoi.io | sh
+  args:
+    creates: "{{ local_bin }}/chezmoi"
+  when: chezmoi_check.rc != 0
+
+# ============================================================================
+# Sync themes
+# ============================================================================
+
+- name: Create themes directory
+  ansible.builtin.file:
+    path: "{{ themes_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Sync themes from repository
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/../themes/"
+    dest: "{{ themes_dir }}/"
+    recursive: true
+    delete: false
+  delegate_to: localhost
+
+# ============================================================================
+# Install bin scripts
+# ============================================================================
+
+- name: Create local bin directory
+  ansible.builtin.file:
+    path: "{{ local_bin }}"
+    state: directory
+    mode: "0755"
+
+- name: Install omarchy-pop-theme script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../bin/omarchy-pop-theme"
+    dest: "{{ local_bin }}/omarchy-pop-theme"
+    mode: "0755"
+    remote_src: true
+
+- name: Install omarchy-cursor-extensions script
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../bin/omarchy-cursor-extensions"
+    dest: "{{ local_bin }}/omarchy-cursor-extensions"
+    mode: "0755"
+    remote_src: true
+
+# ============================================================================
+# Initialize and apply chezmoi
+# ============================================================================
+
+- name: Create chezmoi config directory
+  ansible.builtin.file:
+    path: "{{ config_dir }}/chezmoi"
+    state: directory
+    mode: "0755"
+
+- name: Configure chezmoi with theme data
+  ansible.builtin.copy:
+    content: |
+      [data]
+          theme = "{{ defaults.theme | default('nord') }}"
+          themes_dir = "{{ themes_dir }}"
+          font_family = "JetBrainsMono Nerd Font"
+          font_size = 9
+          padding = 14
+    dest: "{{ config_dir }}/chezmoi/chezmoi.toml"
+    mode: "0644"
+
+- name: Initialize chezmoi with source directory
+  ansible.builtin.command:
+    cmd: "{{ local_bin }}/chezmoi init --source={{ playbook_dir }}/../chezmoi --apply=false"
+  args:
+    creates: "{{ local_share }}/chezmoi/.chezmoi.toml.tmpl"
+  environment:
+    PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
+
+- name: Apply chezmoi dotfiles
+  ansible.builtin.command:
+    cmd: "{{ local_bin }}/chezmoi apply --force"
+  environment:
+    PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
+  register: chezmoi_apply
+  changed_when: chezmoi_apply.rc == 0
+
+# ============================================================================
+# Shell integration
+# ============================================================================
+
+- name: Check if .bashrc exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+  register: bashrc_stat
+
+- name: Add omarchy-pop to .bashrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    marker: "# {mark} OMARCHY-POP MANAGED BLOCK"
+    block: |
+      # omarchy-pop
+      export PATH="{{ local_bin }}:$PATH"
+      export TERMINAL="{{ 'ghostty' if defaults.ghostty | default(true) else 'kitty' }}"
+      [ -f "{{ config_dir }}/shell/omarchy-pop.sh" ] && source "{{ config_dir }}/shell/omarchy-pop.sh"
+    create: true
+    mode: "0644"
+  when: bashrc_stat.stat.exists or true
+
+- name: Check if .zshrc exists
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+  register: zshrc_stat
+
+- name: Add omarchy-pop to .zshrc
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    marker: "# {mark} OMARCHY-POP MANAGED BLOCK"
+    block: |
+      # omarchy-pop
+      export PATH="{{ local_bin }}:$PATH"
+      export TERMINAL="{{ 'ghostty' if defaults.ghostty | default(true) else 'kitty' }}"
+      [ -f "{{ config_dir }}/shell/omarchy-pop.sh" ] && source "{{ config_dir }}/shell/omarchy-pop.sh"
+    create: false
+    mode: "0644"
+  when: zshrc_stat.stat.exists
+
+# ============================================================================
+# Install theme-tui
+# ============================================================================
+
+- name: Check if uv is available
+  ansible.builtin.stat:
+    path: "{{ local_bin }}/uv"
+  register: uv_stat
+
+- name: Install theme-tui via uv
+  ansible.builtin.command:
+    cmd: "{{ local_bin }}/uv tool install --reinstall {{ playbook_dir }}/.."
+  environment:
+    PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
+  when: uv_stat.stat.exists
+  register: theme_tui_install
+  changed_when: "'Installed' in theme_tui_install.stdout"
+  failed_when: false
+

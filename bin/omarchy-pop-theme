@@ -1,168 +1,264 @@
 #!/usr/bin/env bash
+# omarchy-pop-theme - Switch themes using chezmoi and helper scripts
+# This script updates the theme in chezmoi data, reapplies dotfiles, and
+# calls per-app helper scripts for live theme updates
 set -euo pipefail
 
-THEMES_DIR="${THEMES_DIR:-$HOME/.local/share/omarchy-pop/themes}"
-CONFIG_DIR="${CONFIG_DIR:-$HOME/.config}"
+# Find script directory for helper scripts
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-usage() {
-  echo "Usage: $(basename "$0") <theme-name>" >&2
-  echo "Available themes:" >&2
-  ls "$THEMES_DIR" 2>/dev/null || true
+# Find themes directory - check multiple locations
+find_themes_dir() {
+    # 1. Environment variable override
+    if [[ -n "${THEMES_DIR:-}" ]] && [[ -d "$THEMES_DIR" ]]; then
+        echo "$THEMES_DIR"
+        return
+    fi
+    
+    # 2. Installed location
+    local installed="$HOME/.local/share/omarchy-pop/themes"
+    if [[ -d "$installed" ]]; then
+        echo "$installed"
+        return
+    fi
+    
+    # 3. Repo location (relative to this script)
+    local repo_themes="$SCRIPT_DIR/../themes"
+    if [[ -d "$repo_themes" ]]; then
+        echo "$(cd "$repo_themes" && pwd)"
+        return
+    fi
+    
+    # 4. Current working directory
+    if [[ -d "./themes" ]]; then
+        echo "$(cd "./themes" && pwd)"
+        return
+    fi
+    
+    # Fallback to default (will fail later with helpful message)
+    echo "$HOME/.local/share/omarchy-pop/themes"
 }
 
-[[ $# -eq 1 ]] || { usage; exit 1; }
-THEME="$1"
-THEME_PATH="$THEMES_DIR/$THEME"
-[[ -d "$THEME_PATH" ]] || { echo "Theme '$THEME' not found in $THEMES_DIR" >&2; usage; exit 1; }
+THEMES_DIR="$(find_themes_dir)"
 
-echo "Applying theme: $THEME"
-
-# ------------------------------------------------------------------------------
-# Terminal Emulators
-# ------------------------------------------------------------------------------
-
-# Ghostty
-if [[ -f "$THEME_PATH/ghostty.conf" ]]; then
-  mkdir -p "$CONFIG_DIR/ghostty/themes"
-  cp "$THEME_PATH/ghostty.conf" "$CONFIG_DIR/ghostty/themes/active.conf"
-  local_conf="$CONFIG_DIR/ghostty/config"
-  if [[ ! -f "$local_conf" ]] || ! grep -q "themes/active.conf" "$local_conf"; then
-    mkdir -p "$CONFIG_DIR/ghostty"
-    echo "include themes/active.conf" >> "$local_conf"
-  fi
-  echo "  - Updated Ghostty"
-fi
-
-# Kitty
-if [[ -f "$THEME_PATH/kitty.conf" ]]; then
-  mkdir -p "$CONFIG_DIR/kitty"
-  cp "$THEME_PATH/kitty.conf" "$CONFIG_DIR/kitty/theme.conf"
-  # Ensure kitty.conf includes the theme
-  kitty_conf="$CONFIG_DIR/kitty/kitty.conf"
-  if [[ ! -f "$kitty_conf" ]] || ! grep -q "include theme.conf" "$kitty_conf"; then
-      echo "include theme.conf" >> "$kitty_conf"
-  fi
-  # Reload kitty if running
-  pkill -USR1 kitty || true
-  echo "  - Updated Kitty"
-fi
-
-# Alacritty
-if [[ -f "$THEME_PATH/alacritty.toml" ]]; then
-  mkdir -p "$CONFIG_DIR/alacritty"
-  cp "$THEME_PATH/alacritty.toml" "$CONFIG_DIR/alacritty/theme.toml"
-  # Ensure alacritty.toml imports the theme
-  alacritty_conf="$CONFIG_DIR/alacritty/alacritty.toml"
-  if [[ ! -f "$alacritty_conf" ]]; then
-      echo "import = [\"$CONFIG_DIR/alacritty/theme.toml\"]" > "$alacritty_conf"
-  else
-      # Check for theme.toml in non-comment lines
-      if ! grep -v "^[[:space:]]*#" "$alacritty_conf" | grep -q "theme.toml"; then
-           echo "Warning: alacritty.toml exists but does not seem to import 'theme.toml'."
-           echo "         Please ensure it contains: import = [\"$CONFIG_DIR/alacritty/theme.toml\"]"
-      fi
-  fi
-  echo "  - Updated Alacritty"
-fi
-
-# ------------------------------------------------------------------------------
-# Shell & Prompts
-# ------------------------------------------------------------------------------
-
-# Starship
-if [[ -f "$THEME_PATH/starship.toml" ]]; then
-  # Starship usually lives at ~/.config/starship.toml
-  cp "$THEME_PATH/starship.toml" "$CONFIG_DIR/starship.toml"
-  echo "  - Updated Starship"
-fi
-
-# ------------------------------------------------------------------------------
-# Editors
-# ------------------------------------------------------------------------------
-
-# Neovim
-if [[ -f "$THEME_PATH/nvim.lua" ]]; then
-  mkdir -p "$CONFIG_DIR/nvim/lua/omarchy_pop"
-  cp "$THEME_PATH/nvim.lua" "$CONFIG_DIR/nvim/lua/omarchy_pop/theme.lua"
-  echo "  - Updated Neovim"
-fi
-
-# Cursor (editor)
-if [[ -f "$THEME_PATH/cursor.json" ]]; then
-  mkdir -p "$CONFIG_DIR/Cursor"
-  cp "$THEME_PATH/cursor.json" "$CONFIG_DIR/Cursor/theme.json"
-  echo "  - Updated Cursor"
-fi
-
-# ------------------------------------------------------------------------------
-# System & Desktop
-# ------------------------------------------------------------------------------
-
-# btop
-if [[ -f "$THEME_PATH/btop.theme" ]]; then
-  mkdir -p "$CONFIG_DIR/btop/themes"
-  cp "$THEME_PATH/btop.theme" "$CONFIG_DIR/btop/themes/$THEME.theme"
-  mkdir -p "$CONFIG_DIR/btop"
-  btop_conf="$CONFIG_DIR/btop/btop.conf"
-  if [[ -f "$btop_conf" ]]; then
-    # Robustly replace color_theme using regex to handle whitespace
-    if grep -q "^[[:space:]]*color_theme" "$btop_conf"; then
-      sed -i -E "s/^[[:space:]]*color_theme[[:space:]]*=.*/color_theme = \"$THEME\"/" "$btop_conf" || true
+usage() {
+    echo "Usage: $(basename "$0") <theme-name> [options]"
+    echo ""
+    echo "Switch to a different theme by updating chezmoi data, reapplying dotfiles,"
+    echo "and calling per-app helper scripts for live theme updates."
+    echo ""
+    echo "Options:"
+    echo "  --no-cursor     Skip Cursor/VS Code theme update"
+    echo "  --no-cosmic     Skip COSMIC desktop theme update"
+    echo "  --no-terminals  Skip terminal reload signals"
+    echo "  --no-chezmoi    Skip chezmoi apply (only run helper scripts)"
+    echo "  --quiet, -q     Suppress output from helper scripts"
+    echo "  -h, --help      Show this help message"
+    echo ""
+    echo "Available themes:"
+    if [[ -d "$THEMES_DIR" ]]; then
+        for theme in "$THEMES_DIR"/*/; do
+            [[ -d "$theme" ]] && echo "  - $(basename "$theme")"
+        done
     else
-      echo "color_theme = \"$THEME\"" >> "$btop_conf"
+        echo "  (themes directory not found - run 'make install' first)"
     fi
-  else
-    echo "color_theme = \"$THEME\"" > "$btop_conf"
-  fi
-  echo "  - Updated btop"
+    echo ""
+    echo "Examples:"
+    echo "  $(basename "$0") nord"
+    echo "  $(basename "$0") tokyo-night --no-cursor"
+    echo "  $(basename "$0") catppuccin --no-chezmoi  # Only update running apps"
+}
+
+# Parse arguments
+THEME=""
+APPLY_CURSOR=true
+APPLY_COSMIC=true
+APPLY_TERMINALS=true
+APPLY_CHEZMOI=true
+QUIET=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --no-cursor)
+            APPLY_CURSOR=false
+            shift
+            ;;
+        --no-cosmic)
+            APPLY_COSMIC=false
+            shift
+            ;;
+        --no-terminals)
+            APPLY_TERMINALS=false
+            shift
+            ;;
+        --no-chezmoi)
+            APPLY_CHEZMOI=false
+            shift
+            ;;
+        --quiet|-q)
+            QUIET=true
+            shift
+            ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            usage
+            exit 1
+            ;;
+        *)
+            if [[ -z "$THEME" ]]; then
+                THEME="$1"
+            else
+                echo "Error: Multiple theme names provided" >&2
+                usage
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Require theme argument
+if [[ -z "$THEME" ]]; then
+    usage
+    exit 1
 fi
 
-# Mako (Notification Daemon)
-if [[ -f "$THEME_PATH/mako.ini" ]]; then
-  mkdir -p "$CONFIG_DIR/mako"
-  cp "$THEME_PATH/mako.ini" "$CONFIG_DIR/mako/config"
-  makoctl reload || true
-  echo "  - Updated Mako"
+THEME_PATH="$THEMES_DIR/$THEME"
+
+# Validate theme exists
+if [[ ! -d "$THEME_PATH" ]]; then
+    echo "Error: Theme '$THEME' not found in $THEMES_DIR" >&2
+    echo "" >&2
+    echo "Available themes:" >&2
+    if [[ -d "$THEMES_DIR" ]]; then
+        for t in "$THEMES_DIR"/*/; do
+            [[ -d "$t" ]] && echo "  - $(basename "$t")" >&2
+        done
+    fi
+    exit 1
 fi
 
-# Waybar
-if [[ -f "$THEME_PATH/waybar.css" ]]; then
-  mkdir -p "$CONFIG_DIR/waybar"
-  cp "$THEME_PATH/waybar.css" "$CONFIG_DIR/waybar/style.css"
-  pkill -SIGUSR2 waybar || true
-  echo "  - Updated Waybar"
+echo "Switching to theme: $THEME"
+
+# Step 1: Update chezmoi and apply dotfiles
+if [[ "$APPLY_CHEZMOI" == "true" ]]; then
+    # Check if chezmoi is available
+    if ! command -v chezmoi >/dev/null 2>&1; then
+        echo "Error: chezmoi not found. Please install chezmoi first." >&2
+        echo "  curl -sfL https://get.chezmoi.io | sh" >&2
+        exit 1
+    fi
+
+    # Update chezmoi data with new theme
+    # chezmoi stores data in ~/.config/chezmoi/chezmoi.toml
+    CHEZMOI_CONFIG="$HOME/.config/chezmoi/chezmoi.toml"
+
+    if [[ -f "$CHEZMOI_CONFIG" ]]; then
+        # Update existing config
+        if grep -q '^\[data\]' "$CHEZMOI_CONFIG"; then
+            # Update theme in existing [data] section
+            if grep -q '^[[:space:]]*theme[[:space:]]*=' "$CHEZMOI_CONFIG"; then
+                sed -i "s/^[[:space:]]*theme[[:space:]]*=.*/    theme = \"$THEME\"/" "$CHEZMOI_CONFIG"
+            else
+                # Add theme to [data] section
+                sed -i "/^\[data\]/a\\    theme = \"$THEME\"" "$CHEZMOI_CONFIG"
+            fi
+            # Update themes_dir to match the actual location
+            if grep -q '^[[:space:]]*themes_dir[[:space:]]*=' "$CHEZMOI_CONFIG"; then
+                sed -i "s|^[[:space:]]*themes_dir[[:space:]]*=.*|    themes_dir = \"$THEMES_DIR\"|" "$CHEZMOI_CONFIG"
+            else
+                sed -i "/^\[data\]/a\\    themes_dir = \"$THEMES_DIR\"" "$CHEZMOI_CONFIG"
+            fi
+        else
+            # Add [data] section
+            echo "" >> "$CHEZMOI_CONFIG"
+            echo "[data]" >> "$CHEZMOI_CONFIG"
+            echo "    theme = \"$THEME\"" >> "$CHEZMOI_CONFIG"
+            echo "    themes_dir = \"$THEMES_DIR\"" >> "$CHEZMOI_CONFIG"
+        fi
+    else
+        # Create new config
+        mkdir -p "$(dirname "$CHEZMOI_CONFIG")"
+        cat > "$CHEZMOI_CONFIG" << EOF
+[data]
+    theme = "$THEME"
+    themes_dir = "$THEMES_DIR"
+    font_family = "JetBrainsMono Nerd Font"
+    font_size = 9
+    padding = 14
+EOF
+    fi
+
+    echo "  - Updated chezmoi configuration"
+
+    # Reapply dotfiles with new theme
+    echo "  - Applying dotfiles..."
+    chezmoi apply --force
 fi
 
-# Icons
-if [[ -f "$THEME_PATH/icons.theme" ]]; then
-    # Read the icon theme name from the file
-    ICON_THEME=$(grep "Inherits=" "$THEME_PATH/icons.theme" | cut -d= -f2 || echo "")
-    if [[ -n "$ICON_THEME" ]]; then
-         # Attempt to set via gsettings (Works for GNOME/Pop Shell)
-         gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME" 2>/dev/null || true
-         echo "  - Updated Icon Theme to $ICON_THEME (gsettings)"
+# Step 2: Call helper scripts for live app updates
+echo ""
+echo "Updating applications..."
+
+# Helper script arguments
+HELPER_ARGS=("$THEME")
+if [[ "$QUIET" == "true" ]]; then
+    HELPER_ARGS+=("--quiet")
+fi
+
+# Find helper script (check script dir first, then PATH)
+find_helper() {
+    local name="$1"
+    if [[ -x "$SCRIPT_DIR/$name" ]]; then
+        echo "$SCRIPT_DIR/$name"
+    elif command -v "$name" >/dev/null 2>&1; then
+        command -v "$name"
+    else
+        echo ""
+    fi
+}
+
+# Apply Cursor/VS Code theme
+if [[ "$APPLY_CURSOR" == "true" ]]; then
+    CURSOR_HELPER=$(find_helper "omarchy-pop-theme-cursor")
+    if [[ -n "$CURSOR_HELPER" ]]; then
+        echo "  - Applying Cursor theme..."
+        THEMES_DIR="$THEMES_DIR" "$CURSOR_HELPER" "${HELPER_ARGS[@]}" || true
+    else
+        echo "  - Warning: omarchy-pop-theme-cursor not found"
     fi
 fi
 
-# Antigravity (Omarchy AI tool)
-if [[ -f "$THEME_PATH/antigravity.conf" ]]; then
-  mkdir -p "$CONFIG_DIR/antigravity"
-  cp "$THEME_PATH/antigravity.conf" "$CONFIG_DIR/antigravity/theme.conf"
-  echo "  - Updated Antigravity"
+# Apply COSMIC desktop theme
+if [[ "$APPLY_COSMIC" == "true" ]]; then
+    COSMIC_HELPER=$(find_helper "omarchy-pop-theme-cosmic")
+    if [[ -n "$COSMIC_HELPER" ]]; then
+        echo "  - Applying COSMIC theme..."
+        THEMES_DIR="$THEMES_DIR" "$COSMIC_HELPER" "${HELPER_ARGS[@]}" || true
+    else
+        echo "  - Warning: omarchy-pop-theme-cosmic not found"
+    fi
 fi
 
-# Opencode
-if [[ -f "$THEME_PATH/opencode.toml" ]]; then
-  mkdir -p "$CONFIG_DIR/opencode"
-  cp "$THEME_PATH/opencode.toml" "$CONFIG_DIR/opencode/theme.toml"
-  echo "  - Updated Opencode"
+# Reload terminal emulators
+if [[ "$APPLY_TERMINALS" == "true" ]]; then
+    TERMINAL_HELPER=$(find_helper "omarchy-pop-theme-terminal")
+    if [[ -n "$TERMINAL_HELPER" ]]; then
+        echo "  - Reloading terminals..."
+        if [[ "$QUIET" == "true" ]]; then
+            "$TERMINAL_HELPER" --quiet || true
+        else
+            "$TERMINAL_HELPER" || true
+        fi
+    else
+        echo "  - Warning: omarchy-pop-theme-terminal not found"
+    fi
 fi
 
-# ------------------------------------------------------------------------------
-# COSMIC (Placeholder)
-# ------------------------------------------------------------------------------
-# TODO: Implement COSMIC theme switching when CLI tools are available.
-# Currently COSMIC themes are JSON files in ~/.config/cosmic/com.system76.CosmicTheme/
-# We would need to copy the theme json and set it active.
-
-echo "Theme '$THEME' applied. Restart applications to see changes."
+echo ""
+echo "Theme '$THEME' applied successfully!"

@@ -1,8 +1,12 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "Rosé Pine Dawn",
+  "extension": "mvllow.rose-pine",
+  "light": true,
+  "colors": {
+    "background": "#faf4ed",
+    "foreground": "#575279",
+    "accent": "#56949f",
+    "error": "#b4637a",
+    "warning": "#ea9d34"
+  }
 }

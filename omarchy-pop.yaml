@@ -84,8 +84,8 @@ apt:
     - name: shellcheck
       desc: Static analysis tool for shell scripts
       install: true
-    - name: stow
-      desc: Symlink farm manager (great for dotfiles)
+    - name: bpython
+      desc: Fancy interface to the Python interpreter
       install: true
     # Debugging & Profiling
     - name: gdb
@@ -155,9 +155,6 @@ apt:
       install: true
 
   gui:
-    - name: pinta
-      desc: Simple drawing/editing program modeled after Paint.NET
-      install: true
     - name: xournalpp
       desc: Handwriting note-taking software with PDF annotation support
       install: true
@@ -194,7 +191,7 @@ flatpak:
   utility:
     - id: com.system76.KeyboardConfigurator
       desc: Configure System76 keyboards
-      install: true
+      install: false  # Will be available in COSMIC store soon
     - id: md.obsidian.Obsidian
       desc: A knowledge base that works on top of a local folder of plain text Markdown files
       install: true
@@ -250,6 +247,12 @@ fonts:
 
 installers:
   runtimes:
+    - name: starship
+      desc: Minimal, blazing-fast, and customizable shell prompt
+      method: script
+      url: https://starship.rs/install.sh
+      check: starship
+      install: true
     - name: rust
       desc: Systems programming language
       method: script
@@ -269,6 +272,11 @@ installers:
       url: https://astral.sh/uv/install.sh
       check: uv
       install: true
+    - name: nvm
+      desc: Node Version Manager for managing Node.js versions
+      method: custom_nvm
+      check: nvm
+      install: true
     - name: julia
       desc: High-level, high-performance, dynamic programming language
       method: script
@@ -282,6 +290,12 @@ installers:
       method: deb
       deb_url: "https://api2.cursor.sh/updates/download/golden/linux-x64-deb/cursor/latest"
       check: cursor
+      install: true
+    - name: cursor-agent
+      desc: Cursor AI Agent CLI for terminal use
+      method: script
+      url: https://cursor.com/install
+      check: cursor-agent
       install: true
     - name: antigravity
       desc: Google Antigravity
@@ -320,10 +334,17 @@ installers:
       desc: Convert potentially dangerous PDFs/docs to safe PDFs
       method: custom_dangerzone
       install: true
-
 npm:
   - name: "@openai/codex"
     desc: OpenAI Codex CLI
+    version: "latest"
+    install: true
+  - name: "@bitwarden/cli"
+    desc: Bitwarden CLI for secrets management with chezmoi
+    version: "latest"
+    install: true
+  - name: "@withgraphite/graphite-cli"
+    desc: CLI for stacking Git branches and managing PRs
     version: "latest"
     install: true
 
@@ -334,7 +355,7 @@ uv_tools:
     desc: An extremely fast Python linter and formatter
     install: true
   - name: pyrefly
-    desc: Python tool (specifics needed)
+    desc: Fast Python type checker from Meta
     install: true
   - name: mypy
     desc: Optional static typing for Python
@@ -390,3 +411,6 @@ hp_zbook_ultra:
     Pop uses its own kernel; if webcam/suspend are broken, consider Ubuntu 24.04 OEM
     for linux-oem-24.04b support or a small OEM partition. Mixing OEM kernel into Pop
     is unsupported.
+
+
+

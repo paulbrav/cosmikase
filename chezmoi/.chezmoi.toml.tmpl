@@ -1,0 +1,22 @@
+# Chezmoi configuration file
+# This is a template that generates ~/.config/chezmoi/chezmoi.toml
+
+sourceDir = "{{ .chezmoi.sourceDir }}"
+
+[data]
+{{- $theme := "nord" }}
+{{- $themes_dir := "~/.local/share/omarchy-pop/themes" }}
+{{- $font_family := "JetBrainsMono Nerd Font" }}
+{{- $font_size := 9 }}
+{{- $padding := 14 }}
+{{- if hasKey . "theme" }}{{ $theme = .theme }}{{ end }}
+{{- if hasKey . "themes_dir" }}{{ $themes_dir = .themes_dir }}{{ end }}
+{{- if hasKey . "font_family" }}{{ $font_family = .font_family }}{{ end }}
+{{- if hasKey . "font_size" }}{{ $font_size = .font_size }}{{ end }}
+{{- if hasKey . "padding" }}{{ $padding = .padding }}{{ end }}
+    theme = "{{ $theme }}"
+    themes_dir = "{{ $themes_dir }}"
+    font_family = "{{ $font_family }}"
+    font_size = {{ $font_size }}
+    padding = {{ $padding }}
+

@@ -1,0 +1,69 @@
+# Main Ansible playbook for omarchy-pop
+# Configures a Pop!_OS workstation with packages, runtimes, tools, and dotfiles
+---
+- name: Configure Pop!_OS workstation
+  hosts: localhost
+  connection: local
+  become: false
+
+  vars:
+    config_file: "{{ lookup('env', 'CONFIG_FILE') | default('../omarchy-pop.yaml', true) }}"
+    # Load the omarchy-pop.yaml configuration
+    omarchy_config: "{{ lookup('file', config_file) | from_yaml }}"
+
+    # Extract commonly used values
+    defaults: "{{ omarchy_config.defaults | default({}) }}"
+    apt: "{{ omarchy_config.apt | default({}) }}"
+    flatpak: "{{ omarchy_config.flatpak | default({}) }}"
+    fonts: "{{ omarchy_config.fonts | default({}) }}"
+    installers: "{{ omarchy_config.installers | default({}) }}"
+    uv_tools: "{{ omarchy_config.uv_tools | default([]) }}"
+    npm_packages: "{{ omarchy_config.npm | default([]) }}"
+    themes: "{{ omarchy_config.themes | default({}) }}"
+
+    # Paths
+    local_bin: "{{ ansible_env.HOME }}/.local/bin"
+    local_share: "{{ ansible_env.HOME }}/.local/share"
+    config_dir: "{{ ansible_env.HOME }}/.config"
+    themes_dir: "{{ local_share }}/omarchy-pop/themes"
+
+  pre_tasks:
+    - name: Display configuration source
+      ansible.builtin.debug:
+        msg: "Loading configuration from: {{ config_file }}"
+
+    - name: Update apt cache
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      tags: [packages, apt]
+
+  roles:
+    - role: packages
+      tags: [packages]
+    - role: runtimes
+      tags: [runtimes]
+    - role: ghostty
+      tags: [ghostty]
+      when: defaults.ghostty | default(true)
+    - role: tools
+      tags: [tools]
+    - role: dotfiles
+      tags: [dotfiles]
+
+  post_tasks:
+    - name: Display completion message
+      ansible.builtin.debug:
+        msg: |
+          ✓ omarchy-pop installation complete!
+
+          Next steps:
+          - Log out and back in for font changes to take effect
+          - Run 'omarchy-pop-theme <name>' to switch themes
+          - Run 'theme-tui' for interactive theme selection
+
+
+
+
+

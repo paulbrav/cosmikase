@@ -12,7 +12,8 @@ LOG_TAG="omarchy-power"
 log() { logger -t "$LOG_TAG" "$*"; }
 
 current_profile() {
-  powerprofilesctl get 2>/dev/null || echo "unknown"
+  # system76-power profile output is like "Power Profile: Balanced" - extract the profile name
+  system76-power profile 2>/dev/null | grep -i "Power Profile:" | awk '{print tolower($3)}' || echo "unknown"
 }
 
 set_profile() {
@@ -20,7 +21,9 @@ set_profile() {
   if [[ "$(current_profile)" == "$profile" ]]; then
     return 0
   fi
-  if powerprofilesctl set "$profile" 2>/dev/null; then
+  # system76-power returns non-zero exit when stdout is redirected, so we verify by checking the profile after
+  system76-power profile "$profile" >/dev/null 2>&1 || true
+  if [[ "$(current_profile)" == "$profile" ]]; then
     log "Set power profile: $profile"
     return 0
   fi
@@ -46,7 +49,7 @@ apply_once() {
       set_profile "balanced" || true
     fi
   else
-    set_profile "power-saver" || true
+    set_profile "battery" || true
   fi
 }
 
@@ -57,7 +60,7 @@ case "${1:---apply}" in
     fi
     ;;
   --battery)
-    set_profile "power-saver" || true
+    set_profile "battery" || true
     ;;
   --apply|*)
     apply_once || true

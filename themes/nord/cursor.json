@@ -1,8 +1,11 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "Nord",
+  "extension": "arcticicestudio.nord-visual-studio-code",
+  "colors": {
+    "background": "#2e3440",
+    "foreground": "#eceff4",
+    "accent": "#88c0d0",
+    "error": "#bf616a",
+    "warning": "#ebcb8b"
+  }
 }

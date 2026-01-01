@@ -1,0 +1,297 @@
+# Tools role: Install AI tools, security tools, and other custom installers
+---
+# ============================================================================
+# Helper variables
+# ============================================================================
+
+- name: Set enabled tools lists
+  ansible.builtin.set_fact:
+    enabled_ai_tools: "{{ installers.ai_tools | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.ai_tools | default([]) | rejectattr('install', 'defined') | list }}"
+    enabled_security: "{{ installers.security | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.security | default([]) | rejectattr('install', 'defined') | list }}"
+
+# ============================================================================
+# Brave Browser (official apt repo)
+# ============================================================================
+
+- name: Check if Brave is installed
+  ansible.builtin.command:
+    cmd: which brave-browser
+  register: brave_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Brave Browser
+  when:
+    - enabled_security | selectattr('name', 'equalto', 'brave-browser') | list | length > 0
+    - brave_check.rc != 0
+  block:
+    - name: Install curl for Brave setup
+      become: true
+      ansible.builtin.apt:
+        name: curl
+        state: present
+
+    - name: Download Brave keyring
+      become: true
+      ansible.builtin.get_url:
+        url: https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg
+        dest: /usr/share/keyrings/brave-browser-archive-keyring.gpg
+        mode: "0644"
+
+    - name: Add Brave repository
+      become: true
+      ansible.builtin.get_url:
+        url: https://brave-browser-apt-release.s3.brave.com/brave-browser.sources
+        dest: /etc/apt/sources.list.d/brave-browser-release.sources
+        mode: "0644"
+
+    - name: Update apt cache for Brave
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Brave browser
+      become: true
+      ansible.builtin.apt:
+        name: brave-browser
+        state: present
+
+# ============================================================================
+# Dangerzone (document sanitizer)
+# ============================================================================
+
+- name: Check if Dangerzone is installed
+  ansible.builtin.command:
+    cmd: which dangerzone
+  register: dangerzone_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Dangerzone
+  when:
+    - enabled_security | selectattr('name', 'equalto', 'dangerzone') | list | length > 0
+    - dangerzone_check.rc != 0
+  block:
+    - name: Install GPG prerequisites
+      become: true
+      ansible.builtin.apt:
+        name:
+          - gpg
+          - ca-certificates
+        state: present
+
+    - name: Create keyrings directory
+      become: true
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Dangerzone GPG key
+      become: true
+      ansible.builtin.shell: |
+        gpg --keyserver hkps://keys.openpgp.org \
+          --no-default-keyring \
+          --keyring gnupg-ring:/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg \
+          --recv-keys DE28AB241FA48260FAC9B8BAA7C9B38522604281
+        chmod +r /etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg
+      args:
+        creates: /etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg
+
+    - name: Get Ubuntu codename
+      ansible.builtin.command:
+        cmd: lsb_release -cs
+      register: ubuntu_codename
+      changed_when: false
+
+    - name: Add Dangerzone repository
+      become: true
+      ansible.builtin.copy:
+        content: |
+          deb [signed-by=/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg] https://packages.freedom.press/apt-tools-prod {{ ubuntu_codename.stdout }} main
+        dest: /etc/apt/sources.list.d/fpf-apt-tools.list
+        mode: "0644"
+
+    - name: Update apt cache for Dangerzone
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Dangerzone
+      become: true
+      ansible.builtin.apt:
+        name: dangerzone
+        state: present
+
+# ============================================================================
+# Antigravity (Google AI tool)
+# ============================================================================
+
+- name: Check if Antigravity is installed
+  ansible.builtin.command:
+    cmd: which antigravity
+  register: antigravity_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Antigravity
+  when:
+    - enabled_ai_tools | selectattr('name', 'equalto', 'antigravity') | list | length > 0
+    - antigravity_check.rc != 0
+  block:
+    - name: Create keyrings directory
+      become: true
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Antigravity GPG key
+      become: true
+      ansible.builtin.shell: |
+        curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | \
+          gpg --dearmor -o /etc/apt/keyrings/antigravity-repo-key.gpg
+      args:
+        creates: /etc/apt/keyrings/antigravity-repo-key.gpg
+
+    - name: Add Antigravity repository
+      become: true
+      ansible.builtin.copy:
+        content: |
+          deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main
+        dest: /etc/apt/sources.list.d/antigravity.list
+        mode: "0644"
+
+    - name: Update apt cache for Antigravity
+      become: true
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install Antigravity
+      become: true
+      ansible.builtin.apt:
+        name: antigravity
+        state: present
+
+# ============================================================================
+# Cursor (AI Code Editor)
+# ============================================================================
+
+- name: Check if Cursor is installed
+  ansible.builtin.command:
+    cmd: which cursor
+  register: cursor_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Cursor
+  when:
+    - enabled_ai_tools | selectattr('name', 'equalto', 'cursor') | list | length > 0
+    - cursor_check.rc != 0
+  block:
+    - name: Get Cursor item config
+      ansible.builtin.set_fact:
+        cursor_config: "{{ enabled_ai_tools | selectattr('name', 'equalto', 'cursor') | first }}"
+
+    - name: Create temp directory for Cursor
+      ansible.builtin.tempfile:
+        state: directory
+      register: cursor_tmp
+
+    - name: Download Cursor deb
+      ansible.builtin.get_url:
+        url: "{{ cursor_config.deb_url }}"
+        dest: "{{ cursor_tmp.path }}/cursor.deb"
+        mode: "0644"
+      when: cursor_config.deb_url is defined
+
+    - name: Install Cursor
+      become: true
+      ansible.builtin.apt:
+        deb: "{{ cursor_tmp.path }}/cursor.deb"
+      when: cursor_config.deb_url is defined
+
+    - name: Clean up Cursor temp
+      ansible.builtin.file:
+        path: "{{ cursor_tmp.path }}"
+        state: absent
+
+# ============================================================================
+# Claude Code (npm)
+# ============================================================================
+
+- name: Check if Claude Code is installed
+  ansible.builtin.command:
+    cmd: which claude
+  register: claude_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Claude Code via npm
+  ansible.builtin.shell: |
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm install -g @anthropic-ai/claude-code
+  args:
+    executable: /bin/bash
+  when:
+    - enabled_ai_tools | selectattr('name', 'equalto', 'claude-code') | list | length > 0
+    - claude_check.rc != 0
+  failed_when: false
+
+# ============================================================================
+# OpenCode (bun)
+# ============================================================================
+
+- name: Check if OpenCode is installed
+  ansible.builtin.command:
+    cmd: which opencode
+  register: opencode_check
+  changed_when: false
+  failed_when: false
+
+- name: Install OpenCode via bun
+  ansible.builtin.shell: |
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+    bun add -g opencode-ai
+  args:
+    executable: /bin/bash
+  when:
+    - enabled_ai_tools | selectattr('name', 'equalto', 'opencode') | list | length > 0
+    - opencode_check.rc != 0
+  failed_when: false
+
+# ============================================================================
+# Power Management (udev rules)
+# ============================================================================
+
+- name: Install power management helper
+  become: true
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../bin/omarchy-power-helper"
+    dest: /usr/local/bin/omarchy-power-helper
+    mode: "0755"
+  failed_when: false
+
+- name: Install udev power rules
+  become: true
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../omarchy/udev/99-omarchy-power.rules"
+    dest: /etc/udev/rules.d/99-omarchy-power.rules
+    mode: "0644"
+  register: udev_rules
+  failed_when: false
+
+- name: Reload udev rules
+  become: true
+  ansible.builtin.command:
+    cmd: udevadm control --reload-rules
+  when: udev_rules.changed | default(false)
+
+- name: Trigger udev rules
+  become: true
+  ansible.builtin.command:
+    cmd: udevadm trigger
+  when: udev_rules.changed | default(false)
+

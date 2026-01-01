@@ -1,8 +1,11 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "Gruvbox Dark Hard",
+  "extension": "jdinhlife.gruvbox",
+  "colors": {
+    "background": "#1d2021",
+    "foreground": "#ebdbb2",
+    "accent": "#458588",
+    "error": "#cc241d",
+    "warning": "#d79921"
+  }
 }

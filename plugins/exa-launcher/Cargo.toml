@@ -1,0 +1,23 @@
+[package]
+name = "exa-launcher"
+version = "0.1.0"
+edition = "2021"
+description = "Pop!_OS launcher plugin for Exa.ai web search"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+toml = "0.8"
+dirs = "6.0"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+
+
+
+
+

@@ -1,8 +1,11 @@
 {
-  "name": "Osaka Jade",
-  "background": "#0b1314",
-  "foreground": "#c8f3e4",
-  "accent": "#52e0a0",
-  "error": "#ff6b6b",
-  "warning": "#ffd166"
+  "colorTheme": "One Dark Pro",
+  "extension": "zhuangtongfa.material-theme",
+  "colors": {
+    "background": "#0b1314",
+    "foreground": "#c8f3e4",
+    "accent": "#3ecf8e",
+    "error": "#ff6b6b",
+    "warning": "#ffd166"
+  }
 }

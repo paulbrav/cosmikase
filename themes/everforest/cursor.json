@@ -1,8 +1,11 @@
 {
-  "name": "Pop Default",
-  "background": "#0c0d11",
-  "foreground": "#e6e6e6",
-  "accent": "#48b9c7",
-  "error": "#e95420",
-  "warning": "#f6d32d"
+  "colorTheme": "Everforest Dark",
+  "extension": "sainnhe.everforest",
+  "colors": {
+    "background": "#2d353b",
+    "foreground": "#d3c6aa",
+    "accent": "#7fbbb3",
+    "error": "#e67e80",
+    "warning": "#dbbc7f"
+  }
 }

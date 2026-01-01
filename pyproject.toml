@@ -1,15 +1,31 @@
 [project]
-name = "omarchy-pop-theme-tui"
-version = "0.1.0"
-description = "Textual TUI for browsing and applying omarchy-pop themes"
+name = "omarchy-pop"
+version = "0.2.0"
+description = "Omarchy-style dotfiles and theme management for Pop!_OS"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "pyyaml>=6.0",
     "textual>=0.76,<0.90",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ansible>=9.0",
+    "ansible-lint>=24.0",
+    "ruff>=0.4",
 ]
 
 [project.scripts]
 theme-tui = "omarchy_pop.theme_tui:run"
+omarchy-config = "omarchy_pop.config:_main"
 
 [tool.uv]
 package = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

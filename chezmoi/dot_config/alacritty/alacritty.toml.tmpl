@@ -1,0 +1,29 @@
+# Alacritty terminal configuration
+# Theme is dynamically applied via chezmoi template
+
+general.import = [ "{{ .themes_dir }}/{{ .theme }}/alacritty.toml" ]
+
+[env]
+TERM = "xterm-256color"
+
+[font]
+normal = { family = "{{ .font_family }}", style = "Regular" }
+bold = { family = "{{ .font_family }}", style = "Bold" }
+italic = { family = "{{ .font_family }}", style = "Italic" }
+size = {{ .font_size }}
+
+[window]
+padding.x = {{ .padding }}
+padding.y = {{ .padding }}
+decorations = "None"
+
+[keyboard]
+bindings = [
+{ key = "Insert", mods = "Shift", action = "Paste" },
+{ key = "Insert", mods = "Control", action = "Copy" }
+]
+
+
+
+
+

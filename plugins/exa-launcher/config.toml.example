@@ -1,0 +1,14 @@
+# Exa Launcher Configuration
+# Copy this file to ~/.config/exa-launcher/config.toml
+
+# Your Exa.ai API key (get one at https://exa.ai/)
+# Alternatively, set the EXA_API_KEY environment variable
+api_key = "your-api-key-here"
+
+# Number of search results to return (default: 8)
+num_results = 8
+
+
+
+
+

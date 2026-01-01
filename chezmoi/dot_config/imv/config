@@ -1,0 +1,45 @@
+[options]
+# Suppress built-in key bind documentation
+suppress_default_binds = true
+# Use full screen
+fullscreen = false
+# Loop through images
+loop = true
+
+[binds]
+# Exit
+q = quit
+<Escape> = quit
+
+# Navigation
+<Left> = prev
+<Right> = next
+j = next
+k = prev
+gg = goto 1
+<Shift+g> = goto -1
+
+# Zoom
+<Up> = zoom 1
+<Down> = zoom -1
+= = zoom actual
+<Shift+=> = zoom 1
+- = zoom -1
+f = zoom fit
+
+# Pan
+h = pan 50 0
+l = pan -50 0
+<Shift+j> = pan 0 -50
+<Shift+k> = pan 0 50
+
+# Rotation
+r = rotate by 90
+
+# Toggle fullscreen
+<Return> = toggle fullscreen
+
+
+
+
+
