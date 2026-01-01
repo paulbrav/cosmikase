@@ -10,6 +10,12 @@ defaults:
 
 apt:
   core:
+    - name: zellij
+      desc: Terminal workspace with batteries included
+      install: true
+    - name: gum
+      desc: Tool for glamorous shell scripts
+      install: true
     - name: fzf
       desc: General-purpose command-line fuzzy finder
       install: true
@@ -135,6 +141,13 @@ apt:
       install: true
     - name: firejail-profiles
       desc: Profiles for Firejail
+      install: true
+    # Fingerprint Authentication
+    - name: fprintd
+      desc: D-Bus daemon for fingerprint reader access
+      install: true
+    - name: libpam-fprintd
+      desc: PAM module for fingerprint authentication
       install: true
 
   yubikey:
@@ -405,12 +418,14 @@ themes:
 
 hp_zbook_ultra:
   emit_notes: true
-  oem_kernel: linux-oem-24.04b
+  oem_kernel: linux-oem-24.04c
   warn_on_mix: true
-  notes: >
-    Pop uses its own kernel; if webcam/suspend are broken, consider Ubuntu 24.04 OEM
-    for linux-oem-24.04b support or a small OEM partition. Mixing OEM kernel into Pop
-    is unsupported.
+  notes: |
+    Pop!_OS uses its own kernel. HP ZBook Ultra G1a hardware status:
+    - Fingerprint: Works with fprintd after firmware update (fwupdmgr update)
+    - Webcam: Requires AMD ISP4 driver, expected in mainline kernel 6.18
+      Current workaround: Ubuntu 24.04 with linux-image-oem-24.04c
+    - WiFi (MT7925): May have stability issues, improved in kernel 6.16+
 
 
 

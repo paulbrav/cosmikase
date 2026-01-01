@@ -2,11 +2,18 @@
 name = "omarchy-pop"
 version = "0.2.0"
 description = "Omarchy-style dotfiles and theme management for Pop!_OS"
+authors = [
+    { name = "Paul Brav", email = "paulbrav@github.com" }
+]
+license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
+urls = { homepage = "https://github.com/paulbrav/omarchy-for-popos", repository = "https://github.com/paulbrav/omarchy-for-popos" }
 dependencies = [
     "pyyaml>=6.0",
     "textual>=0.76,<0.90",
+    "tomli-w>=1.0.0",
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -14,11 +21,15 @@ dev = [
     "ansible>=9.0",
     "ansible-lint>=24.0",
     "ruff>=0.4",
+    "pytest>=8.0",
 ]
 
 [project.scripts]
 theme-tui = "omarchy_pop.theme_tui:run"
 omarchy-config = "omarchy_pop.config:_main"
+omarchy-chezmoi = "omarchy_pop.chezmoi:_main"
+omarchy-validate-ron = "omarchy_pop.validate:_main"
+omarchy-themes-dir = "omarchy_pop.themes:_main"
 
 [tool.uv]
 package = true
