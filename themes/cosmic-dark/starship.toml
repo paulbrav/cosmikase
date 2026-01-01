@@ -1,0 +1,27 @@
+palette = "cosmic_dark"
+add_newline = false
+format = "$all"
+
+[palettes.cosmic_dark]
+base = "#141414"
+text = "#c8c8c8"
+accent = "#4096f5"
+warn = "#f5f540"
+err = "#f54040"
+
+[character]
+success_symbol = "[➜](accent) "
+error_symbol = "[✗](err) "
+
+[cmd_duration]
+style = "warn"
+
+[directory]
+style = "accent"
+
+[git_branch]
+style = "text"
+
+[git_status]
+style = "warn"
+

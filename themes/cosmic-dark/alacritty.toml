@@ -1,0 +1,31 @@
+# COSMIC Dark default palette for Alacritty
+# Matches ghostty.conf color scheme
+
+[colors.primary]
+background = "#141414"
+foreground = "#c8c8c8"
+
+[colors.cursor]
+cursor = "#4096f5"
+text = "#141414"
+
+[colors.normal]
+black = "#000000"
+red = "#f54040"
+green = "#40f596"
+yellow = "#f5f540"
+blue = "#4096f5"
+magenta = "#b480dc"
+cyan = "#40c8c8"
+white = "#c8c8c8"
+
+[colors.bright]
+black = "#505050"
+red = "#ff6666"
+green = "#66ffb4"
+yellow = "#ffff66"
+blue = "#66b4ff"
+magenta = "#cc99eb"
+cyan = "#66e0e0"
+white = "#e6e6e6"
+

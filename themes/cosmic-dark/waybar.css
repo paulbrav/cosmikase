@@ -1,0 +1,80 @@
+/* COSMIC Dark default Waybar styling */
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "CaskaydiaMono Nerd Font", "Symbols Nerd Font Mono", monospace;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(20, 20, 20, 0.95);
+    color: #c8c8c8;
+}
+
+#workspaces button {
+    padding: 0 6px;
+    color: #c8c8c8;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: #4096f5;
+    background: rgba(64, 150, 245, 0.2);
+}
+
+#workspaces button:hover {
+    background: rgba(64, 150, 245, 0.1);
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#bluetooth,
+#tray,
+#custom-omarchy,
+#custom-update {
+    padding: 0 10px;
+    margin: 0 2px;
+    color: #c8c8c8;
+}
+
+#custom-omarchy {
+    color: #4096f5;
+    font-weight: bold;
+}
+
+#battery.charging {
+    color: #40f596;
+}
+
+#battery.warning:not(.charging) {
+    color: #f5f540;
+}
+
+#battery.critical:not(.charging) {
+    color: #f54040;
+}
+
+#network.disconnected {
+    color: #f54040;
+}
+
+#pulseaudio.muted {
+    color: #505050;
+}
+
+tooltip {
+    background: #1e1e1e;
+    border: 1px solid #4096f5;
+    border-radius: 5px;
+}
+
+tooltip label {
+    color: #c8c8c8;
+}
+

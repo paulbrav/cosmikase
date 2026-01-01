@@ -1,0 +1,27 @@
+palette = "cosmic_light"
+add_newline = false
+format = "$all"
+
+[palettes.cosmic_light]
+base = "#f0f0f0"
+text = "#373737"
+accent = "#3380d9"
+warn = "#b39900"
+err = "#cc3333"
+
+[character]
+success_symbol = "[➜](accent) "
+error_symbol = "[✗](err) "
+
+[cmd_duration]
+style = "warn"
+
+[directory]
+style = "accent"
+
+[git_branch]
+style = "text"
+
+[git_status]
+style = "warn"
+

@@ -1,0 +1,80 @@
+/* COSMIC Light default Waybar styling */
+
+* {
+    border: none;
+    border-radius: 0;
+    font-family: "CaskaydiaMono Nerd Font", "Symbols Nerd Font Mono", monospace;
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(240, 240, 240, 0.95);
+    color: #373737;
+}
+
+#workspaces button {
+    padding: 0 6px;
+    color: #373737;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: #3380d9;
+    background: rgba(51, 128, 217, 0.2);
+}
+
+#workspaces button:hover {
+    background: rgba(51, 128, 217, 0.1);
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#bluetooth,
+#tray,
+#custom-omarchy,
+#custom-update {
+    padding: 0 10px;
+    margin: 0 2px;
+    color: #373737;
+}
+
+#custom-omarchy {
+    color: #3380d9;
+    font-weight: bold;
+}
+
+#battery.charging {
+    color: #009a4d;
+}
+
+#battery.warning:not(.charging) {
+    color: #b39900;
+}
+
+#battery.critical:not(.charging) {
+    color: #cc3333;
+}
+
+#network.disconnected {
+    color: #cc3333;
+}
+
+#pulseaudio.muted {
+    color: #c3c3c3;
+}
+
+tooltip {
+    background: #e0e0e0;
+    border: 1px solid #3380d9;
+    border-radius: 5px;
+}
+
+tooltip label {
+    color: #373737;
+}
+

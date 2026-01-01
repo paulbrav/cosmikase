@@ -1,0 +1,12 @@
+{
+  "colorTheme": "Default Dark Modern",
+  "extension": null,
+  "colors": {
+    "background": "#141414",
+    "foreground": "#c8c8c8",
+    "accent": "#4096f5",
+    "error": "#f54040",
+    "warning": "#f5f540"
+  }
+}
+
