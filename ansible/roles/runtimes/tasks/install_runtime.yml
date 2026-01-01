@@ -1,0 +1,44 @@
+# Install a single runtime using the spec from runtime_specs
+# Variables: runtime_name (from loop), runtime_specs (from main.yml)
+---
+- name: Get spec for {{ runtime_name }}
+  ansible.builtin.set_fact:
+    spec: "{{ runtime_specs[runtime_name] }}"
+
+- name: Check if {{ runtime_name }} is installed (path)
+  ansible.builtin.stat:
+    path: "{{ spec.check_path }}"
+  register: runtime_path_check
+  when: spec.check_path | length > 0
+
+- name: Check if {{ runtime_name }} is installed (command)
+  ansible.builtin.command:
+    cmd: "which {{ spec.check_cmd }}"
+  register: runtime_cmd_check
+  changed_when: false
+  failed_when: runtime_cmd_check.rc > 1
+  when: spec.check_cmd is defined
+
+- name: Set installation needed flag for {{ runtime_name }}
+  ansible.builtin.set_fact:
+    needs_install: "{{ (spec.check_path | length > 0 and not runtime_path_check.stat.exists) or (spec.check_cmd is defined and runtime_cmd_check.rc != 0) }}"
+
+- name: Download {{ runtime_name }} installer
+  ansible.builtin.get_url:
+    url: "{{ spec.installer_url }}"
+    dest: "{{ spec.installer_dest }}"
+    mode: "0755"
+    checksum: "{{ spec.checksum | default(omit) }}"
+  when: needs_install
+
+- name: Install {{ runtime_name }}
+  ansible.builtin.command:
+    cmd: "{{ spec.install_cmd }}"
+  when: needs_install
+
+- name: Clean up {{ runtime_name }} installer
+  ansible.builtin.file:
+    path: "{{ spec.installer_dest }}"
+    state: absent
+  when: needs_install
+

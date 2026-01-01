@@ -1,141 +1,63 @@
-# Runtimes role: Install development runtimes (Rust, Bun, uv, nvm, Julia)
+# Runtimes role: Install development runtimes (Rust, Bun, uv, nvm, Starship, Julia)
 ---
 - name: Set runtimes list
   ansible.builtin.set_fact:
     enabled_runtimes: "{{ installers.runtimes | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.runtimes | default([]) | rejectattr('install', 'defined') | list }}"
 
 # ============================================================================
-# Rust via rustup
+# Runtime definitions - data-driven installation
 # ============================================================================
 
-- name: Check if Rust is installed
-  ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
-  register: rust_installed
-
-- name: Download rustup installer
-  ansible.builtin.get_url:
-    url: https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
-    dest: /tmp/rustup-init
-    mode: "0755"
-    checksum: "sha256:https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init.sha256"
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'rust') | list | length > 0
-    - not rust_installed.stat.exists
-
-- name: Install Rust via rustup
-  ansible.builtin.command:
-    cmd: /tmp/rustup-init -y
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'rust') | list | length > 0
-    - not rust_installed.stat.exists
-
-- name: Clean up rustup installer
-  ansible.builtin.file:
-    path: /tmp/rustup-init
-    state: absent
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'rust') | list | length > 0
-    - not rust_installed.stat.exists
-
-# ============================================================================
-# Bun
-# ============================================================================
-
-- name: Check if Bun is installed
-  ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.bun/bin/bun"
-  register: bun_installed
-
-- name: Download Bun installer
-  ansible.builtin.get_url:
-    url: https://bun.sh/install
-    dest: /tmp/bun-install.sh
-    mode: "0755"
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'bun') | list | length > 0
-    - not bun_installed.stat.exists
-
-- name: Install Bun
-  ansible.builtin.command:
-    cmd: /tmp/bun-install.sh
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'bun') | list | length > 0
-    - not bun_installed.stat.exists
-
-- name: Clean up Bun installer
-  ansible.builtin.file:
-    path: /tmp/bun-install.sh
-    state: absent
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'bun') | list | length > 0
-    - not bun_installed.stat.exists
+- name: Define runtime install specs
+  ansible.builtin.set_fact:
+    runtime_specs:
+      rust:
+        check_path: "{{ ansible_env.HOME }}/.cargo/bin/rustc"
+        installer_url: https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init
+        installer_dest: /tmp/rustup-init
+        install_cmd: /tmp/rustup-init -y
+        checksum: "sha256:https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init.sha256"
+      bun:
+        check_path: "{{ ansible_env.HOME }}/.bun/bin/bun"
+        installer_url: https://bun.sh/install
+        installer_dest: /tmp/bun-install.sh
+        install_cmd: /tmp/bun-install.sh
+      uv:
+        check_path: "{{ local_bin }}/uv"
+        installer_url: https://astral.sh/uv/install.sh
+        installer_dest: /tmp/uv-install.sh
+        install_cmd: /tmp/uv-install.sh
+      nvm:
+        check_path: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+        installer_url: https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh
+        installer_dest: /tmp/nvm-install.sh
+        install_cmd: /tmp/nvm-install.sh
+      starship:
+        check_path: "{{ local_bin }}/starship"
+        installer_url: https://starship.rs/install.sh
+        installer_dest: /tmp/starship-install.sh
+        install_cmd: "/tmp/starship-install.sh -y -b {{ local_bin }}"
+      julia:
+        check_path: ""  # Uses which instead
+        check_cmd: julia
+        installer_url: https://install.julialang.org
+        installer_dest: /tmp/julia-install.sh
+        install_cmd: /tmp/julia-install.sh -y
 
 # ============================================================================
-# uv (Python package manager)
+# Install runtimes using data-driven loop
 # ============================================================================
 
-- name: Check if uv is installed
-  ansible.builtin.stat:
-    path: "{{ local_bin }}/uv"
-  register: uv_installed
-
-- name: Download uv installer
-  ansible.builtin.get_url:
-    url: https://astral.sh/uv/install.sh
-    dest: /tmp/uv-install.sh
-    mode: "0755"
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'uv') | list | length > 0
-    - not uv_installed.stat.exists
-
-- name: Install uv
-  ansible.builtin.command:
-    cmd: /tmp/uv-install.sh
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'uv') | list | length > 0
-    - not uv_installed.stat.exists
-
-- name: Clean up uv installer
-  ansible.builtin.file:
-    path: /tmp/uv-install.sh
-    state: absent
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'uv') | list | length > 0
-    - not uv_installed.stat.exists
+- name: Install script-based runtimes
+  ansible.builtin.include_tasks: install_runtime.yml
+  loop: "{{ enabled_runtimes | map(attribute='name') | list }}"
+  loop_control:
+    loop_var: runtime_name
+  when: runtime_name in runtime_specs
 
 # ============================================================================
-# nvm (Node Version Manager)
+# Post-install: Node.js LTS via nvm
 # ============================================================================
-
-- name: Check if nvm is installed
-  ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
-  register: nvm_installed
-
-- name: Download nvm installer
-  ansible.builtin.get_url:
-    url: https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh
-    dest: /tmp/nvm-install.sh
-    mode: "0755"
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'nvm') | list | length > 0
-    - not nvm_installed.stat.exists
-
-- name: Install nvm
-  ansible.builtin.command:
-    cmd: /tmp/nvm-install.sh
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'nvm') | list | length > 0
-    - not nvm_installed.stat.exists
-
-- name: Clean up nvm installer
-  ansible.builtin.file:
-    path: /tmp/nvm-install.sh
-    state: absent
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'nvm') | list | length > 0
-    - not nvm_installed.stat.exists
 
 - name: Install Node.js LTS via nvm
   ansible.builtin.shell: |
@@ -147,80 +69,6 @@
     creates: "{{ ansible_env.HOME }}/.nvm/versions/node"
   when:
     - enabled_runtimes | selectattr('name', 'equalto', 'nvm') | list | length > 0
-
-# ============================================================================
-# Starship prompt
-# ============================================================================
-
-- name: Check if Starship is installed
-  ansible.builtin.stat:
-    path: "{{ local_bin }}/starship"
-  register: starship_installed
-
-- name: Download Starship installer
-  ansible.builtin.get_url:
-    url: https://starship.rs/install.sh
-    dest: /tmp/starship-install.sh
-    mode: "0755"
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'starship') | list | length > 0
-    - not starship_installed.stat.exists
-
-- name: Install Starship
-  ansible.builtin.command:
-    cmd: /tmp/starship-install.sh -y -b {{ local_bin }}
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'starship') | list | length > 0
-    - not starship_installed.stat.exists
-
-- name: Clean up Starship installer
-  ansible.builtin.file:
-    path: /tmp/starship-install.sh
-    state: absent
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'starship') | list | length > 0
-    - not starship_installed.stat.exists
-
-# ============================================================================
-# Julia
-# ============================================================================
-
-- name: Check if Julia is installed
-  ansible.builtin.command:
-    cmd: which julia
-  register: julia_check
-  changed_when: false
-  failed_when: julia_check.rc > 1
-
-- name: Download Julia installer
-  ansible.builtin.get_url:
-    url: https://install.julialang.org
-    dest: /tmp/julia-install.sh
-    mode: "0755"
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'julia') | list | length > 0
-    - julia_check.rc != 0
-
-- name: Install Julia
-  ansible.builtin.command:
-    cmd: /tmp/julia-install.sh -y
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'julia') | list | length > 0
-    - julia_check.rc != 0
-  register: julia_install
-
-- name: Clean up Julia installer
-  ansible.builtin.file:
-    path: /tmp/julia-install.sh
-    state: absent
-  when:
-    - enabled_runtimes | selectattr('name', 'equalto', 'julia') | list | length > 0
-    - julia_check.rc != 0
-
-- name: Note Julia installation status
-  ansible.builtin.debug:
-    msg: "Julia installation {{ 'succeeded' if julia_install.rc == 0 else 'failed (can retry manually: curl -fsSL https://install.julialang.org | sh)' }}"
-  when: julia_install is defined
 
 # ============================================================================
 # uv tools (Python CLI tools)
@@ -249,12 +97,18 @@
   changed_when: false
   failed_when: npm_check.rc > 1
 
+- name: Check if nvm is installed
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+  register: nvm_installed
+
 - name: Install npm global packages
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     if ! npm list -g {{ item.name }} --depth=0 >/dev/null 2>&1; then
       npm install -g {{ item.name }}{% if item.version is defined %}@{{ item.version }}{% endif %}
+
       echo "installed"
     else
       echo "already installed"
@@ -270,4 +124,3 @@
     label: "{{ item.name }}"
   register: npm_result
   changed_when: "'installed' in npm_result.stdout"
-
