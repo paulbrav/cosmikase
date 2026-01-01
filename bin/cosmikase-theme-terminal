@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# omarchy-pop-theme-terminal - Reload terminal emulators after theme change
+# cosmikase-theme-terminal - Reload terminal emulators after theme change
 # This script sends reload signals to running terminal emulators
 set -euo pipefail
 
 # Source shared library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=bin/omarchy-pop-lib.sh
-source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
 
 usage() {
     echo "Usage: $(basename "$0") [options]"
@@ -19,10 +19,10 @@ usage() {
     echo "  -h, --help     Show this help message"
     echo ""
     echo "Supported terminals:"
-    echo "  - kitty     (SIGUSR1 reload)"
-    echo "  - ghostty   (SIGUSR1 reload)"
-    echo ""
-    echo "Note: Alacritty auto-reloads config files via inotify."
+    echo "  - kitty       (SIGUSR1 reload)"
+    echo "  - ghostty     (SIGUSR1 reload)"
+    echo "  - alacritty   (auto-reload via inotify)"
+    echo "  - cosmic-term (auto-reload via inotify)"
 }
 
 QUIET=false
@@ -47,37 +47,38 @@ done
 
 log "Reloading terminal emulators..."
 
-# Reload kitty if running
-if pgrep -x kitty >/dev/null 2>&1; then
-    if pkill -USR1 kitty 2>/dev/null; then
-        log "  - Reloaded kitty"
+# Terminals that need SIGUSR1 signal to reload
+declare -A SIGNAL_TERMINALS=(
+    ["kitty"]="kitty"
+    ["ghostty"]="ghostty"
+)
+
+# Terminals that auto-reload via inotify (no action needed)
+declare -A INOTIFY_TERMINALS=(
+    ["alacritty"]="alacritty"
+    ["cosmic-term"]="cosmic-term"
+)
+
+# Reload signal-based terminals
+for name in "${!SIGNAL_TERMINALS[@]}"; do
+    process="${SIGNAL_TERMINALS[$name]}"
+    if pgrep -x "$process" >/dev/null 2>&1; then
+        if pkill -USR1 "$process" 2>/dev/null; then
+            log "  - Reloaded $name"
+        else
+            log "  - Failed to reload $name"
+        fi
     else
-        log "  - Failed to reload kitty"
+        log "  - $name not running"
     fi
-else
-    log "  - kitty not running"
-fi
+done
 
-# Reload ghostty if running
-if pgrep -x ghostty >/dev/null 2>&1; then
-    if pkill -USR1 ghostty 2>/dev/null; then
-        log "  - Reloaded ghostty"
-    else
-        log "  - Failed to reload ghostty"
+# Note inotify-based terminals
+for name in "${!INOTIFY_TERMINALS[@]}"; do
+    process="${INOTIFY_TERMINALS[$name]}"
+    if pgrep -xf "$process" >/dev/null 2>&1; then
+        log "  - $name running (auto-reloads via inotify)"
     fi
-else
-    log "  - ghostty not running"
-fi
-
-# Note: Alacritty auto-reloads via inotify, no signal needed
-if pgrep -x alacritty >/dev/null 2>&1; then
-    log "  - alacritty running (auto-reloads via inotify)"
-fi
-
-# Note: COSMIC Terminal watches config files via inotify
-if pgrep -f "cosmic-term" >/dev/null 2>&1; then
-    log "  - cosmic-term running (auto-reloads via inotify)"
-fi
+done
 
 log "Terminal reload complete!"
-
