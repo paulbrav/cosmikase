@@ -68,7 +68,6 @@ jobs:
       - name: Run ansible-lint
         working-directory: ansible
         run: ansible-lint playbook.yml
-        continue-on-error: true  # Don't fail on lint warnings initially
 
   yaml:
     name: YAML Lint
@@ -81,7 +80,24 @@ jobs:
 
       - name: Run yamllint
         run: yamllint -d relaxed ansible/ omarchy-pop.yaml
-        continue-on-error: true
+
+  rust:
+    name: Rust Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          components: clippy, rustfmt
+      - name: Check formatting (exa-launcher)
+        run: cd plugins/exa-launcher && cargo fmt --check
+      - name: Run clippy (exa-launcher)
+        run: cd plugins/exa-launcher && cargo clippy -- -D warnings
+      - name: Check formatting (bw-launcher)
+        run: cd plugins/bw-launcher && cargo fmt --check
+      - name: Run clippy (bw-launcher)
+        run: cd plugins/bw-launcher && cargo clippy -- -D warnings
 
 
 
