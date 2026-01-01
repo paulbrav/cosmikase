@@ -31,6 +31,19 @@ alias path='echo -e ${PATH//:/\\n}'
 alias zshrc='${EDITOR:-nvim} ~/.zshrc'
 alias bashrc='${EDITOR:-nvim} ~/.bashrc'
 
+# Short tool aliases
+alias n='nvim'
+alias d='docker'
+alias f='fdfind'
+alias r='rg'
+
+# Fuzzy finder with preview
+alias ff='fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"'
+
+# TUI applications
+alias lzg='lazygit'
+alias lzd='lazydocker'
+
 # --- Omakub-style Utility Functions ---
 
 # Archive utilities
@@ -105,7 +118,73 @@ dexec() {
     docker exec -it "$1" "${2:-bash}";
 }
 
+# Web app launcher management
+# Create a desktop launcher for a web application
+web2app() {
+    if [[ $# -lt 2 ]]; then
+        echo "Usage: web2app <Name> <URL> [Icon URL]" >&2
+        echo "Example: web2app 'My App' 'https://example.com' 'https://example.com/icon.png'" >&2
+        return 1
+    fi
 
+    local name="$1"
+    local url="$2"
+    local icon_url="${3:-}"
+    local safe_name="${name// /-}"
+    local desktop_file="$HOME/.local/share/applications/${safe_name}.desktop"
+    local icon_path=""
 
+    # Download icon if URL provided
+    if [[ -n "$icon_url" ]]; then
+        local icon_dir="$HOME/.local/share/icons/web2app"
+        mkdir -p "$icon_dir"
+        icon_path="$icon_dir/${safe_name}.png"
+        if ! curl -sL "$icon_url" -o "$icon_path"; then
+            echo "Warning: Failed to download icon, using default" >&2
+            icon_path="web-browser"
+        fi
+    else
+        icon_path="web-browser"
+    fi
 
+    # Create desktop file
+    cat > "$desktop_file" << EOF
+[Desktop Entry]
+Name=${name}
+Exec=xdg-open ${url}
+Icon=${icon_path}
+Type=Application
+Categories=Network;WebBrowser;
+StartupNotify=true
+EOF
+
+    chmod +x "$desktop_file"
+    echo "Created web app launcher: $desktop_file"
+}
+
+# Remove a web app launcher
+web2app-remove() {
+    if [[ -z "$1" ]]; then
+        echo "Usage: web2app-remove <Name>" >&2
+        return 1
+    fi
+
+    local name="$1"
+    local safe_name="${name// /-}"
+    local desktop_file="$HOME/.local/share/applications/${safe_name}.desktop"
+    local icon_path="$HOME/.local/share/icons/web2app/${safe_name}.png"
+
+    if [[ -f "$desktop_file" ]]; then
+        rm "$desktop_file"
+        echo "Removed: $desktop_file"
+    else
+        echo "Desktop file not found: $desktop_file" >&2
+        return 1
+    fi
+
+    if [[ -f "$icon_path" ]]; then
+        rm "$icon_path"
+        echo "Removed icon: $icon_path"
+    fi
+}
 
