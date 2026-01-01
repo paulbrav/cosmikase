@@ -57,48 +57,48 @@
     state: directory
     mode: "0755"
 
-- name: Install omarchy-pop-theme script
+- name: Install cosmikase-theme script
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/omarchy-pop-theme"
-    dest: "{{ local_bin }}/omarchy-pop-theme"
+    src: "{{ playbook_dir }}/../bin/cosmikase-theme"
+    dest: "{{ local_bin }}/cosmikase-theme"
     mode: "0755"
     remote_src: true
 
-- name: Install omarchy-pop theme helper library
+- name: Install cosmikase theme helper library
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/omarchy-pop-lib.sh"
-    dest: "{{ local_bin }}/omarchy-pop-lib.sh"
+    src: "{{ playbook_dir }}/../bin/cosmikase-lib.sh"
+    dest: "{{ local_bin }}/cosmikase-lib.sh"
     mode: "0755"
     remote_src: true
 
-- name: Install omarchy-pop theme helper scripts
+- name: Install cosmikase theme helper scripts
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../bin/{{ item }}"
     dest: "{{ local_bin }}/{{ item }}"
     mode: "0755"
     remote_src: true
   loop:
-    - omarchy-pop-theme-cosmic
-    - omarchy-pop-theme-cursor
-    - omarchy-pop-theme-terminal
+    - cosmikase-theme-cosmic
+    - cosmikase-theme-cursor
+    - cosmikase-theme-terminal
 
-- name: Install omarchy-pop system helper scripts
+- name: Install cosmikase system helper scripts
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../bin/{{ item }}"
     dest: "{{ local_bin }}/{{ item }}"
     mode: "0755"
     remote_src: true
   loop:
-    - omarchy-pop
-    - omarchy-pop-install
-    - omarchy-pop-databases
-    - omarchy-pop-update
-    - omarchy-power-helper
+    - cosmikase
+    - cosmikase-install
+    - cosmikase-databases
+    - cosmikase-update
+    - cosmikase-power-helper
 
-- name: Install omarchy-cursor-extensions script
+- name: Install cosmikase-cursor-extensions script
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/omarchy-cursor-extensions"
-    dest: "{{ local_bin }}/omarchy-cursor-extensions"
+    src: "{{ playbook_dir }}/../bin/cosmikase-cursor-extensions"
+    dest: "{{ local_bin }}/cosmikase-cursor-extensions"
     mode: "0755"
     remote_src: true
 
@@ -149,15 +149,15 @@
     path: "{{ ansible_env.HOME }}/.bashrc"
   register: bashrc_stat
 
-- name: Add omarchy-pop to .bashrc
+- name: Add cosmikase to .bashrc
   ansible.builtin.blockinfile:
     path: "{{ ansible_env.HOME }}/.bashrc"
-    marker: "# {mark} OMARCHY-POP MANAGED BLOCK"
+    marker: "# {mark} COSMIKASE MANAGED BLOCK"
     block: |
-      # omarchy-pop
+      # cosmikase
       export PATH="{{ local_bin }}:$PATH"
       export TERMINAL="{{ 'ghostty' if defaults.ghostty | default(true) else 'kitty' }}"
-      [ -f "{{ config_dir }}/shell/omarchy-pop.sh" ] && source "{{ config_dir }}/shell/omarchy-pop.sh"
+      [ -f "{{ config_dir }}/shell/cosmikase.sh" ] && source "{{ config_dir }}/shell/cosmikase.sh"
     create: true
     mode: "0644"
   when: bashrc_stat.stat.exists or true
@@ -167,15 +167,15 @@
     path: "{{ ansible_env.HOME }}/.zshrc"
   register: zshrc_stat
 
-- name: Add omarchy-pop to .zshrc
+- name: Add cosmikase to .zshrc
   ansible.builtin.blockinfile:
     path: "{{ ansible_env.HOME }}/.zshrc"
-    marker: "# {mark} OMARCHY-POP MANAGED BLOCK"
+    marker: "# {mark} COSMIKASE MANAGED BLOCK"
     block: |
-      # omarchy-pop
+      # cosmikase
       export PATH="{{ local_bin }}:$PATH"
       export TERMINAL="{{ 'ghostty' if defaults.ghostty | default(true) else 'kitty' }}"
-      [ -f "{{ config_dir }}/shell/omarchy-pop.sh" ] && source "{{ config_dir }}/shell/omarchy-pop.sh"
+      [ -f "{{ config_dir }}/shell/cosmikase.sh" ] && source "{{ config_dir }}/shell/cosmikase.sh"
     create: false
     mode: "0644"
   when: zshrc_stat.stat.exists

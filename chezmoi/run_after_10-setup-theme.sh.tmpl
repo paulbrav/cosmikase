@@ -42,12 +42,12 @@ fi
 
 # Copy neovim theme
 if [[ -f "$THEME_PATH/neovim.lua" ]] || [[ -f "$THEME_PATH/nvim.lua" ]]; then
-    mkdir -p ~/.config/nvim/lua/omarchy_pop
-    rm -f ~/.config/nvim/lua/omarchy_pop/theme.lua
+    mkdir -p ~/.config/nvim/lua/cosmikase
+    rm -f ~/.config/nvim/lua/cosmikase/theme.lua
     if [[ -f "$THEME_PATH/neovim.lua" ]]; then
-        cp "$THEME_PATH/neovim.lua" ~/.config/nvim/lua/omarchy_pop/theme.lua
+        cp "$THEME_PATH/neovim.lua" ~/.config/nvim/lua/cosmikase/theme.lua
     elif [[ -f "$THEME_PATH/nvim.lua" ]]; then
-        cp "$THEME_PATH/nvim.lua" ~/.config/nvim/lua/omarchy_pop/theme.lua
+        cp "$THEME_PATH/nvim.lua" ~/.config/nvim/lua/cosmikase/theme.lua
     fi
     echo "  - Copied neovim theme"
 fi
@@ -56,23 +56,23 @@ fi
 # These handle live app updates (COSMIC, terminals, etc.)
 
 # Apply COSMIC theme (wallpaper, colors, terminal, dark/light mode)
-if [[ -x "$LOCAL_BIN/omarchy-pop-theme-cosmic" ]]; then
+if [[ -x "$LOCAL_BIN/cosmikase-theme-cosmic" ]]; then
     echo "  - Applying COSMIC theme..."
-    THEMES_DIR="$THEMES_DIR" "$LOCAL_BIN/omarchy-pop-theme-cosmic" "$THEME" --quiet || true
-elif command -v omarchy-pop-theme-cosmic >/dev/null 2>&1; then
+    THEMES_DIR="$THEMES_DIR" "$LOCAL_BIN/cosmikase-theme-cosmic" "$THEME" --quiet || true
+elif command -v cosmikase-theme-cosmic >/dev/null 2>&1; then
     echo "  - Applying COSMIC theme..."
-    THEMES_DIR="$THEMES_DIR" omarchy-pop-theme-cosmic "$THEME" --quiet || true
+    THEMES_DIR="$THEMES_DIR" cosmikase-theme-cosmic "$THEME" --quiet || true
 else
     echo "  - Skipping COSMIC theme (helper not installed)"
 fi
 
 # Reload terminal emulators
-if [[ -x "$LOCAL_BIN/omarchy-pop-theme-terminal" ]]; then
+if [[ -x "$LOCAL_BIN/cosmikase-theme-terminal" ]]; then
     echo "  - Reloading terminals..."
-    "$LOCAL_BIN/omarchy-pop-theme-terminal" --quiet || true
-elif command -v omarchy-pop-theme-terminal >/dev/null 2>&1; then
+    "$LOCAL_BIN/cosmikase-theme-terminal" --quiet || true
+elif command -v cosmikase-theme-terminal >/dev/null 2>&1; then
     echo "  - Reloading terminals..."
-    omarchy-pop-theme-terminal --quiet || true
+    cosmikase-theme-terminal --quiet || true
 else
     echo "  - Skipping terminal reload (helper not installed)"
 fi

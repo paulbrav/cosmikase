@@ -1,6 +1,6 @@
 # Cursor/VS Code Extensions
 # Install with: cat ~/.config/Cursor/extensions.txt | grep -v '^#' | xargs -L 1 cursor --install-extension
-# Or run: omarchy-cursor-extensions install
+# Or run: cosmikase-cursor-extensions install
 
 # AI & Coding Assistants
 # (Cursor has built-in AI, but you may want additional extensions)

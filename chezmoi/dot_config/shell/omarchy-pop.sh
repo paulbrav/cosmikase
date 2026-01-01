@@ -1,4 +1,4 @@
-# omarchy-pop shell helpers
+# cosmikase shell helpers
 # Additional shell config sourced by ~/.bashrc
 
 # This file is for extra customizations beyond the main bashrc

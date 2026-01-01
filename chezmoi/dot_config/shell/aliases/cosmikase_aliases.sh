@@ -1,4 +1,4 @@
-# Omarchy-pop shell aliases
+# Cosmikase shell aliases
 
 # Navigation
 alias ..='cd ..'

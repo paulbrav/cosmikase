@@ -267,15 +267,15 @@
 - name: Install power management helper
   become: true
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/omarchy-power-helper"
-    dest: /usr/local/bin/omarchy-power-helper
+    src: "{{ playbook_dir }}/../bin/cosmikase-power-helper"
+    dest: /usr/local/bin/cosmikase-power-helper
     mode: "0755"
 
 - name: Install udev power rules
   become: true
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../omarchy/udev/99-omarchy-power.rules"
-    dest: /etc/udev/rules.d/99-omarchy-power.rules
+    src: "{{ playbook_dir }}/../cosmikase/udev/99-cosmikase-power.rules"
+    dest: /etc/udev/rules.d/99-cosmikase-power.rules
     mode: "0644"
   register: udev_rules
   notify:

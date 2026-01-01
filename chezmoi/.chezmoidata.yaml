@@ -1,9 +1,9 @@
-# Chezmoi data file for omarchy-pop
+# Chezmoi data file for cosmikase
 # This file contains template variables used across dotfiles
 
 # Theme configuration
 theme: nord
-themes_dir: ~/.local/share/omarchy-pop/themes
+themes_dir: ~/.local/share/cosmikase/themes
 
 # Font settings
 font_family: JetBrainsMono Nerd Font
