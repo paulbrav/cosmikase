@@ -1,14 +1,14 @@
 [project]
-name = "omarchy-pop"
+name = "cosmikase"
 version = "0.2.0"
-description = "Omarchy-style dotfiles and theme management for Pop!_OS"
+description = "COSMIC Omakase - Opinionated Pop!_OS workstation configuration"
 authors = [
     { name = "Paul Brav", email = "paulbrav@github.com" }
 ]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.10"
-urls = { homepage = "https://github.com/paulbrav/omarchy-for-popos", repository = "https://github.com/paulbrav/omarchy-for-popos" }
+urls = { homepage = "https://github.com/paulbrav/cosmikase", repository = "https://github.com/paulbrav/cosmikase" }
 dependencies = [
     "pyyaml>=6.0",
     "textual>=0.76,<0.90",
@@ -25,11 +25,11 @@ dev = [
 ]
 
 [project.scripts]
-theme-tui = "omarchy_pop.theme_tui:run"
-omarchy-config = "omarchy_pop.config:_main"
-omarchy-chezmoi = "omarchy_pop.chezmoi:_main"
-omarchy-validate-ron = "omarchy_pop.validate:_main"
-omarchy-themes-dir = "omarchy_pop.themes:_main"
+theme-tui = "cosmikase.theme_tui:run"
+cosmikase-config = "cosmikase.config:_main"
+cosmikase-chezmoi = "cosmikase.chezmoi:_main"
+cosmikase-validate-ron = "cosmikase.validate:_main"
+cosmikase-themes-dir = "cosmikase.themes:_main"
 
 [tool.uv]
 package = true

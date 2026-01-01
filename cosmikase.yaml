@@ -1,0 +1,431 @@
+defaults:
+  install: true
+  ghostty: true
+  yubikey_setup: false
+  theme: nord
+  # Firmware/recovery steps run after core apt installs; they require fwupd (fwupdmgr)
+  # and pop-upgrade to be present on PATH.
+  run_fw_update: true
+  run_recovery_upgrade: false
+
+apt:
+  core:
+    - name: zellij
+      desc: Terminal workspace with batteries included
+      install: true
+    - name: gum
+      desc: Tool for glamorous shell scripts
+      install: true
+    - name: fzf
+      desc: General-purpose command-line fuzzy finder
+      install: true
+    - name: zoxide
+      desc: A smarter cd command that remembers your frequent paths
+      install: true
+    - name: ripgrep
+      desc: Line-oriented search tool that recursively searches directories
+      install: true
+    - name: fd-find
+      desc: Simple, fast and user-friendly alternative to find
+      alias: fdfind
+      install: true
+    - name: bat
+      desc: A cat clone with syntax highlighting and Git integration
+      install: true
+    - name: btop
+      desc: Resource monitor that shows usage and stats for processor, memory, disks, network and processes
+      install: true
+    - name: tmux
+      desc: Terminal multiplexer to manage multiple terminal sessions
+      install: true
+    - name: git
+      desc: Distributed version control system
+      install: true
+    - name: git-lfs
+      desc: Git extension for versioning large files
+      install: true
+    - name: neovim
+      desc: Hyperextensible Vim-based text editor
+      install: true
+    - name: curl
+      desc: Command line tool for transferring data with URL syntax
+      install: true
+    - name: wget
+      desc: Network utility to retrieve files from the Web
+      install: true
+    - name: jq
+      desc: Lightweight and flexible command-line JSON processor
+      install: true
+    - name: build-essential
+      desc: Informational list of build-essential packages (gcc, make, etc.)
+      install: true
+    - name: rsync
+      desc: Fast, versatile, remote (and local) file-copying tool
+      install: true
+    - name: unzip
+      desc: De-archiver for .zip files
+      install: true
+    - name: fontconfig
+      desc: Library for configuring and customizing font access
+      install: true
+    - name: tree
+      desc: Recursive directory listing command
+      install: true
+    - name: eza
+      desc: A modern, maintained replacement for ls
+      install: true
+    # Missing Semester Tools
+    - name: tldr
+      desc: Simplified and community-driven man pages
+      install: true
+    - name: trash-cli
+      desc: Command line interface to the freedesktop.org Trash
+      install: true
+    - name: mosh
+      desc: Mobile shell that supports roaming and intermittent connectivity
+      install: true
+    - name: atool
+      desc: Script for managing file archives of various types
+      install: true
+    - name: shellcheck
+      desc: Static analysis tool for shell scripts
+      install: true
+    - name: bpython
+      desc: Fancy interface to the Python interpreter
+      install: true
+    # Debugging & Profiling
+    - name: gdb
+      desc: The GNU Project Debugger
+      install: true
+    - name: valgrind
+      desc: Instrumentation framework for building dynamic analysis tools
+      install: true
+    - name: strace
+      desc: Diagnostic, debugging and instructional userspace tracer
+      install: true
+    - name: tcpdump
+      desc: Command-line packet analyzer
+      install: true
+    - name: lsof
+      desc: List open files
+      install: true
+    - name: hyperfine
+      desc: Command-line benchmarking tool
+      install: true
+    - name: ncdu
+      desc: NCurses Disk Usage
+      install: true
+    # Build Systems
+    - name: cmake
+      desc: Cross-platform family of tools designed to build, test and package software
+      install: true
+    - name: ninja-build
+      desc: Small build system with a focus on speed
+      install: true
+    - name: pkg-config
+      desc: Helper tool used when compiling applications and libraries
+      install: true
+    # Backups & Remote
+    - name: timeshift
+      desc: System restore tool
+      install: true
+    - name: restic
+      desc: Fast, secure, efficient backup program
+      install: true
+    - name: sshfs
+      desc: Filesystem client based on the SSH File Transfer Protocol
+      install: true
+    # Security
+    - name: firejail
+      desc: SUID sandbox program to reduce the risk of security breaches
+      install: true
+    - name: firejail-profiles
+      desc: Profiles for Firejail
+      install: true
+    # Fingerprint Authentication
+    - name: fprintd
+      desc: D-Bus daemon for fingerprint reader access
+      install: true
+    - name: libpam-fprintd
+      desc: PAM module for fingerprint authentication
+      install: true
+
+  yubikey:
+    - name: yubikey-manager
+      desc: Python library and command line tool for configuring a YubiKey
+      install: true
+    - name: libpam-u2f
+      desc: Universal 2nd Factor (U2F) PAM module
+      install: true
+    - name: pamu2fcfg
+      desc: Configuration tool for the U2F PAM module
+      install: true
+    - name: libfido2-1
+      desc: Library functionality for FIDO 2.0
+      install: true
+    - name: fido2-tools
+      desc: Command-line tools for FIDO 2.0
+      install: true
+
+  gui:
+    - name: xournalpp
+      desc: Handwriting note-taking software with PDF annotation support
+      install: true
+    - name: fonts-jetbrains-mono
+      desc: A typeface made for developers
+      install: true
+
+  terminal:
+    - name: ghostty
+      desc: Fast, feature-rich, and cross-platform terminal emulator
+      source: source
+      note: "Compiling from source to ensure latest version (requires Zig 0.13+)"
+      install: true
+    - name: kitty
+      desc: Fast, feature-rich, GPU based terminal emulator
+      install: true
+    - name: alacritty
+      desc: A cross-platform, OpenGL terminal emulator
+      install: true
+    - name: docker.io
+      desc: Linux container engine
+      install: true
+    - name: vlc
+      desc: Multimedia player and streamer
+      install: true
+    - name: steam-installer
+      desc: Installer for the Steam software distribution service
+      install: true
+    - name: firefox
+      desc: Fast, private and safe web browser
+      install: true
+
+flatpak:
+  utility:
+    - id: com.system76.KeyboardConfigurator
+      desc: Configure System76 keyboards
+      install: false  # Will be available in COSMIC store soon
+    - id: md.obsidian.Obsidian
+      desc: A knowledge base that works on top of a local folder of plain text Markdown files
+      install: true
+    - id: org.localsend.localsend_app
+      desc: Open source cross-platform file sharing
+      install: true
+    - id: com.github.tchx84.Flatseal
+      desc: Manage Flatpak permissions
+      install: true
+    - id: com.spotify.Client
+      desc: Music streaming service
+      install: false
+    - id: com.brave.Browser
+      desc: Privacy-oriented web browser
+      install: false
+    - id: com.bitwarden.desktop
+      desc: Password manager
+      install: true
+    - id: com.protonvpn.www
+      desc: VPN service
+      install: true
+    - id: me.proton.Pass
+      desc: Password manager from Proton
+      install: false    # set true if a valid Flatpak exists for your region/build
+    - id: org.chromium.Chromium
+      desc: Open source web browser
+      install: true
+    - id: com.discordapp.Discord
+      desc: All-in-one voice and text chat
+      install: true
+    - id: org.signal.Signal
+      desc: Encrypted instant messaging
+      install: true
+    - id: org.telegram.desktop
+      desc: Cloud-based mobile and desktop messaging app
+      install: true
+    - id: org.onlyoffice.desktopeditors
+      desc: Office productivity suite
+      install: true
+    - id: org.standardnotes.standardnotes
+      desc: Encrypted note-taking app
+      install: true
+    - id: me.proton.Mail
+      desc: Encrypted email service
+      install: true
+
+fonts:
+  nerd:
+    - name: JetBrainsMono Nerd Font
+      desc: Developer font with icons
+      url: https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+      install: true
+
+installers:
+  runtimes:
+    - name: starship
+      desc: Minimal, blazing-fast, and customizable shell prompt
+      method: script
+      url: https://starship.rs/install.sh
+      check: starship
+      install: true
+    - name: rust
+      desc: Systems programming language
+      method: script
+      url: https://sh.rustup.rs
+      args: -y
+      check: rustc
+      install: true
+    - name: bun
+      desc: Fast all-in-one JavaScript runtime
+      method: script
+      url: https://bun.sh/install
+      check: bun
+      install: true
+    - name: uv
+      desc: An extremely fast Python package installer and resolver
+      method: script
+      url: https://astral.sh/uv/install.sh
+      check: uv
+      install: true
+    - name: nvm
+      desc: Node Version Manager for managing Node.js versions
+      method: custom_nvm
+      check: nvm
+      install: true
+    - name: julia
+      desc: High-level, high-performance, dynamic programming language
+      method: script
+      url: https://install.julialang.org
+      args: -y
+      check: julia
+      install: true
+  ai_tools:
+    - name: cursor
+      desc: The AI Code Editor
+      method: deb
+      deb_url: "https://api2.cursor.sh/updates/download/golden/linux-x64-deb/cursor/latest"
+      check: cursor
+      install: true
+    - name: cursor-agent
+      desc: Cursor AI Agent CLI for terminal use
+      method: script
+      url: https://cursor.com/install
+      check: cursor-agent
+      install: true
+    - name: antigravity
+      desc: Google Antigravity
+      method: custom_antigravity
+      check: antigravity
+      install: true
+    - name: codex
+      desc: AI coding tool
+      method: npm
+      npm_package: "@openai/codex"
+      check: codex
+      install: false
+    - name: opencode
+      desc: Open source AI coding assistant
+      method: bun
+      bun_package: opencode-ai
+      check: opencode
+      install: true
+    - name: claude-code
+      desc: Claude AI coding assistant
+      method: npm
+      check: claude
+      install: true
+    - name: amp
+      desc: AI coding agent (ampcode.com)
+      method: manual
+      note: "Check https://ampcode.com for install instructions (often requires waitlist/login)."
+      install: false
+  security:
+    - name: brave-browser
+      desc: Privacy-oriented web browser (Official DEB)
+      method: custom_brave
+      check: brave-browser
+      install: true
+    - name: dangerzone
+      desc: Convert potentially dangerous PDFs/docs to safe PDFs
+      method: custom_dangerzone
+      install: true
+npm:
+  - name: "@openai/codex"
+    desc: OpenAI Codex CLI
+    version: "latest"
+    install: true
+  - name: "@bitwarden/cli"
+    desc: Bitwarden CLI for secrets management with chezmoi
+    version: "latest"
+    install: true
+  - name: "@withgraphite/graphite-cli"
+    desc: CLI for stacking Git branches and managing PRs
+    version: "latest"
+    install: true
+
+scripts: []
+
+uv_tools:
+  - name: ruff
+    desc: An extremely fast Python linter and formatter
+    install: true
+  - name: pyrefly
+    desc: Fast Python type checker from Meta
+    install: true
+  - name: mypy
+    desc: Optional static typing for Python
+    install: false
+  - name: ty
+    desc: Type checking tool
+    install: true
+  - name: huggingface-hub
+    desc: Client library to interact with the Hugging Face Hub
+    install: true
+  - name: jupyter-client
+    desc: Jupyter protocol client APIs
+    install: true
+  - name: jupyter-core
+    desc: Core common functionality of Jupyter projects
+    install: true
+  - name: jupyterlab
+    desc: JupyterLab computational environment
+    install: true
+  - name: pls
+    desc: Prettier List command
+    install: true
+  - name: mojo
+    desc: Programming language for AI developers
+    install: true
+
+themes:
+  default: osaka-jade
+  available:
+    - catppuccin
+    - catppuccin-latte
+    - ethereal
+    - everforest
+    - flexoki-light
+    - gruvbox
+    - hackerman
+    - kanagawa
+    - matte-black
+    - nord
+    - osaka-jade
+    - pop-default
+    - ristretto
+    - rose-pine
+    - tokyo-night
+  paths:
+    base: ~/.local/share/cosmikase/themes
+
+hp_zbook_ultra:
+  emit_notes: true
+  oem_kernel: linux-oem-24.04c
+  warn_on_mix: true
+  notes: |
+    Pop!_OS uses its own kernel. HP ZBook Ultra G1a hardware status:
+    - Fingerprint: Works with fprintd after firmware update (fwupdmgr update)
+    - Webcam: Requires AMD ISP4 driver, expected in mainline kernel 6.18
+      Current workaround: Ubuntu 24.04 with linux-image-oem-24.04c
+    - WiFi (MT7925): May have stability issues, improved in kernel 6.16+
+
+
+

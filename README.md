@@ -1,4 +1,4 @@
-# Omarchy-style Pop!_OS Setup
+# Cosmikase - COSMIC Omakase for Pop!_OS
 
 Pop!_OS 24 workstation configuration with COSMIC hotkeys, apt + Flatpak packages, Ghostty terminal, and a comprehensive theme system.
 
@@ -6,14 +6,14 @@ Pop!_OS 24 workstation configuration with COSMIC hotkeys, apt + Flatpak packages
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/paulbrav/omarchy-for-popos ~/Repos/omarchy-for-popos
-cd ~/Repos/omarchy-for-popos
+git clone https://github.com/paulbrav/cosmikase ~/Repos/cosmikase
+cd ~/Repos/cosmikase
 
 # 2. Install dependencies
 make setup
 
 # 3. Review configuration
-nano omarchy-pop.yaml
+nano cosmikase.yaml
 
 # 4. Run the installer
 make install
@@ -27,7 +27,7 @@ make dry-run
 This project uses:
 - **Ansible** for package installation and system configuration
 - **chezmoi** for dotfile management with theme templating
-- **YAML configuration** (`omarchy-pop.yaml`) to control what gets installed
+- **YAML configuration** (`cosmikase.yaml`) to control what gets installed
 
 ## What Gets Installed
 
@@ -64,13 +64,13 @@ Manage Cursor/VS Code extensions via a text file for easy reinstallation:
 
 ```bash
 # Export your current extensions
-omarchy-cursor-extensions export
+cosmikase-cursor-extensions export
 
 # Install extensions on a new machine
-omarchy-cursor-extensions install
+cosmikase-cursor-extensions install
 
 # See what's different between list and installed
-omarchy-cursor-extensions diff
+cosmikase-cursor-extensions diff
 ```
 
 Edit `~/.config/Cursor/extensions.txt` to customize your extension list.
@@ -138,13 +138,13 @@ cp ~/dotfiles/.cursor/rules/python.mdc .cursor/rules/
 
 ```bash
 # CLI
-omarchy-pop-theme tokyo-night
+cosmikase-theme tokyo-night
 
 # Interactive TUI
 theme-tui
 
 # Interactive menu (gum)
-omarchy-pop
+cosmikase
 ```
 
 ### Available Themes
@@ -166,10 +166,10 @@ omarchy-pop
 
 ## Shell Utilities
 
-Omarchy-pop adds a handful of convenience functions/aliases via:
+Cosmikase adds a handful of convenience functions/aliases via:
 
 ```bash
-~/.config/shell/aliases/omarchy_aliases.sh
+~/.config/shell/aliases/cosmikase_aliases.sh
 ```
 
 Highlights:
@@ -181,7 +181,7 @@ Highlights:
 
 ## Configuration
 
-Edit `omarchy-pop.yaml` to customize your installation:
+Edit `cosmikase.yaml` to customize your installation:
 
 ```yaml
 defaults:
@@ -238,21 +238,21 @@ make exa-clean
 If `gum` is installed, you can use a single entrypoint to discover common actions:
 
 ```bash
-omarchy-pop
+cosmikase
 ```
 
 Menu options include:
 - Theme selection (launches `theme-tui` when available)
-- Optional software installation (from `omarchy-pop.yaml`, installs items marked `install: false`)
+- Optional software installation (from `cosmikase.yaml`, installs items marked `install: false`)
 - Docker development databases (PostgreSQL/MySQL/Redis/MongoDB)
-- System update (`omarchy-pop-update`)
+- System update (`cosmikase-update`)
 
 ### Safety / Undo
 - Optional software installs can be removed with `sudo apt remove <pkg>` or `flatpak uninstall <app-id>`.
-- Databases are created as Docker containers named `omarchy-*`. Remove them with:
+- Databases are created as Docker containers named `cosmikase-*`. Remove them with:
 
 ```bash
-docker rm -f omarchy-postgres omarchy-mysql omarchy-redis omarchy-mongodb
+docker rm -f cosmikase-postgres cosmikase-mysql cosmikase-redis cosmikase-mongodb
 ```
 
 ## Exa Launcher Plugin
@@ -349,15 +349,15 @@ chezmoi apply
 ├── plugins/                # Pop Launcher plugins
 │   └── exa-launcher/       # Exa.ai search plugin
 ├── themes/                 # Theme definitions (15+ themes)
-├── src/omarchy_pop/        # Python utilities (theme-tui)
-└── omarchy-pop.yaml        # Main configuration
+├── src/cosmikase/          # Python utilities (theme-tui)
+└── cosmikase.yaml           # Main configuration
 ```
 
 ## Documentation
 
 ### Getting Started
 - [CLI Reference](docs/cli-reference.md) - Complete command documentation
-- [Configuration Reference](docs/configuration-reference.md) - Full `omarchy-pop.yaml` schema
+- [Configuration Reference](docs/configuration-reference.md) - Full `cosmikase.yaml` schema
 - [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and solutions
 
 ### Guides
@@ -400,7 +400,7 @@ make install
 chezmoi purge
 
 # Remove shell integration
-# Edit ~/.bashrc and remove the OMARCHY-POP MANAGED BLOCK
+# Edit ~/.bashrc and remove the COSMIKASE MANAGED BLOCK
 ```
 
 ## License

@@ -1,11 +1,11 @@
-# Makefile for omarchy-pop
+# Makefile for cosmikase
 # Unified development commands for package installation, dotfile management, and linting
 
 .PHONY: install setup update lint test theme clean fmt help dry-run exa-build exa-install exa-clean bw-build bw-install bw-clean menu
 
 ANSIBLE_DIR := ansible
 CHEZMOI_SOURCE := $(PWD)/chezmoi
-CONFIG_FILE ?= omarchy-pop.yaml
+CONFIG_FILE ?= cosmikase.yaml
 
 # Tool paths - use PATH lookup with fallback to common install locations
 UV := $(shell command -v uv 2>/dev/null || echo "$$HOME/.local/bin/uv")
@@ -13,7 +13,7 @@ CHEZMOI := $(shell command -v chezmoi 2>/dev/null || echo "$$HOME/.local/bin/che
 
 # Default target
 help:
-	@echo "omarchy-pop - Dotfiles and system configuration for Pop!_OS"
+	@echo "cosmikase - Dotfiles and system configuration for Pop!_OS"
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
@@ -26,7 +26,7 @@ help:
 	@echo "Dotfiles & Themes:"
 	@echo "  theme       Apply current theme via chezmoi"
 	@echo "  dotfiles    Apply all dotfiles via chezmoi"
-	@echo "  menu        Open the interactive omarchy-pop menu (requires gum)"
+	@echo "  menu        Open the interactive cosmikase menu (requires gum)"
 	@echo ""
 	@echo "Exa Launcher Plugin:"
 	@echo "  exa-build   Build the exa-launcher plugin (requires Rust)"
@@ -77,7 +77,7 @@ dry-run:
 # Update all installed packages and runtimes
 update:
 	@echo "==> Running system update..."
-	./bin/omarchy-pop-update
+	./bin/cosmikase-update
 
 # Apply dotfiles via chezmoi
 dotfiles:
@@ -89,7 +89,7 @@ theme:
 
 # Main interactive menu
 menu:
-	./bin/omarchy-pop
+	./bin/cosmikase
 
 # Lint all code
 lint: lint-shell lint-python lint-ansible
