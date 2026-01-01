@@ -35,6 +35,9 @@ ansible/.ansible/
 
 # Test artifacts
 tests/*.log
+htmlcov/
+.coverage
+coverage.xml
 
 # Local overrides
 *.local

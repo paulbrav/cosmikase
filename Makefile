@@ -1,7 +1,7 @@
 # Makefile for cosmikase
 # Unified development commands for package installation, dotfile management, and linting
 
-.PHONY: install setup update lint test theme clean fmt help dry-run exa-build exa-install exa-clean bw-build bw-install bw-clean menu
+.PHONY: install setup update lint test test-cov test-smoke test-full test-container container-build theme clean fmt help dry-run validate exa-build exa-install exa-clean bw-build bw-install bw-clean menu
 
 ANSIBLE_DIR := ansible
 CHEZMOI_SOURCE := $(PWD)/chezmoi
@@ -39,10 +39,15 @@ help:
 	@echo "  bw-clean    Clean bw-launcher build artifacts"
 	@echo ""
 	@echo "Development:"
-	@echo "  lint        Run all linters (shellcheck, ruff, ansible-lint)"
-	@echo "  fmt         Format Python code with ruff"
-	@echo "  test        Run container smoke tests"
-	@echo "  clean       Remove generated files and caches"
+	@echo "  lint            Run all linters (shellcheck, ruff, ansible-lint)"
+	@echo "  fmt             Format Python code with ruff"
+	@echo "  test            Run pytest + container smoke test"
+	@echo "  test-smoke      Fast container smoke test (check mode, ~2 min)"
+	@echo "  test-full       Full container install test (~10 min)"
+	@echo "  test-container  Run both container test tiers"
+	@echo "  container-build Build test container images"
+	@echo "  validate        Validate cosmikase.yaml configuration"
+	@echo "  clean           Remove generated files and caches"
 
 # Setup development environment
 setup:
@@ -118,6 +123,46 @@ test:
 	$(UV) run pytest tests/ -v
 	@echo "==> Running container smoke test..."
 	./tests/container-smoke.sh
+
+# Run tests with coverage
+test-cov:
+	@echo "==> Running Python unit tests with coverage..."
+	$(UV) run pytest tests/ -v --cov=src/cosmikase --cov-report=term-missing --cov-report=html
+	@echo "==> Coverage report: htmlcov/index.html"
+
+# =============================================================================
+# Container Testing
+# =============================================================================
+
+# Container engine - podman by default, override with ENGINE=docker
+ENGINE ?= podman
+
+# Fast container smoke test (Ansible check mode, ~2 min)
+test-smoke:
+	@echo "==> Running container smoke test..."
+	ENGINE=$(ENGINE) ./tests/container-smoke.sh
+
+# Full container install test (~10 min)
+test-full:
+	@echo "==> Running full container install test..."
+	ENGINE=$(ENGINE) ./tests/container-full.sh
+
+# Run both container test tiers
+test-container: test-smoke test-full
+	@echo "==> All container tests complete!"
+
+# Build test container images (for caching)
+container-build:
+	@echo "==> Building smoke test container..."
+	$(ENGINE) build -f tests/Containerfile.smoke -t cosmikase-smoke .
+	@echo "==> Building full test container..."
+	$(ENGINE) build -f tests/Containerfile.full -t cosmikase-full .
+	@echo "==> Container images built!"
+
+# Validate configuration
+validate:
+	@echo "==> Validating cosmikase.yaml..."
+	$(UV) run cosmikase-validate-config $(CONFIG_FILE)
 
 # Clean generated files
 clean:
