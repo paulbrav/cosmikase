@@ -20,6 +20,8 @@
     installers: "{{ cosmikase_config.installers | default({}) }}"
     uv_tools: "{{ cosmikase_config.uv_tools | default([]) }}"
     npm_packages: "{{ cosmikase_config.npm | default([]) }}"
+    cargo_tools: "{{ cosmikase_config.cargo_tools | default([]) }}"
+    go_tools: "{{ cosmikase_config.go_tools | default([]) }}"
     themes: "{{ cosmikase_config.themes | default({}) }}"
 
     # Paths
@@ -29,42 +31,123 @@
     themes_dir: "{{ local_share }}/cosmikase/themes"
 
   pre_tasks:
+    - name: "═══════════════════════════════════════════════════════════════════"
+      ansible.builtin.debug:
+        msg: "⛩️  COSMIKASE INSTALLATION STARTING"
+      tags: [always]
+
     - name: Display configuration source
       ansible.builtin.debug:
         msg: "Loading configuration from: {{ config_file }}"
+      tags: [always]
 
     - name: Update apt cache
       become: true
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
-      tags: [packages, apt]
+      tags: [always]
 
-  roles:
-    - role: packages
+  tasks:
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 1: APT Packages & Flatpaks
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "📦 [1/6] INSTALLING APT PACKAGES & FLATPAKS"
+      ansible.builtin.debug:
+        msg: "Installing system packages, fonts, and Flatpak applications..."
       tags: [packages]
-    - role: runtimes
+
+    - name: Include packages role
+      ansible.builtin.include_role:
+        name: packages
+      tags: [packages]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 2: Language Runtimes
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "🔧 [2/6] INSTALLING LANGUAGE RUNTIMES"
+      ansible.builtin.debug:
+        msg: "Installing Rust, Go, Zig, Node.js, Python tools, Bun, Julia..."
       tags: [runtimes]
-    - role: ghostty
-      tags: [ghostty]
+
+    - name: Include runtimes role
+      ansible.builtin.include_role:
+        name: runtimes
+      tags: [runtimes]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 3: Ghostty Terminal
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "👻 [3/6] BUILDING GHOSTTY TERMINAL"
+      ansible.builtin.debug:
+        msg: "Compiling Ghostty from source (this may take a few minutes)..."
       when: defaults.ghostty | default(true)
-    - role: tools
+      tags: [ghostty]
+
+    - name: Include ghostty role
+      ansible.builtin.include_role:
+        name: ghostty
+      when: defaults.ghostty | default(true)
+      tags: [ghostty]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 4: AI & Security Tools
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "🤖 [4/6] INSTALLING AI & SECURITY TOOLS"
+      ansible.builtin.debug:
+        msg: "Installing Cursor, Claude Code, Brave Browser, Dangerzone..."
       tags: [tools]
-    - role: web
+
+    - name: Include tools role
+      ansible.builtin.include_role:
+        name: tools
+      tags: [tools]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 5: Web Apps
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "🌐 [5/6] CREATING WEB APP SHORTCUTS"
+      ansible.builtin.debug:
+        msg: "Creating desktop shortcuts for Slack, Linear, Superhuman..."
       tags: [web]
-    - role: dotfiles
+
+    - name: Include web role
+      ansible.builtin.include_role:
+        name: web
+      tags: [web]
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Phase 6: Dotfiles
+    # ─────────────────────────────────────────────────────────────────────────
+    - name: "📝 [6/6] APPLYING DOTFILES"
+      ansible.builtin.debug:
+        msg: "Configuring shell, editor, and application settings..."
+      tags: [dotfiles]
+
+    - name: Include dotfiles role
+      ansible.builtin.include_role:
+        name: dotfiles
       tags: [dotfiles]
 
   post_tasks:
+    - name: "═══════════════════════════════════════════════════════════════════"
+      ansible.builtin.debug:
+        msg: "✅ COSMIKASE INSTALLATION COMPLETE!"
+
     - name: Display completion message
       ansible.builtin.debug:
         msg: |
-          ✓ cosmikase installation complete!
-
-          Next steps:
-          - Log out and back in for font changes to take effect
-          - Run 'cosmikase-theme <name>' to switch themes
-          - Run 'theme-tui' for interactive theme selection
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │                    🎉 Installation Complete!                    │
+          ├─────────────────────────────────────────────────────────────────┤
+          │                                                                 │
+          │  Next steps:                                                    │
+          │  • Log out and back in for font changes to take effect          │
+          │  • Run 'cosmikase-theme <name>' to switch themes                │
+          │  • Run 'cosmikase' for the interactive menu                     │
+          │                                                                 │
+          └─────────────────────────────────────────────────────────────────┘
 
 
 

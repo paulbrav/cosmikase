@@ -92,6 +92,8 @@
 - name: Configure chezmoi with theme data
   ansible.builtin.copy:
     content: |
+      sourceDir = "{{ playbook_dir }}/../chezmoi"
+
       [data]
           theme = "{{ defaults.theme | default('nord') }}"
           themes_dir = "{{ themes_dir }}"

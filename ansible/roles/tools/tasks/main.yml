@@ -291,7 +291,7 @@
 - name: Update device firmware via fwupd
   become: true
   ansible.builtin.command:
-    cmd: fwupdmgr update --no-reboot
+    cmd: fwupdmgr update -y
   when: defaults.run_fw_update | default(false)
   register: fwupd_update
   changed_when: "'Successfully installed' in fwupd_update.stdout"
@@ -299,6 +299,7 @@
     - fwupd_update.rc != 0
     - "'No upgrades available' not in fwupd_update.stdout"
     - "'Nothing to do' not in fwupd_update.stderr"
+    - "'no supported devices' not in fwupd_update.stderr | lower"
 
 - name: Enable fingerprint authentication in PAM
   become: true

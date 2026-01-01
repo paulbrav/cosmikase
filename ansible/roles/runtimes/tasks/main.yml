@@ -1,4 +1,5 @@
-# Runtimes role: Install development runtimes (Rust, Bun, uv, nvm, Starship, Julia)
+# Runtimes role: Install development runtimes (Rust, Bun, uv, nvm, Starship, Julia, Go, Zig)
+# Also installs cargo_tools (zellij) and go_tools (gum, lazygit, lazydocker)
 ---
 - name: Set runtimes list
   ansible.builtin.set_fact:
@@ -43,6 +44,17 @@
         installer_url: https://install.julialang.org
         installer_dest: /tmp/julia-install.sh
         install_cmd: /tmp/julia-install.sh -y
+      go:
+        check_path: /usr/local/go/bin/go
+        installer_url: https://go.dev/dl/go1.24.4.linux-amd64.tar.gz
+        installer_dest: /tmp/go.tar.gz
+        install_cmd: ""  # Custom handling required
+      zig:
+        check_path: /usr/local/bin/zig
+        installer_url: https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+        installer_dest: /tmp/zig.tar.xz
+        install_dir: /opt/zig-0.15.2
+        install_cmd: ""  # Custom handling required
 
 # ============================================================================
 # Install runtimes using data-driven loop
@@ -53,7 +65,181 @@
   loop: "{{ enabled_runtimes | map(attribute='name') | list }}"
   loop_control:
     loop_var: runtime_name
-  when: runtime_name in runtime_specs
+  when:
+    - runtime_name in runtime_specs
+    - runtime_name not in ['go', 'zig']
+
+# ============================================================================
+# Go installation (custom handling - extracts tarball)
+# ============================================================================
+
+- name: Check if Go is installed
+  ansible.builtin.stat:
+    path: /usr/local/go/bin/go
+  register: go_installed
+
+- name: Install Go
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'go') | list | length > 0
+    - not go_installed.stat.exists
+  block:
+    - name: Download Go tarball
+      ansible.builtin.get_url:
+        url: https://go.dev/dl/go1.24.4.linux-amd64.tar.gz
+        dest: /tmp/go.tar.gz
+        mode: "0644"
+
+    - name: Remove existing Go installation
+      become: true
+      ansible.builtin.file:
+        path: /usr/local/go
+        state: absent
+
+    - name: Extract Go to /usr/local
+      become: true
+      ansible.builtin.unarchive:
+        src: /tmp/go.tar.gz
+        dest: /usr/local
+        remote_src: true
+
+    - name: Clean up Go tarball
+      ansible.builtin.file:
+        path: /tmp/go.tar.gz
+        state: absent
+
+# ============================================================================
+# Zig installation (custom handling - extracts tarball)
+# ============================================================================
+
+- name: Check if Zig is installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/zig
+  register: zig_installed
+
+- name: Install Zig
+  when:
+    - enabled_runtimes | selectattr('name', 'equalto', 'zig') | list | length > 0
+    - not zig_installed.stat.exists
+  block:
+    - name: Download Zig tarball
+      ansible.builtin.get_url:
+        url: https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+        dest: /tmp/zig.tar.xz
+        mode: "0644"
+
+    - name: Remove existing Zig installation
+      become: true
+      ansible.builtin.file:
+        path: /opt/zig-0.15.2
+        state: absent
+
+    - name: Create Zig installation directory
+      become: true
+      ansible.builtin.file:
+        path: /opt/zig-0.15.2
+        state: directory
+        mode: "0755"
+
+    - name: Extract Zig to /opt
+      become: true
+      ansible.builtin.unarchive:
+        src: /tmp/zig.tar.xz
+        dest: /opt/zig-0.15.2
+        remote_src: true
+        extra_opts:
+          - --strip-components=1
+
+    - name: Remove old Zig symlink
+      become: true
+      ansible.builtin.file:
+        path: /usr/local/bin/zig
+        state: absent
+
+    - name: Create Zig symlink
+      become: true
+      ansible.builtin.file:
+        src: /opt/zig-0.15.2/zig
+        dest: /usr/local/bin/zig
+        state: link
+
+    - name: Clean up Zig tarball
+      ansible.builtin.file:
+        path: /tmp/zig.tar.xz
+        state: absent
+
+# ============================================================================
+# Cargo tools (Rust-based CLI tools) - Parallel installation
+# ============================================================================
+
+- name: Install cargo tools (parallel)
+  ansible.builtin.shell: |
+    source {{ ansible_env.HOME }}/.cargo/env
+    if ! command -v {{ item.name }} &>/dev/null; then
+      cargo install --locked {{ item.name }}
+      echo "installed"
+    else
+      echo "already installed"
+    fi
+  args:
+    executable: /bin/bash
+  loop: "{{ cargo_tools | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + cargo_tools | default([]) | rejectattr('install', 'defined') | list }}"
+  when:
+    - cargo_tools is defined and cargo_tools | length > 0
+    - enabled_runtimes | selectattr('name', 'equalto', 'rust') | list | length > 0
+  loop_control:
+    label: "{{ item.name }}"
+  async: 600
+  poll: 0
+  register: cargo_jobs
+
+- name: "⏳ Waiting for cargo tools to compile (retries are normal, not errors)"
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  loop: "{{ cargo_jobs.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name | default('unknown') }}"
+  register: cargo_results
+  until: cargo_results.finished
+  retries: 120
+  delay: 5
+  when: item.ansible_job_id is defined
+
+# ============================================================================
+# Go tools (Go-based CLI tools) - Parallel installation
+# ============================================================================
+
+- name: Install go tools (parallel)
+  ansible.builtin.shell: |
+    export PATH="/usr/local/go/bin:{{ ansible_env.HOME }}/go/bin:$PATH"
+    if ! command -v {{ item.name }} &>/dev/null; then
+      go install {{ item.package }}
+      echo "installed"
+    else
+      echo "already installed"
+    fi
+  args:
+    executable: /bin/bash
+  loop: "{{ go_tools | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + go_tools | default([]) | rejectattr('install', 'defined') | list }}"
+  when:
+    - go_tools is defined and go_tools | length > 0
+    - enabled_runtimes | selectattr('name', 'equalto', 'go') | list | length > 0 or go_installed.stat.exists
+  loop_control:
+    label: "{{ item.name }}"
+  async: 300
+  poll: 0
+  register: go_jobs
+
+- name: "⏳ Waiting for go tools to install (retries are normal, not errors)"
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  loop: "{{ go_jobs.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name | default('unknown') }}"
+  register: go_results
+  until: go_results.finished
+  retries: 60
+  delay: 5
+  when: item.ansible_job_id is defined
 
 # ============================================================================
 # Post-install: Node.js LTS via nvm
@@ -71,21 +257,31 @@
     - enabled_runtimes | selectattr('name', 'equalto', 'nvm') | list | length > 0
 
 # ============================================================================
-# uv tools (Python CLI tools)
+# uv tools (Python CLI tools) - Parallel installation
 # ============================================================================
 
-- name: Install uv tools (standard PyPI packages)
+- name: Install uv tools (parallel)
   ansible.builtin.shell: |
     {{ local_bin }}/uv tool install {{ item.name }}
-  loop: "{{ uv_tools }}"
-  when:
-    - uv_tools is defined and uv_tools | length > 0
-    - item.install | default(true)
-    - item.name != 'mojo'
+  loop: "{{ uv_tools | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | rejectattr('name', 'equalto', 'mojo') | list + uv_tools | default([]) | rejectattr('install', 'defined') | rejectattr('name', 'equalto', 'mojo') | list }}"
+  when: uv_tools is defined and uv_tools | length > 0
   loop_control:
     label: "{{ item.name }}"
-  register: uv_tool_result
-  changed_when: "'Installed' in uv_tool_result.stdout"
+  async: 120
+  poll: 0
+  register: uv_jobs
+
+- name: "⏳ Waiting for uv tools to install (retries are normal, not errors)"
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  loop: "{{ uv_jobs.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.name | default('unknown') }}"
+  register: uv_results
+  until: uv_results.finished
+  retries: 30
+  delay: 4
+  when: item.ansible_job_id is defined
 
 - name: Install Mojo via uv (requires Modular index)
   ansible.builtin.shell: |

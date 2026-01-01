@@ -21,13 +21,16 @@
 - name: Install terminal apt packages (excluding ghostty)
   become: true
   ansible.builtin.apt:
-    name: "{{ item.name }}"
+    name: "{{ apt.terminal | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | rejectattr('name', 'equalto', 'ghostty') | map(attribute='name') | list + apt.terminal | default([]) | rejectattr('install', 'defined') | rejectattr('name', 'equalto', 'ghostty') | map(attribute='name') | list }}"
     state: present
-  loop: "{{ apt.terminal | default([]) }}"
-  when:
-    - apt.terminal is defined
-    - item.name != 'ghostty'
-    - item.install | default(true)
+  when: apt.terminal is defined and apt.terminal | length > 0
+
+- name: Install system apt packages (containers, gaming)
+  become: true
+  ansible.builtin.apt:
+    name: "{{ apt.system | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | map(attribute='name') | list + apt.system | default([]) | rejectattr('install', 'defined') | map(attribute='name') | list }}"
+    state: present
+  when: apt.system is defined and apt.system | length > 0
 
 - name: Install YubiKey packages
   become: true
@@ -54,16 +57,29 @@
     flatpakrepo_url: https://flathub.org/repo/flathub.flatpakrepo
     state: present
 
-- name: Install Flatpak applications
+- name: Install Flatpak applications (parallel)
   community.general.flatpak:
     name: "{{ item.id }}"
     state: present
-  loop: "{{ flatpak.utility | default([]) }}"
-  when:
-    - flatpak.utility is defined
-    - item.install | default(true)
+  loop: "{{ flatpak.apps | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + flatpak.apps | default([]) | rejectattr('install', 'defined') | list }}"
+  when: flatpak.apps is defined
   loop_control:
     label: "{{ item.id }}"
+  async: 300
+  poll: 0
+  register: flatpak_jobs
+
+- name: "⏳ Waiting for Flatpak installs (retries are normal, not errors)"
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  loop: "{{ flatpak_jobs.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.id | default('unknown') }}"
+  register: flatpak_results
+  until: flatpak_results.finished
+  retries: 60
+  delay: 5
+  when: item.ansible_job_id is defined
 
 # ============================================================================
 # NPM Global Packages
