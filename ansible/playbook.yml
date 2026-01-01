@@ -16,6 +16,7 @@
     apt: "{{ cosmikase_config.apt | default({}) }}"
     flatpak: "{{ cosmikase_config.flatpak | default({}) }}"
     fonts: "{{ cosmikase_config.fonts | default({}) }}"
+    web: "{{ cosmikase_config.web | default({}) }}"
     installers: "{{ cosmikase_config.installers | default({}) }}"
     uv_tools: "{{ cosmikase_config.uv_tools | default([]) }}"
     npm_packages: "{{ cosmikase_config.npm | default([]) }}"
@@ -49,6 +50,8 @@
       when: defaults.ghostty | default(true)
     - role: tools
       tags: [tools]
+    - role: web
+      tags: [web]
     - role: dotfiles
       tags: [dotfiles]
 

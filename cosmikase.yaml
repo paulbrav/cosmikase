@@ -13,6 +13,9 @@ apt:
     - name: zellij
       desc: Terminal workspace with batteries included
       install: true
+    - name: wl-clipboard
+      desc: Command-line copy/paste utilities for Wayland (required by Zellij)
+      install: true
     - name: gum
       desc: Tool for glamorous shell scripts
       install: true
@@ -149,6 +152,21 @@ apt:
     - name: libpam-fprintd
       desc: PAM module for fingerprint authentication
       install: true
+    # TUI Applications
+    - name: lazygit
+      desc: Simple terminal UI for git commands
+      install: true
+    - name: lazydocker
+      desc: Simple terminal UI for Docker and docker-compose
+      install: true
+    # Media
+    - name: ffmpeg
+      desc: Multimedia framework for video/audio processing
+      install: true
+    # Developer Tools
+    - name: gh
+      desc: GitHub CLI for authentication and repository management
+      install: true
 
   yubikey:
     - name: yubikey-manager
@@ -256,6 +274,24 @@ fonts:
     - name: JetBrainsMono Nerd Font
       desc: Developer font with icons
       url: https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+      install: true
+
+web:
+  apps:
+    - name: Slack
+      desc: Team communication and collaboration platform
+      url: https://slack.com
+      icon_url: https://a.slack-edge.com/80588/marketing/img/icons/icon_slack_hash_colored.png
+      install: true
+    - name: Superhuman
+      desc: Fastest email experience ever made
+      url: https://superhuman.com
+      icon_url: https://superhuman.com/favicon.ico
+      install: true
+    - name: Linear
+      desc: The issue tracking tool you'll enjoy using
+      url: https://linear.app
+      icon_url: https://linear.app/favicon.ico
       install: true
 
 installers:
@@ -393,6 +429,9 @@ uv_tools:
     install: true
   - name: mojo
     desc: Programming language for AI developers
+    install: true
+  - name: vllm
+    desc: High-throughput LLM serving engine
     install: true
 
 themes:
