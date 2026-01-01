@@ -456,6 +456,5 @@ chezmoi apply
 
 - [Zellij Documentation](https://zellij.dev/documentation/)
 - [Zellij Keybindings Reference](https://zellij.dev/documentation/keybindings)
-- [tmux Configuration](../dotfiles/tmux/tmux.conf) - Alternative multiplexer
 
 
