@@ -538,3 +538,36 @@ fn main() {
     plugin.run();
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_item_description() {
+        let plugin = Plugin::new();
+        let item = BitwardenItem {
+            id: "123".to_string(),
+            name: "Test".to_string(),
+            login: Some(BitwardenLogin {
+                username: Some("user".to_string()),
+                uris: vec![BitwardenUri {
+                    uri: Some("https://example.com/path".to_string()),
+                }],
+                totp: None,
+            }),
+        };
+        assert_eq!(plugin.format_item_description(&item), "user • example.com");
+    }
+
+    #[test]
+    fn test_format_item_description_no_login() {
+        let plugin = Plugin::new();
+        let item = BitwardenItem {
+            id: "123".to_string(),
+            name: "Test".to_string(),
+            login: None,
+        };
+        assert_eq!(plugin.format_item_description(&item), "Login item");
+    }
+}
+

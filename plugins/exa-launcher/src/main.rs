@@ -394,17 +394,49 @@ impl Plugin {
     }
 }
 
-fn truncate_string(s: &str, max_len: usize) -> String {
-    if s.len() <= max_len {
+fn truncate_string(s: &str, max_chars: usize) -> String {
+    let chars: Vec<char> = s.chars().collect();
+    if chars.len() <= max_chars {
         s.to_string()
     } else {
-        format!("{}...", &s[..max_len.saturating_sub(3)])
+        chars[..max_chars.saturating_sub(3)]
+            .iter()
+            .collect::<String>()
+            + "..."
     }
 }
 
 fn main() {
     let mut plugin = Plugin::new();
     plugin.run();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_string_short() {
+        assert_eq!(truncate_string("hello", 10), "hello");
+    }
+
+    #[test]
+    fn test_truncate_string_exact() {
+        assert_eq!(truncate_string("hello", 5), "hello");
+    }
+
+    #[test]
+    fn test_truncate_string_long() {
+        assert_eq!(truncate_string("hello world", 8), "hello...");
+    }
+
+    #[test]
+    fn test_truncate_string_unicode() {
+        // Ensure we don't panic on multi-byte characters and truncate correctly
+        let s = "héllo wörld";
+        let truncated = truncate_string(s, 8);
+        assert_eq!(truncated, "héllo...");
+    }
 }
 
 
