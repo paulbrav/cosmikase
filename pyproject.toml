@@ -27,6 +27,7 @@ dev = [
 ]
 
 [project.scripts]
+cosmikase = "cosmikase.cli:run"
 theme-tui = "cosmikase.theme_tui:run"
 cosmikase-cli = "cosmikase.cli:run"
 cosmikase-config = "cosmikase.config:_main"

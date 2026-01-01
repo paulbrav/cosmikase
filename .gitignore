@@ -32,6 +32,7 @@ Thumbs.db
 # Ansible
 *.retry
 ansible/.ansible/
+/tmp/ansible_facts_cache/
 
 # Test artifacts
 tests/*.log

@@ -18,10 +18,11 @@ help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Setup & Installation:"
-	@echo "  setup       Install development dependencies (uv sync, chezmoi init)"
-	@echo "  install     Run full Ansible playbook to configure system"
-	@echo "  update      Update all installed packages and runtimes"
-	@echo "  dry-run     Run Ansible in check mode (no changes)"
+	@echo "  setup           Install development dependencies (uv sync, chezmoi init)"
+	@echo "  install         Run full installation with beautiful gum UI ⛩️"
+	@echo "  install-verbose Run Ansible directly (for debugging)"
+	@echo "  update          Update all installed packages and runtimes"
+	@echo "  dry-run         Run Ansible in check mode (no changes)"
 	@echo ""
 	@echo "Dotfiles & Themes:"
 	@echo "  theme       Apply current theme via chezmoi"
@@ -69,9 +70,20 @@ setup:
 	$(CHEZMOI) init --source=$(CHEZMOI_SOURCE)
 	@echo "==> Setup complete!"
 
-# Run full Ansible playbook
+# Run full installation with beautiful gum UI
 install:
-	@echo "==> Running Ansible playbook..."
+	@./bin/cosmikase-install
+
+# Run Ansible directly (verbose, for debugging)
+install-verbose:
+	@echo ""
+	@echo "╔═══════════════════════════════════════════════════════════════════╗"
+	@echo "║              ⛩️  COSMIKASE SYSTEM INSTALLATION                     ║"
+	@echo "╠═══════════════════════════════════════════════════════════════════╣"
+	@echo "║  This will install packages, runtimes, and configure your system  ║"
+	@echo "║  Task timing is shown - longer tasks will display elapsed time    ║"
+	@echo "╚═══════════════════════════════════════════════════════════════════╝"
+	@echo ""
 	cd $(ANSIBLE_DIR) && $(UV) run ansible-playbook -i inventory.yml playbook.yml -K -e "config_file=$(realpath $(CONFIG_FILE))"
 
 # Dry-run Ansible (check mode)
