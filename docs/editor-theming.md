@@ -1,10 +1,10 @@
 # Editor Theming Guide
 
-A comprehensive guide to theming Cursor and Antigravity within the omarchy ecosystem, covering both automated theme switching and manual configuration.
+A comprehensive guide to theming Cursor and Antigravity within the cosmikase ecosystem, covering both automated theme switching and manual configuration.
 
 ## Table of Contents
 
-- [Omarchy Theme System Overview](#omarchy-theme-system-overview)
+- [Cosmikase Theme System Overview](#cosmikase-theme-system-overview)
 - [Cursor Theming](#cursor-theming)
 - [Antigravity Theming](#antigravity-theming)
 - [Adding a New Theme](#adding-a-new-theme)
@@ -14,9 +14,9 @@ A comprehensive guide to theming Cursor and Antigravity within the omarchy ecosy
 
 ---
 
-## Omarchy Theme System Overview
+## Cosmikase Theme System Overview
 
-The omarchy system provides unified theming across multiple applications with a single command. When you run `cosmikase-theme`, it updates configurations for COSMIC desktop, terminals (Ghostty, Kitty, Alacritty), Cursor, Antigravity, and other tools simultaneously.
+The cosmikase system provides unified theming across multiple applications with a single command. When you run `cosmikase-theme`, it updates configurations for COSMIC desktop, terminals (Ghostty, Kitty, Alacritty), Cursor, Antigravity, and other tools simultaneously.
 
 ### How Theme Switching Works
 
@@ -62,9 +62,9 @@ Templates use `.theme` and `.themes_dir` variables from chezmoi config.
 
 Cursor is a VS Code fork, so it uses VS Code's theming system with `workbench.colorTheme` in settings.
 
-### How Omarchy Themes Cursor
+### How Cosmikase Themes Cursor
 
-The template `chezmoi/dot_config/Cursor/User/settings.json.tmpl` maps omarchy theme names to VS Code theme extensions:
+The template `chezmoi/dot_config/Cursor/User/settings.json.tmpl` maps cosmikase theme names to VS Code theme extensions:
 
 ```jsonc
 {{- if eq .theme "catppuccin" }}
@@ -79,7 +79,7 @@ The template `chezmoi/dot_config/Cursor/User/settings.json.tmpl` maps omarchy th
 
 ### Theme-to-Extension Mapping
 
-| Omarchy Theme | VS Code Theme Extension |
+| Cosmikase Theme | VS Code Theme Extension |
 |---------------|------------------------|
 | `catppuccin` | Catppuccin Mocha |
 | `catppuccin-latte` | Catppuccin Latte |
@@ -176,7 +176,7 @@ Should show the path to your active theme's `antigravity.conf`.
 
 ## Adding a New Theme
 
-To add a new theme to the omarchy system:
+To add a new theme to the cosmikase system:
 
 ### 1. Create Theme Directory
 
@@ -245,7 +245,7 @@ cosmikase-theme my-new-theme
 
 ## Manual Cursor Configuration
 
-For one-off theme changes or customization without modifying omarchy templates.
+For one-off theme changes or customization without modifying cosmikase templates.
 
 ### Quick Theme Change (Command Palette)
 
@@ -282,7 +282,7 @@ For a persistent default (useful for syncing via dotfiles):
 }
 ```
 
-> **Note**: If you're using omarchy themes, edits to `settings.json` will be overwritten on the next `chezmoi apply`. Edit the template instead for permanent changes.
+> **Note**: If you're using cosmikase themes, edits to `settings.json` will be overwritten on the next `chezmoi apply`. Edit the template instead for permanent changes.
 
 ### Custom Color Overrides
 

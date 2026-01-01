@@ -6,7 +6,7 @@ Pop!_OS 24 workstation configuration with COSMIC hotkeys, apt + Flatpak packages
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/paulbrav/omarchy-for-popos ~/Repos/cosmikase
+git clone https://github.com/paulbrav/cosmikase ~/Repos/cosmikase
 cd ~/Repos/cosmikase
 
 # 2. Install dependencies

@@ -4,18 +4,18 @@
 ## Sources Used:
 
 ### Official Theme Wallpapers (Already Included)
-- tokyo-night: 3 wallpapers from official Omarchy repo
-- nord: 2 wallpapers from official Omarchy repo  
-- gruvbox: 1 wallpaper from official Omarchy repo
-- kanagawa: 1 wallpaper from official Omarchy repo
-- everforest: 1 wallpaper from official Omarchy repo
-- rose-pine: 3 wallpapers from official Omarchy repo
-- catppuccin-latte: 1 wallpaper from official Omarchy repo
-- matte-black: 3 wallpapers from official Omarchy repo
-- ristretto: 3 wallpapers from official Omarchy repo
-- ethereal: 1 wallpaper from official Omarchy repo
-- flexoki-light: 2 wallpapers from official Omarchy repo
-- hackerman: 2 wallpapers from official Omarchy repo
+- tokyo-night: 3 wallpapers from official theme repo
+- nord: 2 wallpapers from official theme repo  
+- gruvbox: 1 wallpaper from official theme repo
+- kanagawa: 1 wallpaper from official theme repo
+- everforest: 1 wallpaper from official theme repo
+- rose-pine: 3 wallpapers from official theme repo
+- catppuccin-latte: 1 wallpaper from official theme repo
+- matte-black: 3 wallpapers from official theme repo
+- ristretto: 3 wallpapers from official theme repo
+- ethereal: 1 wallpaper from official theme repo
+- flexoki-light: 2 wallpapers from official theme repo
+- hackerman: 2 wallpapers from official theme repo
 
 ### Custom Theme Wallpapers (Downloaded)
 - **pop-default**: 19 official Pop!_OS wallpapers
@@ -52,6 +52,6 @@ numbered files in the backgrounds/ directory.
 
 - Pop!_OS wallpapers: Licensed under CC-BY-SA 4.0
 - Catppuccin assets: MIT License  
-- Official Omarchy wallpapers: MIT License
+- Official theme wallpapers: MIT License
 - Unsplash images: Unsplash License (free to use)
 

@@ -8,7 +8,7 @@ This guide covers two use cases:
 
 ---
 
-## 1. Pop!_OS 24: replicate the Omarchy-style FIDO2 setup
+## 1. Pop!_OS 24: replicate the Cosmikase-style FIDO2 setup
 
 The official Yubico stack for Linux uses:
 * **libfido2** + **fido2-tools** to detect/manage the key. ([Launchpad][1])
@@ -42,7 +42,7 @@ You should see a line like:
 
 ### 1.3 Create the authfile (`/etc/fido2/fido2`)
 
-Omarchy uses `/etc/fido2/fido2` as the mapping file. To generate it manually:
+Cosmikase uses `/etc/fido2/fido2` as the mapping file. To generate it manually:
 
 ```bash
 sudo mkdir -p /etc/fido2

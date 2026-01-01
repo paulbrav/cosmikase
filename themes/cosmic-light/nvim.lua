@@ -8,7 +8,7 @@ local colors = {
 }
 
 vim.opt.background = "light"
-vim.g.colors_name = "omarchy-cosmic-light"
+vim.g.colors_name = "cosmikase-cosmic-light"
 
 local function hi(group, opts)
   vim.api.nvim_set_hl(0, group, opts)

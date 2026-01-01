@@ -1,6 +1,6 @@
-# Omarchy Themes for Pop!_OS
+# Cosmikase Themes for Pop!_OS
 
-This directory contains a comprehensive collection of themes optimized for both Pop!_OS and Omarchy desktop environments.
+This directory contains a comprehensive collection of themes optimized for both Pop!_OS and COSMIC desktop environments.
 
 ## Available Themes
 
@@ -10,9 +10,9 @@ This directory contains a comprehensive collection of themes optimized for both 
 - **catppuccin** - Dark Catppuccin variant with pastel colors  
 - **osaka-jade** - Cyan and jade green aesthetic inspired by Osaka
 
-### Official Omarchy Themes
+### Official Themes
 
-- **tokyo-night** - Omarchy's flagship theme with deep blues and vibrant colors
+- **tokyo-night** - Flagship theme with deep blues and vibrant colors
 - **nord** - Cool northern palette with Arctic-inspired colors
 - **gruvbox** - Retro warm colors with earthy tones
 - **kanagawa** - Japanese-inspired with muted natural colors
@@ -91,17 +91,17 @@ To switch themes, update your configuration files to import the desired theme:
 
 **For Alacritty** (`~/.config/alacritty/alacritty.toml`):
 ```toml
-import = ["/path/to/omarchy-for-popos/themes/tokyo-night/alacritty.toml"]
+import = ["/path/to/cosmikase/themes/tokyo-night/alacritty.toml"]
 ```
 
 **For Ghostty** (`~/.config/ghostty/config`):
 ```
-import = /path/to/omarchy-for-popos/themes/tokyo-night/ghostty.conf
+import = /path/to/cosmikase/themes/tokyo-night/ghostty.conf
 ```
 
 **For Neovim**, source the theme file in your init.lua:
 ```lua
-dofile("/path/to/omarchy-for-popos/themes/tokyo-night/nvim.lua")
+dofile("/path/to/cosmikase/themes/tokyo-night/nvim.lua")
 ```
 
 ## theme.yaml Schema (v0.3+)
@@ -192,8 +192,8 @@ Feel free to:
 
 ## Credits
 
-- Official Omarchy themes: [basecamp/omarchy](https://github.com/basecamp/omarchy)
-- Custom Pop!_OS themes: Created for omarchy-for-popos project
+- Official themes: [basecamp/omarchy](https://github.com/basecamp/omarchy) (source repository)
+- Custom Pop!_OS themes: Created for cosmikase project
 - Catppuccin: [catppuccin/catppuccin](https://github.com/catppuccin/catppuccin)
 - Nord: [nordtheme/nord](https://github.com/nordtheme/nord)
 - Gruvbox: [morhetz/gruvbox](https://github.com/morhetz/gruvbox)

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Script to download all missing Omarchy theme backgrounds
+# Script to download all missing theme backgrounds
 
 set -e
 
-THEMES_DIR="/home/paulbrav/github_software/omarchy-for-popos/themes"
-OMARCHY_REPO="https://raw.githubusercontent.com/basecamp/omarchy/master/themes"
+THEMES_DIR="/home/paulbrav/github_software/cosmikase/themes"
+THEME_REPO="https://raw.githubusercontent.com/basecamp/omarchy/master/themes"
 
 cd "$THEMES_DIR"
 
@@ -14,7 +14,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo "🎨 Downloading Omarchy Theme Backgrounds..."
+echo "🎨 Downloading Theme Backgrounds..."
 echo ""
 
 # Function to download backgrounds for a theme
@@ -39,7 +39,7 @@ download_theme_backgrounds() {
         for ext in jpg png jpeg; do
             # Try different naming patterns
             for pattern in "$img_num.$ext" "$img_num-$theme_name.$ext" "${img_num}-${theme_name}.$ext"; do
-                local url="$OMARCHY_REPO/$theme_name/backgrounds/$pattern"
+                local url="$THEME_REPO/$theme_name/backgrounds/$pattern"
                 local output="$theme_dir/backgrounds/$pattern"
                 
                 if [ ! -f "$output" ]; then
@@ -64,7 +64,7 @@ download_theme_backgrounds() {
     fi
 }
 
-# Download backgrounds for all official Omarchy themes
+# Download backgrounds for all official themes
 official_themes=(
     "tokyo-night"
     "nord"

@@ -36,14 +36,14 @@ window#waybar {
 #pulseaudio,
 #bluetooth,
 #tray,
-#custom-omarchy,
+#custom-cosmikase,
 #custom-update {
     padding: 0 10px;
     margin: 0 2px;
     color: #373737;
 }
 
-#custom-omarchy {
+#custom-cosmikase {
     color: #3380d9;
     font-weight: bold;
 }

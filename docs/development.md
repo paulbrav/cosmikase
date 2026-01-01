@@ -32,7 +32,7 @@ Guide for developers contributing to cosmikase.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/paulbrav/omarchy-for-popos.git cosmikase
+   git clone https://github.com/paulbrav/cosmikase.git cosmikase
    cd cosmikase
    ```
 
