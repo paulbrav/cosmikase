@@ -1,11 +1,15 @@
 # Makefile for omarchy-pop
 # Unified development commands for package installation, dotfile management, and linting
 
-.PHONY: install setup update lint test theme clean fmt help dry-run exa-build exa-install exa-clean bw-build bw-install bw-clean
+.PHONY: install setup update lint test theme clean fmt help dry-run exa-build exa-install exa-clean bw-build bw-install bw-clean menu
 
 ANSIBLE_DIR := ansible
 CHEZMOI_SOURCE := $(PWD)/chezmoi
 CONFIG_FILE ?= omarchy-pop.yaml
+
+# Tool paths - use PATH lookup with fallback to common install locations
+UV := $(shell command -v uv 2>/dev/null || echo "$$HOME/.local/bin/uv")
+CHEZMOI := $(shell command -v chezmoi 2>/dev/null || echo "$$HOME/.local/bin/chezmoi")
 
 # Default target
 help:
@@ -22,6 +26,7 @@ help:
 	@echo "Dotfiles & Themes:"
 	@echo "  theme       Apply current theme via chezmoi"
 	@echo "  dotfiles    Apply all dotfiles via chezmoi"
+	@echo "  menu        Open the interactive omarchy-pop menu (requires gum)"
 	@echo ""
 	@echo "Exa Launcher Plugin:"
 	@echo "  exa-build   Build the exa-launcher plugin (requires Rust)"
@@ -42,26 +47,32 @@ help:
 # Setup development environment
 setup:
 	@echo "==> Ensuring uv is installed..."
-	@command -v uv >/dev/null 2>&1 || (echo "Installing uv..." && curl -LsSf https://astral.sh/uv/install.sh | sh)
+	@if ! command -v uv >/dev/null 2>&1; then \
+		echo "Installing uv..."; \
+		curl -LsSf https://astral.sh/uv/install.sh -o /tmp/uv-install.sh && sh /tmp/uv-install.sh && rm /tmp/uv-install.sh; \
+	fi
 	@echo "==> Installing Python dependencies (including ansible)..."
-	$$HOME/.local/bin/uv sync --all-extras
+	$(UV) sync --all-extras
 	@echo "==> Installing Ansible collections..."
-	$$HOME/.local/bin/uv run ansible-galaxy collection install community.general
+	$(UV) run ansible-galaxy collection install community.general
 	@echo "==> Ensuring chezmoi is installed..."
-	@command -v chezmoi >/dev/null 2>&1 || (echo "Installing chezmoi..." && curl -sfL https://get.chezmoi.io | BINDIR=$$HOME/.local/bin sh)
+	@if ! command -v chezmoi >/dev/null 2>&1; then \
+		echo "Installing chezmoi..."; \
+		curl -sfL https://get.chezmoi.io -o /tmp/chezmoi-install.sh && BINDIR=$$HOME/.local/bin sh /tmp/chezmoi-install.sh && rm /tmp/chezmoi-install.sh; \
+	fi
 	@echo "==> Initializing chezmoi..."
-	$$HOME/.local/bin/chezmoi init --source=$(CHEZMOI_SOURCE) || true
+	$(CHEZMOI) init --source=$(CHEZMOI_SOURCE)
 	@echo "==> Setup complete!"
 
 # Run full Ansible playbook
 install:
 	@echo "==> Running Ansible playbook..."
-	cd $(ANSIBLE_DIR) && $$HOME/.local/bin/uv run ansible-playbook -i inventory.yml playbook.yml -K -e "config_file=$(realpath $(CONFIG_FILE))"
+	cd $(ANSIBLE_DIR) && $(UV) run ansible-playbook -i inventory.yml playbook.yml -K -e "config_file=$(realpath $(CONFIG_FILE))"
 
 # Dry-run Ansible (check mode)
 dry-run:
 	@echo "==> Running Ansible in check mode (no changes)..."
-	cd $(ANSIBLE_DIR) && $$HOME/.local/bin/uv run ansible-playbook -i inventory.yml playbook.yml --check -K -e "config_file=$(realpath $(CONFIG_FILE))"
+	cd $(ANSIBLE_DIR) && $(UV) run ansible-playbook -i inventory.yml playbook.yml --check -K -e "config_file=$(realpath $(CONFIG_FILE))"
 
 # Update all installed packages and runtimes
 update:
@@ -76,29 +87,35 @@ dotfiles:
 theme:
 	chezmoi apply
 
+# Main interactive menu
+menu:
+	./bin/omarchy-pop
+
 # Lint all code
 lint: lint-shell lint-python lint-ansible
 
 lint-shell:
 	@echo "==> Running shellcheck on bin/*..."
-	shellcheck bin/* || true
+	shellcheck bin/*
 
 lint-python:
 	@echo "==> Running ruff on src/..."
-	$$HOME/.local/bin/uv run ruff check src/
+	$(UV) run ruff check src/
 
 lint-ansible:
 	@echo "==> Running ansible-lint..."
-	cd $(ANSIBLE_DIR) && $$HOME/.local/bin/uv run ansible-lint playbook.yml || true
+	cd $(ANSIBLE_DIR) && $(UV) run ansible-lint playbook.yml
 
 # Format Python code
 fmt:
 	@echo "==> Formatting Python code..."
-	$$HOME/.local/bin/uv run ruff format src/
-	$$HOME/.local/bin/uv run ruff check --fix src/
+	$(UV) run ruff format src/
+	$(UV) run ruff check --fix src/
 
 # Run tests
 test:
+	@echo "==> Running Python unit tests..."
+	$(UV) run pytest tests/ -v
 	@echo "==> Running container smoke test..."
 	./tests/container-smoke.sh
 
