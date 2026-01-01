@@ -1,4 +1,4 @@
-"""Core theme logic and discovery for omarchy-pop."""
+"""Core theme logic and discovery for cosmikase."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def discover_theme_dirs() -> list[Path]:
         Path(env_dir) if env_dir else None,
         repo_root / "themes" if repo_root else None,
         Path.cwd() / "themes",
-        Path.home() / ".local" / "share" / "omarchy-pop" / "themes",
+        Path.home() / ".local" / "share" / "cosmikase" / "themes",
     ]
     return _unique_dirs(path for path in candidates if path is not None)
 
@@ -74,9 +74,9 @@ def find_theme_cli() -> str | None:
     repo_root = _find_repo_root()
     candidates = [
         os.environ.get("THEME_CLI"),
-        str(repo_root / "bin" / "omarchy-pop-theme") if repo_root else None,
-        shutil.which("omarchy-pop-theme"),
-        str(Path.home() / ".local" / "bin" / "omarchy-pop-theme"),
+        str(repo_root / "bin" / "cosmikase-theme") if repo_root else None,
+        shutil.which("cosmikase-theme"),
+        str(Path.home() / ".local" / "bin" / "cosmikase-theme"),
     ]
     for candidate in candidates:
         if not candidate:
@@ -138,7 +138,7 @@ def _main() -> None:
     import sys
 
     parser = argparse.ArgumentParser(
-        description="Discover omarchy-pop theme directories"
+        description="Discover cosmikase theme directories"
     )
     parser.add_argument(
         "--all", "-a",

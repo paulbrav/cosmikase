@@ -1,4 +1,4 @@
-"""Configuration helpers for omarchy-pop.
+"""Configuration helpers for cosmikase.
 
 Provides YAML config parsing utilities for shell scripts and Python tools.
 """
@@ -13,7 +13,7 @@ import yaml
 
 
 def load_config(path: Path | str) -> dict[str, Any]:
-    """Load and parse the omarchy-pop YAML configuration file."""
+    """Load and parse the cosmikase YAML configuration file."""
     path = Path(path)
     return yaml.safe_load(path.read_text())
 
@@ -135,13 +135,13 @@ def _main() -> None:
     import sys
 
     parser = argparse.ArgumentParser(
-        description="Query omarchy-pop YAML configuration"
+        description="Query cosmikase YAML configuration"
     )
     parser.add_argument(
         "--config",
         "-c",
-        default="omarchy-pop.yaml",
-        help="Path to config file (default: omarchy-pop.yaml)",
+        default="cosmikase.yaml",
+        help="Path to config file (default: cosmikase.yaml)",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

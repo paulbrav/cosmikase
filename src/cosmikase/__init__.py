@@ -1,6 +1,6 @@
-"""omarchy-pop: Dotfiles and theme management for Pop!_OS."""
+"""cosmikase: COSMIC Omakase - Opinionated Pop!_OS workstation configuration."""
 
-from omarchy_pop.config import (
+from cosmikase.config import (
     enabled_items,
     enabled_top_level,
     get_value,

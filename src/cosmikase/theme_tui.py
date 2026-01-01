@@ -1,4 +1,4 @@
-"""Textual TUI for browsing and applying omarchy-pop themes."""
+"""Textual TUI for browsing and applying cosmikase themes."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from textual.widgets import Footer, Header, OptionList, Static
 from textual.widgets.option_list import Option
 from textual.worker import Worker, WorkerState, work
 
-from omarchy_pop.themes import discover_theme_dirs, find_theme_cli, list_themes, load_manifest
+from cosmikase.themes import discover_theme_dirs, find_theme_cli, list_themes, load_manifest
 
 
 class ThemePreview(Static):
@@ -51,7 +51,7 @@ class ThemePreview(Static):
 
 
 class ThemeTui(App):
-    """Minimal Textual app to browse and apply omarchy-pop themes."""
+    """Minimal Textual app to browse and apply cosmikase themes."""
 
     CSS = """
     Screen {
@@ -166,7 +166,7 @@ class ThemeTui(App):
         """Apply theme in a background thread."""
         cli = find_theme_cli()
         if not cli:
-            return "ERROR: omarchy-pop-theme not found."
+            return "ERROR: cosmikase-theme not found."
             
         result = subprocess.run([cli, theme], capture_output=True, text=True)
         if result.returncode == 0:
