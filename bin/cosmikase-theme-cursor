@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# omarchy-pop-theme-cursor - Apply theme to Cursor, VS Code, and Antigravity
+# cosmikase-theme-cursor - Apply theme to Cursor, VS Code, and Antigravity
 # This script reads cursor.json from a theme and applies it to VS Code forks
 set -euo pipefail
 
 # Source shared library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=bin/omarchy-pop-lib.sh
-source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
 
 THEMES_DIR="$(find_themes_dir)"
 
@@ -289,9 +289,22 @@ if [[ "$ATTEMPT_RELOAD" == "true" ]] && [[ ${#UPDATED_EDITORS[@]} -gt 0 ]]; then
         reloaded=false
         
         # Try using xdotool on X11
+        # Use --class for precise matching to avoid focusing wrong applications
         if [[ -z "${WAYLAND_DISPLAY:-}" ]] && command -v xdotool >/dev/null 2>&1; then
             for editor in "${running_editors[@]}"; do
-                editor_window=$(xdotool search --name "$editor" 2>/dev/null | head -1 || true)
+                # Map display name to WM_CLASS for precise window matching
+                local class_name
+                case "$editor" in
+                    "Cursor") class_name="cursor" ;;
+                    "VS Code") class_name="code" ;;
+                    "Antigravity") class_name="antigravity" ;;
+                    *) class_name="${editor,,}" ;;  # lowercase fallback
+                esac
+                # Try --class first (more precise), fall back to --name
+                editor_window=$(xdotool search --class "$class_name" 2>/dev/null | head -1 || true)
+                if [[ -z "$editor_window" ]]; then
+                    editor_window=$(xdotool search --name "$editor" 2>/dev/null | head -1 || true)
+                fi
                 if [[ -n "$editor_window" ]]; then
                     log "  - Attempting $editor reload via xdotool..."
                     xdotool windowactivate --sync "$editor_window" 2>/dev/null || true

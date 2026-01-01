@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# omarchy-pop-databases - Setup development databases via Docker
+# cosmikase-databases - Setup development databases via Docker
 
 set -euo pipefail
 
@@ -52,16 +52,19 @@ fi
 if gum confirm "Start selected databases in Docker?"; then
     [[ "$SELECTED" == *"PostgreSQL"* ]] && {
         echo "PostgreSQL:"
-        if ! ensure_running "omarchy-postgres"; then
-            POSTGRES_PASSWORD="$(gum input --password --prompt "  Postgres password: ")"
-            [[ -z "$POSTGRES_PASSWORD" ]] && die "Password cannot be empty"
-            docker volume create omarchy-postgres-data >/dev/null
-            echo "  - Creating container: omarchy-postgres"
+        if ! ensure_running "cosmikase-postgres"; then
+            POSTGRES_PASSWORD="$(gum input --password --prompt "  Postgres password (empty for random): ")"
+            if [[ -z "$POSTGRES_PASSWORD" ]]; then
+                POSTGRES_PASSWORD="$(openssl rand -base64 16 | tr -d '/+=')"
+                echo "  Generated random password: $POSTGRES_PASSWORD"
+            fi
+            docker volume create cosmikase-postgres-data >/dev/null
+            echo "  - Creating container: cosmikase-postgres"
             docker run \
-                --name omarchy-postgres \
+                --name cosmikase-postgres \
                 -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
                 -p 5432:5432 \
-                -v omarchy-postgres-data:/var/lib/postgresql/data \
+                -v cosmikase-postgres-data:/var/lib/postgresql/data \
                 --restart unless-stopped \
                 -d postgres:latest >/dev/null
         fi
@@ -70,16 +73,19 @@ if gum confirm "Start selected databases in Docker?"; then
     
     [[ "$SELECTED" == *"MySQL"* ]] && {
         echo "MySQL:"
-        if ! ensure_running "omarchy-mysql"; then
-            MYSQL_ROOT_PASSWORD="$(gum input --password --prompt "  MySQL root password: ")"
-            [[ -z "$MYSQL_ROOT_PASSWORD" ]] && die "Password cannot be empty"
-            docker volume create omarchy-mysql-data >/dev/null
-            echo "  - Creating container: omarchy-mysql"
+        if ! ensure_running "cosmikase-mysql"; then
+            MYSQL_ROOT_PASSWORD="$(gum input --password --prompt "  MySQL root password (empty for random): ")"
+            if [[ -z "$MYSQL_ROOT_PASSWORD" ]]; then
+                MYSQL_ROOT_PASSWORD="$(openssl rand -base64 16 | tr -d '/+=')"
+                echo "  Generated random password: $MYSQL_ROOT_PASSWORD"
+            fi
+            docker volume create cosmikase-mysql-data >/dev/null
+            echo "  - Creating container: cosmikase-mysql"
             docker run \
-                --name omarchy-mysql \
+                --name cosmikase-mysql \
                 -e MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
                 -p 3306:3306 \
-                -v omarchy-mysql-data:/var/lib/mysql \
+                -v cosmikase-mysql-data:/var/lib/mysql \
                 --restart unless-stopped \
                 -d mysql:latest >/dev/null
         fi
@@ -88,13 +94,13 @@ if gum confirm "Start selected databases in Docker?"; then
     
     [[ "$SELECTED" == *"Redis"* ]] && {
         echo "Redis:"
-        if ! ensure_running "omarchy-redis"; then
-            docker volume create omarchy-redis-data >/dev/null
-            echo "  - Creating container: omarchy-redis"
+        if ! ensure_running "cosmikase-redis"; then
+            docker volume create cosmikase-redis-data >/dev/null
+            echo "  - Creating container: cosmikase-redis"
             docker run \
-                --name omarchy-redis \
+                --name cosmikase-redis \
                 -p 6379:6379 \
-                -v omarchy-redis-data:/data \
+                -v cosmikase-redis-data:/data \
                 --restart unless-stopped \
                 -d redis:latest >/dev/null
         fi
@@ -103,13 +109,13 @@ if gum confirm "Start selected databases in Docker?"; then
     
     [[ "$SELECTED" == *"MongoDB"* ]] && {
         echo "MongoDB:"
-        if ! ensure_running "omarchy-mongodb"; then
-            docker volume create omarchy-mongodb-data >/dev/null
-            echo "  - Creating container: omarchy-mongodb"
+        if ! ensure_running "cosmikase-mongodb"; then
+            docker volume create cosmikase-mongodb-data >/dev/null
+            echo "  - Creating container: cosmikase-mongodb"
             docker run \
-                --name omarchy-mongodb \
+                --name cosmikase-mongodb \
                 -p 27017:27017 \
-                -v omarchy-mongodb-data:/data/db \
+                -v cosmikase-mongodb-data:/data/db \
                 --restart unless-stopped \
                 -d mongo:latest >/dev/null
         fi
@@ -118,7 +124,7 @@ if gum confirm "Start selected databases in Docker?"; then
     
     echo ""
     echo "Databases ready. Use 'docker ps' to see them."
-    echo "Stop/remove: docker rm -f omarchy-postgres omarchy-mysql omarchy-redis omarchy-mongodb"
+    echo "Stop/remove: docker rm -f cosmikase-postgres cosmikase-mysql cosmikase-redis cosmikase-mongodb"
 else
     echo "Aborted."
 fi

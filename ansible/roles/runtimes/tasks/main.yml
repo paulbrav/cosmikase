@@ -74,17 +74,29 @@
 # uv tools (Python CLI tools)
 # ============================================================================
 
-- name: Install uv tools
+- name: Install uv tools (standard PyPI packages)
   ansible.builtin.shell: |
     {{ local_bin }}/uv tool install {{ item.name }}
   loop: "{{ uv_tools }}"
   when:
     - uv_tools is defined and uv_tools | length > 0
     - item.install | default(true)
+    - item.name != 'mojo'
   loop_control:
     label: "{{ item.name }}"
   register: uv_tool_result
   changed_when: "'Installed' in uv_tool_result.stdout"
+
+- name: Install Mojo via uv (requires Modular index)
+  ansible.builtin.shell: |
+    {{ local_bin }}/uv tool install mojo --index-url https://modular.gateway.scarf.sh/simple/ --index-strategy unsafe-best-match
+  when:
+    - uv_tools is defined
+    - uv_tools | selectattr('name', 'equalto', 'mojo') | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list | length > 0 or
+      uv_tools | selectattr('name', 'equalto', 'mojo') | rejectattr('install', 'defined') | list | length > 0
+  register: mojo_result
+  changed_when: "'Installed' in mojo_result.stdout"
+  failed_when: false
 
 # ============================================================================
 # npm global packages

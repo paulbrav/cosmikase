@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# omarchy-pop-theme-cosmic - Apply theme to COSMIC desktop
+# cosmikase-theme-cosmic - Apply theme to COSMIC desktop
 # This script applies theme colors, wallpaper, and terminal settings to COSMIC
 set -euo pipefail
 
 # Source shared library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=bin/omarchy-pop-lib.sh
-source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
 
 THEMES_DIR="$(find_themes_dir)"
 
@@ -87,13 +87,13 @@ log "Applying COSMIC theme: $THEME"
 
 # Validate RON files before applying
 if [[ -f "$THEME_PATH/cosmic.ron" ]]; then
-    if ! uv run omarchy-validate-ron "$THEME_PATH/cosmic.ron" >/dev/null 2>&1; then
+    if ! uv run cosmikase-validate-ron "$THEME_PATH/cosmic.ron" >/dev/null 2>&1; then
         echo "Error: Invalid RON syntax in $THEME_PATH/cosmic.ron" >&2
         exit 1
     fi
 fi
 if [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
-    if ! uv run omarchy-validate-ron "$THEME_PATH/cosmic-term.ron" >/dev/null 2>&1; then
+    if ! uv run cosmikase-validate-ron "$THEME_PATH/cosmic-term.ron" >/dev/null 2>&1; then
         echo "Error: Invalid RON syntax in $THEME_PATH/cosmic-term.ron" >&2
         exit 1
     fi

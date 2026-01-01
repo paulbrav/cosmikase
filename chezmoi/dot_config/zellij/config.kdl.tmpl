@@ -6,10 +6,14 @@ theme "{{ .theme }}"
 // Use a compact layout by default
 default_layout "compact"
 
+// Start in locked mode so shell shortcuts (Ctrl+r, Ctrl+t for FZF) work
+// Press Ctrl+g to enter Normal mode for Zellij navigation
+default_mode "locked"
+
 // UI Settings
 pane_frames false
 mouse_mode true
-copy_command "xclip -selection clipboard" // Adjust if using Wayland
+copy_command "wl-copy"  // Wayland clipboard (Pop!_OS 24.04 COSMIC)
 copy_on_select true
 
 // Keybindings

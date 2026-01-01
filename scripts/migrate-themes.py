@@ -8,7 +8,7 @@ import sys
 
 # Add src to path to use discover_theme_dirs
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
-from omarchy_pop.themes import discover_theme_dirs
+from cosmikase.themes import discover_theme_dirs
 
 
 def migrate_theme(theme_path: Path):
@@ -95,4 +95,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

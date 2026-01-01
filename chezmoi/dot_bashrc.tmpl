@@ -12,8 +12,14 @@ esac
 # ============================================================================
 HISTCONTROL=ignoreboth
 shopt -s histappend
-HISTSIZE=10000
-HISTFILESIZE=20000
+HISTSIZE=32768
+HISTFILESIZE=32768
+
+# ============================================================================
+# Readline Configuration
+# ============================================================================
+# Source custom inputrc for better shell UX (case-insensitive completion, etc.)
+export INPUTRC="$HOME/.inputrc"
 
 # ============================================================================
 # Window size and globbing

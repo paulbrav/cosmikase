@@ -1,7 +1,8 @@
 // Place your key bindings in this file to override the defaults
+// Note: ctrl+i collides with Tab keycode in terminal contexts, so we use ctrl+shift+i
 [
     {
-        "key": "ctrl+i",
+        "key": "ctrl+shift+i",
         "command": "composerMode.agent"
     }
 ]

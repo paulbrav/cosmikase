@@ -1,0 +1,38 @@
+# Readline configuration for improved shell UX
+# Managed by chezmoi - edit the template in cosmikase/chezmoi/
+
+# Case-insensitive tab completion
+set completion-ignore-case on
+
+# Show all completions if ambiguous (no double-tab needed)
+set show-all-if-ambiguous on
+
+# Color the common prefix of completions
+set colored-completion-prefix on
+
+# Color completions by file type
+set colored-stats on
+
+# Don't match hidden files unless the pattern starts with a dot
+set match-hidden-files off
+
+# Skip completed text when inserting completions
+set skip-completed-text on
+
+# Arrow keys search history by prefix
+# Up arrow: search backward through history for lines starting with current input
+"\e[A": history-search-backward
+# Down arrow: search forward through history for lines starting with current input
+"\e[B": history-search-forward
+
+# Page up/down for beginning/end of history
+"\e[5~": beginning-of-history
+"\e[6~": end-of-history
+
+# Ctrl+Left/Right to move by word
+"\e[1;5C": forward-word
+"\e[1;5D": backward-word
+
+# Enable bracketed paste mode (prevents issues with pasted text)
+set enable-bracketed-paste on
+

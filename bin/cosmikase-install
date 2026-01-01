@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# omarchy-pop-install - Optional software installer for Omarchy on Pop!_OS
-# Reads disabled items from omarchy-pop.yaml and allows interactive installation.
+# cosmikase-install - Optional software installer for Cosmikase on Pop!_OS
+# Reads disabled items from cosmikase.yaml and allows interactive installation.
 
 set -euo pipefail
 
@@ -12,17 +12,17 @@ fi
 
 usage() {
     cat <<'EOF'
-Usage: omarchy-pop-install [--config PATH]
+Usage: cosmikase-install [--config PATH]
 
-Installs optional (install:false) apps from omarchy-pop.yaml interactively.
+Installs optional (install:false) apps from cosmikase.yaml interactively.
 
 Options:
-  --config PATH   Path to omarchy-pop.yaml (or set OMARCHY_POP_CONFIG)
+  --config PATH   Path to cosmikase.yaml (or set COSMIKASE_CONFIG)
   -h, --help      Show this help
 EOF
 }
 
-CONFIG_FILE="${OMARCHY_POP_CONFIG:-}"
+CONFIG_FILE="${COSMIKASE_CONFIG:-}"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --config)
@@ -42,20 +42,20 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$CONFIG_FILE" ]]; then
-    if [[ -f "./omarchy-pop.yaml" ]]; then
-        CONFIG_FILE="./omarchy-pop.yaml"
+    if [[ -f "./cosmikase.yaml" ]]; then
+        CONFIG_FILE="./cosmikase.yaml"
     else
         echo "Error: config file not found. Run from the repo root or pass --config PATH." >&2
         exit 1
     fi
 fi
 
-CONFIG_BIN="omarchy-config"
-if ! command -v omarchy-config >/dev/null 2>&1; then
+CONFIG_BIN="cosmikase-config"
+if ! command -v cosmikase-config >/dev/null 2>&1; then
     if command -v uv >/dev/null 2>&1; then
-        CONFIG_BIN="uv run omarchy-config"
+        CONFIG_BIN="uv run cosmikase-config"
     else
-        echo "Error: omarchy-config not found (and uv not found). Run 'make setup' or 'make install'." >&2
+        echo "Error: cosmikase-config not found (and uv not found). Run 'make setup' or 'make install'." >&2
         exit 1
     fi
 fi
@@ -84,7 +84,7 @@ for section_group in "${SECTIONS[@]}"; do
 done
 
 if [[ ! -s "$APPS_LIST" ]]; then
-    echo "No optional software found (all items in omarchy-pop.yaml are already enabled)."
+    echo "No optional software found (all items in cosmikase.yaml are already enabled)."
     exit 0
 fi
 

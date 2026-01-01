@@ -7,7 +7,7 @@ set -Eeuo pipefail
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 
-LOG_TAG="omarchy-power"
+LOG_TAG="cosmikase-power"
 
 log() { logger -t "$LOG_TAG" "$*"; }
 

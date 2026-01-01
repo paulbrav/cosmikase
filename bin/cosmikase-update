@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# omarchy-pop-update - Updates all installed software and system components
+# cosmikase-update - Updates all installed software and system components
 set -euo pipefail
 
-echo "==> Starting omarchy-pop system update..."
+echo "==> Starting cosmikase system update..."
 echo ""
 
 # ------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ if command -v rustup &>/dev/null; then
     rustup update
 fi
 
-# uv is required for omarchy-pop tooling - install if missing, then update
+# uv is required for cosmikase tooling - install if missing, then update
 if command -v uv &>/dev/null; then
     echo ""
     echo "==> Updating uv and tools..."
@@ -44,7 +44,7 @@ if command -v uv &>/dev/null; then
     uv tool upgrade --all || true
 else
     echo ""
-    echo "==> Installing uv (required for omarchy-pop)..."
+    echo "==> Installing uv (required for cosmikase)..."
     curl -LsSf https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
     sh /tmp/uv-install.sh
     rm /tmp/uv-install.sh

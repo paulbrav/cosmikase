@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# omarchy-pop - Main interactive menu entrypoint for Omarchy on Pop!_OS
+# cosmikase - Main interactive menu entrypoint for Cosmikase on Pop!_OS
 # Uses gum for a stylish CLI interface.
 
 set -euo pipefail
@@ -8,10 +8,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source shared helpers (themes dir discovery, etc.)
-# shellcheck source=bin/omarchy-pop-lib.sh
-if [[ -f "$SCRIPT_DIR/omarchy-pop-lib.sh" ]]; then
+# shellcheck source=bin/cosmikase-lib.sh
+if [[ -f "$SCRIPT_DIR/cosmikase-lib.sh" ]]; then
     # shellcheck disable=SC1091
-    source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+    source "$SCRIPT_DIR/cosmikase-lib.sh"
 fi
 
 # Check for gum
@@ -22,13 +22,13 @@ fi
 
 main_menu() {
     clear
-    echo "      ██████╗ ███╗   ███╗ █████╗ ██████╗  ██████╗██╗  ██╗██╗   ██╗"
-    echo "     ██╔═══██╗████╗ ████║██╔══██╗██╔══██╗██╔════╝██║  ██║╚██╗ ██╔╝"
-    echo "     ██║   ██║██╔████╔██║███████║██████╔╝██║     ███████║ ╚████╔╝ "
-    echo "     ██║   ██║██║╚██╔╝██║██╔══██║██╔══██╗██║     ██╔══██║  ╚██╔╝  "
-    echo "     ╚██████╔╝██║ ╚═╝ ██║██║  ██║██║  ██║╚██████╗██║  ██║   ██║   "
-    echo "      ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝   ╚═╝   "
-    echo "                             FOR POP!_OS                          "
+    echo "     ██████╗ ██████╗ ███████╗███╗   ███╗██╗██╗  ██╗ █████╗ ███████╗███████╗"
+    echo "    ██╔════╝██╔═══██╗██╔════╝████╗ ████║██║██║ ██╔╝██╔══██╗██╔════╝██╔════╝"
+    echo "    ██║     ██║   ██║███████╗██╔████╔██║██║█████╔╝ ███████║███████╗█████╗  "
+    echo "    ██║     ██║   ██║╚════██║██║╚██╔╝██║██║██╔═██╗ ██╔══██║╚════██║██╔══╝  "
+    echo "    ╚██████╗╚██████╔╝███████║██║ ╚═╝ ██║██║██║  ██╗██║  ██║███████║███████╗"
+    echo "     ╚═════╝ ╚═════╝ ╚══════╝╚═╝     ╚═╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝"
+    echo "                          COSMIC Omakase for Pop!_OS                       "
     echo ""
 
     CHOICE=$(gum choose \
@@ -44,36 +44,36 @@ main_menu() {
         "🎨 Change Theme")
             if command -v theme-tui >/dev/null 2>&1; then
                 theme-tui
-            elif [[ -f "$SCRIPT_DIR/omarchy-pop-theme" ]]; then
+            elif [[ -f "$SCRIPT_DIR/cosmikase-theme" ]]; then
                 # Fallback to simple choice if TUI fails
                 if command -v find_themes_dir >/dev/null 2>&1; then
                     THEMES_DIR="$(find_themes_dir)"
                 else
                     # Last-resort fallback
-                    THEMES_DIR="${THEMES_DIR:-$HOME/.local/share/omarchy-pop/themes}"
+                    THEMES_DIR="${THEMES_DIR:-$HOME/.local/share/cosmikase/themes}"
                 fi
                 THEME=$(
                     find "$THEMES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
                     | sort \
                     | gum choose
                 )
-                "$SCRIPT_DIR/omarchy-pop-theme" "$THEME"
+                "$SCRIPT_DIR/cosmikase-theme" "$THEME"
             fi
             ;;
         "📦 Install Optional Software")
-            "$SCRIPT_DIR/omarchy-pop-install"
+            "$SCRIPT_DIR/cosmikase-install"
             ;;
         "🐳 Setup Docker Databases")
-            "$SCRIPT_DIR/omarchy-pop-databases"
+            "$SCRIPT_DIR/cosmikase-databases"
             ;;
         "🔄 Update Everything")
-            "$SCRIPT_DIR/omarchy-pop-update"
+            "$SCRIPT_DIR/cosmikase-update"
             ;;
         "⚡ Power Settings")
-            "$SCRIPT_DIR/omarchy-power-helper"
+            "$SCRIPT_DIR/cosmikase-power-helper"
             ;;
         "🪛 Cursor Extensions")
-            "$SCRIPT_DIR/omarchy-cursor-extensions"
+            "$SCRIPT_DIR/cosmikase-cursor-extensions"
             ;;
         "❌ Exit")
             exit 0

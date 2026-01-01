@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# omarchy-pop-theme - Switch themes using chezmoi and helper scripts
+# cosmikase-theme - Switch themes using chezmoi and helper scripts
 # This script updates the theme in chezmoi data, reapplies dotfiles, and
 # calls per-app helper scripts for live theme updates
 set -euo pipefail
@@ -8,8 +8,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source shared library
-# shellcheck source=bin/omarchy-pop-lib.sh
-source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
 
 THEMES_DIR="$(find_themes_dir)"
 
@@ -136,7 +136,7 @@ if [[ "$APPLY_CHEZMOI" == "true" ]]; then
 
     # Update chezmoi data using Python helper for safe TOML editing
     echo "  - Updating chezmoi configuration..."
-    if ! uv run omarchy-chezmoi "$THEME" "$THEMES_DIR"; then
+    if ! uv run cosmikase-chezmoi "$THEME" "$THEMES_DIR"; then
         echo "Error: Failed to update chezmoi configuration" >&2
         exit 1
     fi
@@ -158,29 +158,29 @@ fi
 
 # Apply Cursor/VS Code theme
 if [[ "$APPLY_CURSOR" == "true" ]]; then
-    CURSOR_HELPER=$(find_helper "omarchy-pop-theme-cursor")
+    CURSOR_HELPER=$(find_helper "cosmikase-theme-cursor")
     if [[ -n "$CURSOR_HELPER" ]]; then
         echo "  - Applying Cursor theme..."
         THEMES_DIR="$THEMES_DIR" "$CURSOR_HELPER" "${HELPER_ARGS[@]}" || true
     else
-        echo "  - Warning: omarchy-pop-theme-cursor not found"
+        echo "  - Warning: cosmikase-theme-cursor not found"
     fi
 fi
 
 # Apply COSMIC desktop theme
 if [[ "$APPLY_COSMIC" == "true" ]]; then
-    COSMIC_HELPER=$(find_helper "omarchy-pop-theme-cosmic")
+    COSMIC_HELPER=$(find_helper "cosmikase-theme-cosmic")
     if [[ -n "$COSMIC_HELPER" ]]; then
         echo "  - Applying COSMIC theme..."
         THEMES_DIR="$THEMES_DIR" "$COSMIC_HELPER" "${HELPER_ARGS[@]}" || true
     else
-        echo "  - Warning: omarchy-pop-theme-cosmic not found"
+        echo "  - Warning: cosmikase-theme-cosmic not found"
     fi
 fi
 
 # Reload terminal emulators
 if [[ "$APPLY_TERMINALS" == "true" ]]; then
-    TERMINAL_HELPER=$(find_helper "omarchy-pop-theme-terminal")
+    TERMINAL_HELPER=$(find_helper "cosmikase-theme-terminal")
     if [[ -n "$TERMINAL_HELPER" ]]; then
         echo "  - Reloading terminals..."
         if [[ "$QUIET" == "true" ]]; then
@@ -189,7 +189,7 @@ if [[ "$APPLY_TERMINALS" == "true" ]]; then
             "$TERMINAL_HELPER" || true
         fi
     else
-        echo "  - Warning: omarchy-pop-theme-terminal not found"
+        echo "  - Warning: cosmikase-theme-terminal not found"
     fi
 fi
 
