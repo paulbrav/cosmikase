@@ -45,7 +45,9 @@ if command -v uv &>/dev/null; then
 else
     echo ""
     echo "==> Installing uv (required for omarchy-pop)..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    curl -LsSf https://astral.sh/uv/install.sh -o /tmp/uv-install.sh
+    sh /tmp/uv-install.sh
+    rm /tmp/uv-install.sh
     # Source the new binary for this session
     export PATH="$HOME/.local/bin:$PATH"
     if command -v uv &>/dev/null; then

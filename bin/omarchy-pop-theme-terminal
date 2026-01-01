@@ -3,6 +3,11 @@
 # This script sends reload signals to running terminal emulators
 set -euo pipefail
 
+# Source shared library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/omarchy-pop-lib.sh
+source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+
 usage() {
     echo "Usage: $(basename "$0") [options]"
     echo ""
@@ -39,12 +44,6 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-
-log() {
-    if [[ "$QUIET" != "true" ]]; then
-        echo "$@"
-    fi
-}
 
 log "Reloading terminal emulators..."
 

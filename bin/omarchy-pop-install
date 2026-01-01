@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# omarchy-pop-install - Optional software installer for Omarchy on Pop!_OS
+# Reads disabled items from omarchy-pop.yaml and allows interactive installation.
+
+set -euo pipefail
+
+# Check for gum
+if ! command -v gum >/dev/null 2>&1; then
+    echo "Error: gum is not installed."
+    exit 1
+fi
+
+usage() {
+    cat <<'EOF'
+Usage: omarchy-pop-install [--config PATH]
+
+Installs optional (install:false) apps from omarchy-pop.yaml interactively.
+
+Options:
+  --config PATH   Path to omarchy-pop.yaml (or set OMARCHY_POP_CONFIG)
+  -h, --help      Show this help
+EOF
+}
+
+CONFIG_FILE="${OMARCHY_POP_CONFIG:-}"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --config)
+            CONFIG_FILE="${2:-}"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z "$CONFIG_FILE" ]]; then
+    if [[ -f "./omarchy-pop.yaml" ]]; then
+        CONFIG_FILE="./omarchy-pop.yaml"
+    else
+        echo "Error: config file not found. Run from the repo root or pass --config PATH." >&2
+        exit 1
+    fi
+fi
+
+CONFIG_BIN="omarchy-config"
+if ! command -v omarchy-config >/dev/null 2>&1; then
+    if command -v uv >/dev/null 2>&1; then
+        CONFIG_BIN="uv run omarchy-config"
+    else
+        echo "Error: omarchy-config not found (and uv not found). Run 'make setup' or 'make install'." >&2
+        exit 1
+    fi
+fi
+
+echo "Scanning for optional software..."
+
+# Get list of disabled apps from different sections
+# We'll combine them into a list for gum
+APPS_LIST=$(mktemp)
+trap 'rm -f "$APPS_LIST"' EXIT
+
+# Sections to scan
+SECTIONS=(
+    "flatpak.utility"
+    "apt.core"
+    "apt.gui"
+    "apt.terminal"
+)
+
+for section_group in "${SECTIONS[@]}"; do
+    section="${section_group%.*}"
+    group="${section_group#*.}"
+    
+    # Use our new --disabled flag
+    $CONFIG_BIN --config "$CONFIG_FILE" list "$section" "$group" --disabled >> "$APPS_LIST" || true
+done
+
+if [[ ! -s "$APPS_LIST" ]]; then
+    echo "No optional software found (all items in omarchy-pop.yaml are already enabled)."
+    exit 0
+fi
+
+echo "Select software to install (Space to toggle, Enter to confirm):"
+SELECTED=$(gum choose --no-limit < "$APPS_LIST")
+
+if [[ -z "$SELECTED" ]]; then
+    echo "No software selected."
+    exit 0
+fi
+
+echo "You selected:"
+echo "$SELECTED"
+echo ""
+
+if gum confirm "Install selected software?"; then
+    # For each selected item, we need to know how to install it.
+    # A simple way is to just call 'apt install' or 'flatpak install'
+    # but it's better to update the YAML and run ansible, or just run direct commands.
+    
+    while IFS= read -r item; do
+        name="${item%%:*}"
+        echo "Installing $name..."
+        
+        # Determine if it's a flatpak (contains dots usually) or apt
+        if [[ "$name" == *"."* ]]; then
+            if ! command -v flatpak >/dev/null 2>&1; then
+                echo "Flatpak not found; installing it first..." >&2
+                sudo apt update && sudo apt install -y flatpak
+            fi
+            flatpak install -y "$name" || echo "Failed to install flatpak $name"
+        else
+            sudo apt install -y "$name" || echo "Failed to install apt package $name"
+        fi
+    done <<< "$SELECTED"
+    
+    echo "Installation complete!"
+else
+    echo "Aborted."
+fi
+

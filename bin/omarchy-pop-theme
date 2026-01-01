@@ -7,37 +7,9 @@ set -euo pipefail
 # Find script directory for helper scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Find themes directory - check multiple locations
-find_themes_dir() {
-    # 1. Environment variable override
-    if [[ -n "${THEMES_DIR:-}" ]] && [[ -d "$THEMES_DIR" ]]; then
-        echo "$THEMES_DIR"
-        return
-    fi
-    
-    # 2. Installed location
-    local installed="$HOME/.local/share/omarchy-pop/themes"
-    if [[ -d "$installed" ]]; then
-        echo "$installed"
-        return
-    fi
-    
-    # 3. Repo location (relative to this script)
-    local repo_themes="$SCRIPT_DIR/../themes"
-    if [[ -d "$repo_themes" ]]; then
-        echo "$(cd "$repo_themes" && pwd)"
-        return
-    fi
-    
-    # 4. Current working directory
-    if [[ -d "./themes" ]]; then
-        echo "$(cd "./themes" && pwd)"
-        return
-    fi
-    
-    # Fallback to default (will fail later with helpful message)
-    echo "$HOME/.local/share/omarchy-pop/themes"
-}
+# Source shared library
+# shellcheck source=bin/omarchy-pop-lib.sh
+source "$SCRIPT_DIR/omarchy-pop-lib.sh"
 
 THEMES_DIR="$(find_themes_dir)"
 
@@ -48,6 +20,7 @@ usage() {
     echo "and calling per-app helper scripts for live theme updates."
     echo ""
     echo "Options:"
+    echo "  --rollback      Roll back to the previous theme"
     echo "  --no-cursor     Skip Cursor/VS Code theme update"
     echo "  --no-cosmic     Skip COSMIC desktop theme update"
     echo "  --no-terminals  Skip terminal reload signals"
@@ -72,6 +45,7 @@ usage() {
 
 # Parse arguments
 THEME=""
+ROLLBACK=false
 APPLY_CURSOR=true
 APPLY_COSMIC=true
 APPLY_TERMINALS=true
@@ -83,6 +57,10 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             usage
             exit 0
+            ;;
+        --rollback)
+            ROLLBACK=true
+            shift
             ;;
         --no-cursor)
             APPLY_CURSOR=false
@@ -122,28 +100,30 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Handle rollback
+if [[ "$ROLLBACK" == "true" ]]; then
+    PREV=$(get_previous_theme)
+    if [[ -z "$PREV" ]]; then
+        echo "Error: No theme history found to roll back." >&2
+        exit 1
+    fi
+    echo "Rolling back to: $PREV"
+    THEME="$PREV"
+fi
+
 # Require theme argument
 if [[ -z "$THEME" ]]; then
     usage
     exit 1
 fi
 
-THEME_PATH="$THEMES_DIR/$THEME"
-
-# Validate theme exists
-if [[ ! -d "$THEME_PATH" ]]; then
-    echo "Error: Theme '$THEME' not found in $THEMES_DIR" >&2
-    echo "" >&2
-    echo "Available themes:" >&2
-    if [[ -d "$THEMES_DIR" ]]; then
-        for t in "$THEMES_DIR"/*/; do
-            [[ -d "$t" ]] && echo "  - $(basename "$t")" >&2
-        done
-    fi
-    exit 1
-fi
+THEMES_DIR="$(find_themes_dir)"
+require_theme "$THEME" "$THEMES_DIR" || exit 1
 
 echo "Switching to theme: $THEME"
+
+# Save history
+save_theme_history "$THEME"
 
 # Step 1: Update chezmoi and apply dotfiles
 if [[ "$APPLY_CHEZMOI" == "true" ]]; then
@@ -154,47 +134,12 @@ if [[ "$APPLY_CHEZMOI" == "true" ]]; then
         exit 1
     fi
 
-    # Update chezmoi data with new theme
-    # chezmoi stores data in ~/.config/chezmoi/chezmoi.toml
-    CHEZMOI_CONFIG="$HOME/.config/chezmoi/chezmoi.toml"
-
-    if [[ -f "$CHEZMOI_CONFIG" ]]; then
-        # Update existing config
-        if grep -q '^\[data\]' "$CHEZMOI_CONFIG"; then
-            # Update theme in existing [data] section
-            if grep -q '^[[:space:]]*theme[[:space:]]*=' "$CHEZMOI_CONFIG"; then
-                sed -i "s/^[[:space:]]*theme[[:space:]]*=.*/    theme = \"$THEME\"/" "$CHEZMOI_CONFIG"
-            else
-                # Add theme to [data] section
-                sed -i "/^\[data\]/a\\    theme = \"$THEME\"" "$CHEZMOI_CONFIG"
-            fi
-            # Update themes_dir to match the actual location
-            if grep -q '^[[:space:]]*themes_dir[[:space:]]*=' "$CHEZMOI_CONFIG"; then
-                sed -i "s|^[[:space:]]*themes_dir[[:space:]]*=.*|    themes_dir = \"$THEMES_DIR\"|" "$CHEZMOI_CONFIG"
-            else
-                sed -i "/^\[data\]/a\\    themes_dir = \"$THEMES_DIR\"" "$CHEZMOI_CONFIG"
-            fi
-        else
-            # Add [data] section
-            echo "" >> "$CHEZMOI_CONFIG"
-            echo "[data]" >> "$CHEZMOI_CONFIG"
-            echo "    theme = \"$THEME\"" >> "$CHEZMOI_CONFIG"
-            echo "    themes_dir = \"$THEMES_DIR\"" >> "$CHEZMOI_CONFIG"
-        fi
-    else
-        # Create new config
-        mkdir -p "$(dirname "$CHEZMOI_CONFIG")"
-        cat > "$CHEZMOI_CONFIG" << EOF
-[data]
-    theme = "$THEME"
-    themes_dir = "$THEMES_DIR"
-    font_family = "JetBrainsMono Nerd Font"
-    font_size = 9
-    padding = 14
-EOF
+    # Update chezmoi data using Python helper for safe TOML editing
+    echo "  - Updating chezmoi configuration..."
+    if ! uv run omarchy-chezmoi "$THEME" "$THEMES_DIR"; then
+        echo "Error: Failed to update chezmoi configuration" >&2
+        exit 1
     fi
-
-    echo "  - Updated chezmoi configuration"
 
     # Reapply dotfiles with new theme
     echo "  - Applying dotfiles..."
@@ -210,18 +155,6 @@ HELPER_ARGS=("$THEME")
 if [[ "$QUIET" == "true" ]]; then
     HELPER_ARGS+=("--quiet")
 fi
-
-# Find helper script (check script dir first, then PATH)
-find_helper() {
-    local name="$1"
-    if [[ -x "$SCRIPT_DIR/$name" ]]; then
-        echo "$SCRIPT_DIR/$name"
-    elif command -v "$name" >/dev/null 2>&1; then
-        command -v "$name"
-    else
-        echo ""
-    fi
-}
 
 # Apply Cursor/VS Code theme
 if [[ "$APPLY_CURSOR" == "true" ]]; then

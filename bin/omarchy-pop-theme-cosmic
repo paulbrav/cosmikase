@@ -3,39 +3,12 @@
 # This script applies theme colors, wallpaper, and terminal settings to COSMIC
 set -euo pipefail
 
-# Find themes directory - check multiple locations
-find_themes_dir() {
-    # 1. Environment variable override
-    if [[ -n "${THEMES_DIR:-}" ]] && [[ -d "$THEMES_DIR" ]]; then
-        echo "$THEMES_DIR"
-        return
-    fi
-    
-    # 2. Installed location
-    local installed="$HOME/.local/share/omarchy-pop/themes"
-    if [[ -d "$installed" ]]; then
-        echo "$installed"
-        return
-    fi
-    
-    # 3. Repo location (relative to this script)
-    local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local repo_themes="$script_dir/../themes"
-    if [[ -d "$repo_themes" ]]; then
-        echo "$(cd "$repo_themes" && pwd)"
-        return
-    fi
-    
-    # 4. Current working directory
-    if [[ -d "./themes" ]]; then
-        echo "$(cd "./themes" && pwd)"
-        return
-    fi
-    
-    # Fallback to default (will fail later with helpful message)
-    echo "$HOME/.local/share/omarchy-pop/themes"
-}
+# Source shared library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/omarchy-pop-lib.sh
+source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+
+THEMES_DIR="$(find_themes_dir)"
 
 usage() {
     echo "Usage: $(basename "$0") <theme-name> [options]"
@@ -101,26 +74,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Require theme argument
-if [[ -z "$THEME" ]]; then
-    usage
-    exit 1
-fi
-
-log() {
-    if [[ "$QUIET" != "true" ]]; then
-        echo "$@"
-    fi
-}
-
-THEMES_DIR="$(find_themes_dir)"
-THEME_PATH="$THEMES_DIR/$THEME"
-
-# Validate theme exists
-if [[ ! -d "$THEME_PATH" ]]; then
-    echo "Error: Theme '$THEME' not found in $THEMES_DIR" >&2
-    exit 1
-fi
+# Require theme
+require_theme "$THEME" "$THEMES_DIR" || exit 1
 
 # Check if COSMIC is available
 if [[ ! -d "$HOME/.config/cosmic" ]]; then
@@ -130,43 +85,88 @@ fi
 
 log "Applying COSMIC theme: $THEME"
 
+# Validate RON files before applying
+if [[ -f "$THEME_PATH/cosmic.ron" ]]; then
+    if ! uv run omarchy-validate-ron "$THEME_PATH/cosmic.ron" >/dev/null 2>&1; then
+        echo "Error: Invalid RON syntax in $THEME_PATH/cosmic.ron" >&2
+        exit 1
+    fi
+fi
+if [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
+    if ! uv run omarchy-validate-ron "$THEME_PATH/cosmic-term.ron" >/dev/null 2>&1; then
+        echo "Error: Invalid RON syntax in $THEME_PATH/cosmic-term.ron" >&2
+        exit 1
+    fi
+fi
+
 # Determine if this is a light theme
 IS_LIGHT=false
 if [[ -f "$THEME_PATH/light.mode" ]]; then
     IS_LIGHT=true
 fi
 
-# Set COSMIC dark/light mode
-COSMIC_MODE_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1"
-mkdir -p "$COSMIC_MODE_DIR"
-
-if [[ "$IS_LIGHT" == "true" ]]; then
-    echo "false" > "$COSMIC_MODE_DIR/is_dark"
-    log "  - Set COSMIC to Light mode"
-else
-    echo "true" > "$COSMIC_MODE_DIR/is_dark"
-    log "  - Set COSMIC to Dark mode"
-fi
-
-# Apply COSMIC color theme
-if [[ "$APPLY_COLORS" == "true" ]] && [[ -f "$THEME_PATH/cosmic.ron" ]]; then
+# Atomic update function for COSMIC configs
+apply_cosmic_configs() {
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "$tmp_dir"' EXIT
+    
+    # Prepare all files in tmp
     if [[ "$IS_LIGHT" == "true" ]]; then
-        COSMIC_THEME_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Light/v1"
+        echo "false" > "$tmp_dir/is_dark"
     else
-        COSMIC_THEME_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Dark/v1"
+        echo "true" > "$tmp_dir/is_dark"
     fi
-    mkdir -p "$COSMIC_THEME_DIR"
-    cp "$THEME_PATH/cosmic.ron" "$COSMIC_THEME_DIR/theme"
-    log "  - Applied COSMIC color theme"
-fi
+    
+    if [[ "$APPLY_COLORS" == "true" ]] && [[ -f "$THEME_PATH/cosmic.ron" ]]; then
+        cp "$THEME_PATH/cosmic.ron" "$tmp_dir/theme"
+    fi
+    
+    if [[ "$APPLY_TERMINAL" == "true" ]] && [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
+        cp "$THEME_PATH/cosmic-term.ron" "$tmp_dir/color_scheme"
+    fi
 
-# Apply COSMIC terminal color scheme
-if [[ "$APPLY_TERMINAL" == "true" ]] && [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
-    COSMIC_TERM_DIR="$HOME/.config/cosmic/com.system76.CosmicTerm/v1"
-    mkdir -p "$COSMIC_TERM_DIR"
-    cp "$THEME_PATH/cosmic-term.ron" "$COSMIC_TERM_DIR/color_scheme"
-    log "  - Applied COSMIC terminal color scheme"
-fi
+    # Atomic moves to actual config locations
+    if command -v cosmic-config >/dev/null 2>&1; then
+        log "  - Using cosmic-config CLI..."
+        # Note: cosmic-config might not handle all files yet, but it's the future
+        # For now we'll use it for mode if possible
+        if [[ "$IS_LIGHT" == "true" ]]; then
+            cosmic-config set com.system76.CosmicTheme.Mode/v1 is_dark false
+        else
+            cosmic-config set com.system76.CosmicTheme.Mode/v1 is_dark true
+        fi
+        log "  - Set COSMIC mode via cosmic-config"
+    else
+        mkdir -p "$COSMIC_MODE_DIR"
+        mv "$tmp_dir/is_dark" "$COSMIC_MODE_DIR/is_dark"
+        log "  - Set COSMIC mode via file write"
+    fi
+    
+    if [[ -f "$tmp_dir/theme" ]]; then
+        if [[ "$IS_LIGHT" == "true" ]]; then
+            COSMIC_THEME_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Light/v1"
+        else
+            COSMIC_THEME_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Dark/v1"
+        fi
+        mkdir -p "$COSMIC_THEME_DIR"
+        mv "$tmp_dir/theme" "$COSMIC_THEME_DIR/theme"
+        log "  - Applied COSMIC color theme"
+    fi
+    
+    if [[ -f "$tmp_dir/color_scheme" ]]; then
+        COSMIC_TERM_DIR="$HOME/.config/cosmic/com.system76.CosmicTerm/v1"
+        mkdir -p "$COSMIC_TERM_DIR"
+        mv "$tmp_dir/color_scheme" "$COSMIC_TERM_DIR/color_scheme"
+        log "  - Applied COSMIC terminal color scheme"
+    fi
+}
+
+# Set COSMIC paths
+COSMIC_MODE_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1"
+
+# Execute atomic update
+apply_cosmic_configs
 
 # Set COSMIC wallpaper
 if [[ "$APPLY_WALLPAPER" == "true" ]] && [[ -d "$THEME_PATH/backgrounds" ]]; then
@@ -199,4 +199,3 @@ fi
 # COSMIC uses inotify to watch config files - changes apply automatically
 log "COSMIC theme '$THEME' applied successfully!"
 log "Note: COSMIC auto-reloads config via inotify"
-

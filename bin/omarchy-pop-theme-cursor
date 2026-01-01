@@ -3,39 +3,12 @@
 # This script reads cursor.json from a theme and applies it to VS Code forks
 set -euo pipefail
 
-# Find themes directory - check multiple locations
-find_themes_dir() {
-    # 1. Environment variable override
-    if [[ -n "${THEMES_DIR:-}" ]] && [[ -d "$THEMES_DIR" ]]; then
-        echo "$THEMES_DIR"
-        return
-    fi
-    
-    # 2. Installed location
-    local installed="$HOME/.local/share/omarchy-pop/themes"
-    if [[ -d "$installed" ]]; then
-        echo "$installed"
-        return
-    fi
-    
-    # 3. Repo location (relative to this script)
-    local script_dir
-    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local repo_themes="$script_dir/../themes"
-    if [[ -d "$repo_themes" ]]; then
-        echo "$(cd "$repo_themes" && pwd)"
-        return
-    fi
-    
-    # 4. Current working directory
-    if [[ -d "./themes" ]]; then
-        echo "$(cd "./themes" && pwd)"
-        return
-    fi
-    
-    # Fallback to default (will fail later with helpful message)
-    echo "$HOME/.local/share/omarchy-pop/themes"
-}
+# Source shared library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/omarchy-pop-lib.sh
+source "$SCRIPT_DIR/omarchy-pop-lib.sh"
+
+THEMES_DIR="$(find_themes_dir)"
 
 # Detect editor commands
 find_editor_cmd() {
@@ -44,15 +17,6 @@ find_editor_cmd() {
         echo "$name"
     else
         echo ""
-    fi
-}
-
-# Send notification
-notify() {
-    local title="$1"
-    local message="$2"
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send -a "omarchy-pop" "$title" "$message" 2>/dev/null || true
     fi
 }
 
@@ -142,27 +106,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Require theme argument
-if [[ -z "$THEME" ]]; then
-    usage
-    exit 1
-fi
+# Require theme
+require_theme "$THEME" "$THEMES_DIR" || exit 1
 
-log() {
-    if [[ "$QUIET" != "true" ]]; then
-        echo "$@"
-    fi
-}
-
-THEMES_DIR="$(find_themes_dir)"
-THEME_PATH="$THEMES_DIR/$THEME"
 CURSOR_JSON="$THEME_PATH/cursor.json"
-
-# Validate theme exists
-if [[ ! -d "$THEME_PATH" ]]; then
-    echo "Error: Theme '$THEME' not found in $THEMES_DIR" >&2
-    exit 1
-fi
 
 # Check for cursor.json
 if [[ ! -f "$CURSOR_JSON" ]]; then
