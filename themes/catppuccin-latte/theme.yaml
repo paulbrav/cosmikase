@@ -1,0 +1,7 @@
+name: Catppuccin Latte
+variant: light
+colors: {}
+cursor:
+  theme: Catppuccin Latte
+  extension: catppuccin.catppuccin-vsc
+wallpaper: backgrounds/1-catppuccin-latte.png

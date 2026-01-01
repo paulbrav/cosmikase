@@ -1,0 +1,7 @@
+name: Nord
+variant: dark
+colors: {}
+cursor:
+  theme: Nord
+  extension: arcticicestudio.nord-visual-studio-code
+wallpaper: backgrounds/1-nord.png

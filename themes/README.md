@@ -52,11 +52,12 @@ Each theme directory contains configuration files for various applications:
 - `antigravity.conf` - Antigravity launcher colors
 
 ### System Integration
+- `theme.yaml` - Unified theme manifest (replaces legacy indicators)
 - `cosmic.ron` - COSMIC desktop theme
 - `cosmic-term.ron` - COSMIC Terminal theme
 - `icons.theme` - Preferred icon theme name
 - `chromium.theme` - Browser theme color (RGB format)
-- `light.mode` - Light theme indicator (if present)
+- `light.mode` - Legacy light theme indicator (obsolete in v0.3)
 
 ### Wallpapers
 - `backgrounds/` - Directory containing wallpaper images
@@ -103,9 +104,42 @@ import = /path/to/omarchy-for-popos/themes/tokyo-night/ghostty.conf
 dofile("/path/to/omarchy-for-popos/themes/tokyo-night/nvim.lua")
 ```
 
-## cursor.json Schema
+## theme.yaml Schema (v0.3+)
 
-Each theme's `cursor.json` defines the Cursor/VS Code theme configuration:
+Each theme directory contains a `theme.yaml` file that defines its metadata and key properties:
+
+```yaml
+name: Catppuccin Mocha
+variant: dark              # dark or light
+colors:
+  background: "#1e1e2e"    # hex color code
+  foreground: "#cdd6f4"
+  accent: "#89b4fa"
+  error: "#f38ba8"
+  warning: "#f9e2af"
+cursor:
+  theme: Catppuccin Mocha  # VS Code colorTheme name
+  extension: catppuccin.catppuccin-vsc
+wallpaper: backgrounds/cat_mountains.png  # Path relative to theme dir
+```
+
+The theme system uses this manifest to:
+- Generate color previews in the TUI
+- Set the correct `workbench.colorTheme` in Cursor/VS Code
+- Determine dark/light mode for COSMIC
+- Select the default wallpaper
+
+## Legacy Migration (v0.2 to v0.3)
+
+If you have custom themes from v0.2, you can migrate them using the included script:
+
+```bash
+uv run python scripts/migrate-themes.py
+```
+
+This will automatically generate a `theme.yaml` for each theme directory based on existing `cursor.json`, `light.mode`, and background files.
+
+## cursor.json Schema (Legacy)
 
 ```json
 {

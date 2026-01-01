@@ -1,0 +1,7 @@
+name: Gruvbox
+variant: dark
+colors: {}
+cursor:
+  theme: Gruvbox Dark Hard
+  extension: jdinhlife.gruvbox
+wallpaper: backgrounds/1-grubox.jpg

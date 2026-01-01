@@ -1,0 +1,7 @@
+name: Flexoki Light
+variant: light
+colors: {}
+cursor:
+  theme: Flexoki Light
+  extension: kepano.flexoki-vscode
+wallpaper: backgrounds/1-flexoki-light-orb.png
