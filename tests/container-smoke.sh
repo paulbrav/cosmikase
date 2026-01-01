@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Container smoke test for omarchy-pop
+# Container smoke test for cosmikase
 # Tests the Ansible playbook in a clean Ubuntu container
 set -euo pipefail
 
@@ -54,7 +54,7 @@ ansible-playbook -i inventory.yml playbook.yml --check \
 echo "=== Verifying Python module ==="
 cd /workspace
 pip3 install --break-system-packages pyyaml
-python3 -c "from src.omarchy_pop.config import load_config, get_value; print('Python module OK')"
+python3 -c "from src.cosmikase.config import load_config, get_value; print('Python module OK')"
 
 echo "=== Smoke test passed! ==="
 ENDSCRIPT

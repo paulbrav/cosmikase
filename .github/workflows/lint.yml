@@ -79,7 +79,7 @@ jobs:
         run: pip install yamllint
 
       - name: Run yamllint
-        run: yamllint -d relaxed ansible/ omarchy-pop.yaml
+        run: yamllint -d relaxed ansible/ cosmikase.yaml
 
   rust:
     name: Rust Lint

@@ -1,4 +1,0 @@
-# Power mode auto switch on AC adapter events
-ACTION=="change", SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ENV{POWER_SUPPLY_ONLINE}=="1", RUN+="/usr/local/bin/omarchy-power-helper --ac"
-ACTION=="change", SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ENV{POWER_SUPPLY_ONLINE}=="0", RUN+="/usr/local/bin/omarchy-power-helper --battery"
-

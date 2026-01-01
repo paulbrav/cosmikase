@@ -98,7 +98,7 @@ themes:
     - catppuccin
     - pop-default
   paths:
-    base: ~/.local/share/omarchy-pop/themes
+    base: ~/.local/share/cosmikase/themes
 
 hp_zbook_ultra:
   emit_notes: false
