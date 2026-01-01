@@ -1,9 +1,0 @@
-huggingface-hub
-jupyter-client
-jupyter-core
-jupyterlab
-piper-tts
-pls
-ruff
-ty
-vllm
