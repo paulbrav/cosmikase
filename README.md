@@ -32,7 +32,7 @@ This project uses:
 ## What Gets Installed
 
 ### Packages
-- **Core CLI tools**: fzf, zoxide, ripgrep, fd, bat, btop, tmux, neovim, eza
+- **Core CLI tools**: fzf, zoxide, ripgrep, fd, bat, btop, tmux, zellij, neovim, eza, gum
 - **Build tools**: build-essential, cmake, ninja-build
 - **GUI apps**: xournalpp, fonts-jetbrains-mono
 - **Terminals**: Ghostty (built from source), Kitty, Alacritty
@@ -142,6 +142,9 @@ omarchy-pop-theme tokyo-night
 
 # Interactive TUI
 theme-tui
+
+# Interactive menu (gum)
+omarchy-pop
 ```
 
 ### Available Themes
@@ -160,6 +163,21 @@ theme-tui
 | `matte-black` | High contrast minimal |
 | `osaka-jade` | Cyan and jade aesthetic |
 | `pop-default` | Pop!_OS orange and teal |
+
+## Shell Utilities
+
+Omarchy-pop adds a handful of convenience functions/aliases via:
+
+```bash
+~/.config/shell/aliases/omarchy_aliases.sh
+```
+
+Highlights:
+- `compress <path>`: create `<path>.tar.gz`
+- `decompress <archive.tar.gz>`: extract a tar.gz
+- `webm2mp4 <input.webm>`: convert WebM recordings to MP4 (requires `ffmpeg`)
+- `iso2sd <input.iso> </dev/sdX>`: write an ISO to a removable drive (destructive; prompts for confirmation)
+- `dps`, `dlog <container>`, `dexec <container> [cmd]`: Docker helpers
 
 ## Configuration
 
@@ -202,6 +220,9 @@ make test
 # Dry-run Ansible
 make dry-run
 
+# Interactive menu
+make menu
+
 # Build Exa plugin
 make exa-build
 
@@ -210,6 +231,28 @@ make exa-install
 
 # Clean Exa build
 make exa-clean
+```
+
+## Interactive Menu (gum)
+
+If `gum` is installed, you can use a single entrypoint to discover common actions:
+
+```bash
+omarchy-pop
+```
+
+Menu options include:
+- Theme selection (launches `theme-tui` when available)
+- Optional software installation (from `omarchy-pop.yaml`, installs items marked `install: false`)
+- Docker development databases (PostgreSQL/MySQL/Redis/MongoDB)
+- System update (`omarchy-pop-update`)
+
+### Safety / Undo
+- Optional software installs can be removed with `sudo apt remove <pkg>` or `flatpak uninstall <app-id>`.
+- Databases are created as Docker containers named `omarchy-*`. Remove them with:
+
+```bash
+docker rm -f omarchy-postgres omarchy-mysql omarchy-redis omarchy-mongodb
 ```
 
 ## Exa Launcher Plugin
@@ -310,18 +353,29 @@ chezmoi apply
 └── omarchy-pop.yaml        # Main configuration
 ```
 
-## Manual Steps
+## Documentation
 
-Some features require manual configuration:
+### Getting Started
+- [CLI Reference](docs/cli-reference.md) - Complete command documentation
+- [Configuration Reference](docs/configuration-reference.md) - Full `omarchy-pop.yaml` schema
+- [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and solutions
 
-### YubiKey Setup
-See [docs/yubikey-setup.md](docs/yubikey-setup.md) for PAM and SSH integration.
+### Guides
+- [Architecture Guide](docs/architecture.md) - System design and component interactions
+- [Development Guide](docs/development.md) - Contributing and development setup
+- [Editor Theming Guide](docs/editor-theming.md) - Cursor and Antigravity theming
+- [COSMIC Theming Guide](docs/cosmic-theming.md) - Desktop environment theming
+- [Zellij Guide](docs/zellij.md) - Terminal multiplexer configuration
 
-### Browser Sandboxing
-See [docs/firejail-browsers.md](docs/firejail-browsers.md) for Firejail configuration.
+### Manual Configuration
+- [YubiKey Setup](docs/yubikey-setup.md) - PAM and SSH integration
+- [Browser Sandboxing](docs/firejail-browsers.md) - Firejail configuration
+- [Backup Strategy](docs/backup-strategy.md) - rsync and Timeshift setup
+- [Interactive Menu](docs/omarchy-pop-menu.md) - Optional software and databases
 
-### Backups
-See [docs/backup-strategy.md](docs/backup-strategy.md) for rsync and Timeshift setup.
+### Theme System
+- [Theme Documentation](../themes/README.md) - Theme structure and usage
+- [Wallpapers](../themes/WALLPAPERS.md) - Wallpaper sources and management
 
 ## HP ZBook Ultra G1a Notes
 
