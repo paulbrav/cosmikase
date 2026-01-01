@@ -57,50 +57,27 @@
     state: directory
     mode: "0755"
 
-- name: Install cosmikase-theme script
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/cosmikase-theme"
-    dest: "{{ local_bin }}/cosmikase-theme"
-    mode: "0755"
-    remote_src: true
-
-- name: Install cosmikase theme helper library
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/cosmikase-lib.sh"
-    dest: "{{ local_bin }}/cosmikase-lib.sh"
-    mode: "0755"
-    remote_src: true
-
-- name: Install cosmikase theme helper scripts
+- name: Install all cosmikase bin scripts
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../bin/{{ item }}"
     dest: "{{ local_bin }}/{{ item }}"
     mode: "0755"
     remote_src: true
   loop:
+    # Core library (sourced by other scripts)
+    - cosmikase-lib.sh
+    # Theme system
+    - cosmikase-theme
     - cosmikase-theme-cosmic
     - cosmikase-theme-cursor
     - cosmikase-theme-terminal
-
-- name: Install cosmikase system helper scripts
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/{{ item }}"
-    dest: "{{ local_bin }}/{{ item }}"
-    mode: "0755"
-    remote_src: true
-  loop:
+    # System management
     - cosmikase
     - cosmikase-install
     - cosmikase-databases
     - cosmikase-update
     - cosmikase-power-helper
-
-- name: Install cosmikase-cursor-extensions script
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../bin/cosmikase-cursor-extensions"
-    dest: "{{ local_bin }}/cosmikase-cursor-extensions"
-    mode: "0755"
-    remote_src: true
+    - cosmikase-cursor-extensions
 
 # ============================================================================
 # Initialize and apply chezmoi
@@ -138,7 +115,8 @@
   environment:
     PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
   register: chezmoi_apply
-  changed_when: chezmoi_apply.rc == 0
+  # chezmoi manages its own state; always succeeds means changes were applied as needed
+  changed_when: false
 
 # ============================================================================
 # Shell integration
