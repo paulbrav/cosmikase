@@ -10,13 +10,15 @@ Complete reference for all command-line utilities in the cosmikase project.
   - [cosmikase-update](#cosmikase-update)
   - [cosmikase-install](#cosmikase-install)
   - [cosmikase-databases](#cosmikase-databases)
-  - [omarchy-cursor-extensions](#omarchy-cursor-extensions)
-  - [omarchy-power-helper](#omarchy-power-helper)
+  - [cosmikase-cursor-extensions](#cosmikase-cursor-extensions)
+  - [cosmikase-power-helper](#cosmikase-power-helper)
 - [Python CLI Tools](#python-cli-tools)
-  - [omarchy-config](#omarchy-config)
-  - [omarchy-chezmoi](#omarchy-chezmoi)
-  - [omarchy-validate-ron](#omarchy-validate-ron)
-  - [omarchy-themes-dir](#omarchy-themes-dir)
+  - [cosmikase-cli](#cosmikase-cli)
+  - [cosmikase-config](#cosmikase-config)
+  - [cosmikase-validate-config](#cosmikase-validate-config)
+  - [cosmikase-chezmoi](#cosmikase-chezmoi)
+  - [cosmikase-validate-ron](#cosmikase-validate-ron)
+  - [cosmikase-themes-dir](#cosmikase-themes-dir)
   - [theme-tui](#theme-tui)
 
 ---
@@ -49,8 +51,8 @@ Provides a text-based menu interface using `gum` for:
 - **Install Optional Software**: Runs `cosmikase-install`
 - **Setup Docker Databases**: Runs `cosmikase-databases`
 - **Update Everything**: Runs `cosmikase-update`
-- **Power Settings**: Runs `omarchy-power-helper`
-- **Cursor Extensions**: Runs `omarchy-cursor-extensions`
+- **Power Settings**: Runs `cosmikase-power-helper`
+- **Cursor Extensions**: Runs `cosmikase-cursor-extensions`
 - **Exit**: Closes the menu
 
 **Examples:**
@@ -112,7 +114,7 @@ cosmikase-theme nord --quiet
 ```
 
 **Theme History:**
-The script maintains a history file at `~/.local/share/cosmikase/theme-history.txt` to enable rollback functionality.
+The script maintains a history file at `~/.config/cosmikase/theme-history` to enable rollback functionality.
 
 **Exit Codes:**
 - `0`: Success
@@ -222,7 +224,7 @@ flatpak uninstall <app-id>
 
 **Requirements:**
 - `gum` must be installed
-- `omarchy-config` must be available (or `uv` for fallback)
+- `cosmikase-config` must be available (or `uv` for fallback)
 
 **Exit Codes:**
 - `0`: Success
@@ -255,12 +257,12 @@ Interactive script to create and start Docker containers for common development 
 - `gum` must be installed
 
 **What It Creates:**
-- Docker containers named `omarchy-postgres`, `omarchy-mysql`, `omarchy-redis`, `omarchy-mongodb`
+- Docker containers named `cosmikase-postgres`, `cosmikase-mysql`, `cosmikase-redis`, `cosmikase-mongodb`
 - Docker volumes for data persistence:
-  - `omarchy-postgres-data`
-  - `omarchy-mysql-data`
-  - `omarchy-redis-data`
-  - `omarchy-mongodb-data`
+  - `cosmikase-postgres-data`
+  - `cosmikase-mysql-data`
+  - `cosmikase-redis-data`
+  - `cosmikase-mongodb-data`
 
 **Connection Strings:**
 - **PostgreSQL**: `postgres://postgres:<password>@localhost:5432/postgres`
@@ -280,10 +282,10 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 **Cleanup:**
 ```bash
 # Stop and remove containers
-docker rm -f omarchy-postgres omarchy-mysql omarchy-redis omarchy-mongodb
+docker rm -f cosmikase-postgres cosmikase-mysql cosmikase-redis cosmikase-mongodb
 
 # Remove volumes (deletes all data)
-docker volume rm omarchy-postgres-data omarchy-mysql-data omarchy-redis-data omarchy-mongodb-data
+docker volume rm cosmikase-postgres-data cosmikase-mysql-data cosmikase-redis-data cosmikase-mongodb-data
 ```
 
 **Exit Codes:**
@@ -295,13 +297,13 @@ docker volume rm omarchy-postgres-data omarchy-mysql-data omarchy-redis-data oma
 
 ---
 
-### omarchy-cursor-extensions
+### cosmikase-cursor-extensions
 
 Manage Cursor/VS Code extensions from a text file.
 
 **Usage:**
 ```bash
-omarchy-cursor-extensions <command> [-f FILE]
+cosmikase-cursor-extensions <command> [-f FILE]
 ```
 
 **Description:**
@@ -327,19 +329,19 @@ Manages Cursor/VS Code extensions via a simple text file, making it easy to:
 **Examples:**
 ```bash
 # Export current extensions
-omarchy-cursor-extensions export
+cosmikase-cursor-extensions export
 
 # Install all extensions from list
-omarchy-cursor-extensions install
+cosmikase-cursor-extensions install
 
 # See what's different
-omarchy-cursor-extensions diff
+cosmikase-cursor-extensions diff
 
 # List extensions in file
-omarchy-cursor-extensions list
+cosmikase-cursor-extensions list
 
 # Use custom file
-omarchy-cursor-extensions install -f ~/my-extensions.txt
+cosmikase-cursor-extensions install -f ~/my-extensions.txt
 ```
 
 **Extensions File Format:**
@@ -347,7 +349,7 @@ The extensions file (`~/.config/Cursor/extensions.txt`) is a simple text file wi
 ```
 # Cursor/VS Code Extensions
 # Exported on 2025-01-27 12:00:00
-# Install with: omarchy-cursor-extensions install
+# Install with: cosmikase-cursor-extensions install
 
 catppuccin.catppuccin-vsc
 ms-python.python
@@ -363,13 +365,13 @@ ms-python.vscode-pylance
 
 ---
 
-### omarchy-power-helper
+### cosmikase-power-helper
 
 Switch power profiles based on AC/Battery state.
 
 **Usage:**
 ```bash
-omarchy-power-helper [--ac|--battery|--apply]
+cosmikase-power-helper [--ac|--battery|--apply]
 ```
 
 **Description:**
@@ -383,17 +385,17 @@ Helper script for managing System76 power profiles. Typically called by udev rul
 **Examples:**
 ```bash
 # Auto-detect and apply profile
-omarchy-power-helper
+cosmikase-power-helper
 
 # Force performance mode
-omarchy-power-helper --ac
+cosmikase-power-helper --ac
 
 # Force battery mode
-omarchy-power-helper --battery
+cosmikase-power-helper --battery
 ```
 
 **Udev Integration:**
-The script is designed to be called by udev rules (see `omarchy/udev/99-omarchy-power.rules`). When AC power is plugged/unplugged, udev triggers this script to switch profiles automatically.
+The script is designed to be called by udev rules (see `cosmikase/udev/99-cosmikase-power.rules`). When AC power is plugged/unplugged, udev triggers this script to switch profiles automatically.
 
 **Requirements:**
 - `system76-power` must be installed
@@ -410,13 +412,40 @@ The script is designed to be called by udev rules (see `omarchy/udev/99-omarchy-
 
 ## Python CLI Tools
 
-### omarchy-config
+### cosmikase-cli
+
+Unified Python CLI for cosmikase (separate from the interactive `cosmikase` menu).
+
+**Usage:**
+```bash
+cosmikase-cli <command> [options]
+```
+
+**Commands:**
+- `theme` (switch themes; supports `--list`, `--no-apply`, `--no-helpers`)
+- `config` (query configuration values)
+- `validate` (validate configuration file)
+- `themes-dir` (print theme directories)
+
+**Examples:**
+```bash
+cosmikase-cli theme nord
+cosmikase-cli theme --list
+cosmikase-cli config defaults.theme
+cosmikase-cli validate cosmikase.yaml
+cosmikase-cli themes-dir --all
+```
+
+**Notes:**
+- Use `cosmikase` for the interactive menu.
+
+### cosmikase-config
 
 Query the `cosmikase.yaml` configuration file from shell scripts.
 
 **Usage:**
 ```bash
-omarchy-config [--config PATH] <command> [options]
+cosmikase-config [--config PATH] <command> [options]
 ```
 
 **Description:**
@@ -431,7 +460,7 @@ Python CLI tool for querying the YAML configuration file. Used by shell scripts 
 Get a value by dot-separated path.
 
 ```bash
-omarchy-config get <path> [--default VALUE]
+cosmikase-config get <path> [--default VALUE]
 ```
 
 **Options:**
@@ -440,13 +469,13 @@ omarchy-config get <path> [--default VALUE]
 **Examples:**
 ```bash
 # Get default theme
-omarchy-config get defaults.theme
+cosmikase-config get defaults.theme
 
 # Get theme with default
-omarchy-config get defaults.theme --default nord
+cosmikase-config get defaults.theme --default nord
 
 # Get boolean value
-omarchy-config get defaults.install
+cosmikase-config get defaults.install
 # Output: true or false
 ```
 
@@ -454,7 +483,7 @@ omarchy-config get defaults.install
 List items from a section/group.
 
 ```bash
-omarchy-config list <section> [group] [options]
+cosmikase-config list <section> [group] [options]
 ```
 
 **Arguments:**
@@ -470,22 +499,22 @@ omarchy-config list <section> [group] [options]
 **Examples:**
 ```bash
 # List enabled apt core packages
-omarchy-config list apt core
+cosmikase-config list apt core
 
 # List only names
-omarchy-config list apt core --names-only
+cosmikase-config list apt core --names-only
 
 # List all (including disabled)
-omarchy-config list apt core --all
+cosmikase-config list apt core --all
 
 # List only disabled items
-omarchy-config list apt core --disabled
+cosmikase-config list apt core --disabled
 
 # Output as JSON
-omarchy-config list flatpak utility --json
+cosmikase-config list flatpak utility --json
 
 # List top-level section (no group)
-omarchy-config list npm
+cosmikase-config list npm
 ```
 
 **Exit Codes:**
@@ -497,13 +526,35 @@ omarchy-config list npm
 
 ---
 
-### omarchy-chezmoi
+### cosmikase-validate-config
+
+Validate `cosmikase.yaml` against the Pydantic schema.
+
+**Usage:**
+```bash
+cosmikase-validate-config [path] [options]
+```
+
+**Options:**
+- `-q`, `--quiet`: Only print errors.
+
+**Examples:**
+```bash
+cosmikase-validate-config
+cosmikase-validate-config /path/to/cosmikase.yaml --quiet
+```
+
+**Exit Codes:**
+- `0`: Valid configuration
+- `1`: Validation errors
+
+### cosmikase-chezmoi
 
 Update chezmoi configuration with theme information.
 
 **Usage:**
 ```bash
-omarchy-chezmoi <theme> <themes-dir>
+cosmikase-chezmoi <theme> <themes-dir>
 ```
 
 **Description:**
@@ -524,7 +575,7 @@ themes_dir = "/path/to/themes"
 **Examples:**
 ```bash
 # Update chezmoi config (typically called by cosmikase-theme)
-omarchy-chezmoi nord ~/.local/share/cosmikase/themes
+cosmikase-chezmoi nord ~/.local/share/cosmikase/themes
 ```
 
 **Exit Codes:**
@@ -535,13 +586,13 @@ omarchy-chezmoi nord ~/.local/share/cosmikase/themes
 
 ---
 
-### omarchy-validate-ron
+### cosmikase-validate-ron
 
 Validate RON (Rusty Object Notation) file syntax.
 
 **Usage:**
 ```bash
-omarchy-validate-ron <path>
+cosmikase-validate-ron <path>
 ```
 
 **Description:**
@@ -553,10 +604,10 @@ Basic RON syntax validator that checks for balanced parentheses, brackets, and b
 **Examples:**
 ```bash
 # Validate a COSMIC theme file
-omarchy-validate-ron ~/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark
+cosmikase-validate-ron ~/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark
 
 # Validate theme file
-omarchy-validate-ron themes/nord/cosmic.ron
+cosmikase-validate-ron themes/nord/cosmic.ron
 ```
 
 **Limitations:**
@@ -571,13 +622,13 @@ This is a basic validator that checks bracket/parenthesis balance. It does not p
 
 ---
 
-### omarchy-themes-dir
+### cosmikase-themes-dir
 
 Discover and print the themes directory path.
 
 **Usage:**
 ```bash
-omarchy-themes-dir [--all|--list]
+cosmikase-themes-dir [--all|--list]
 ```
 
 **Description:**
@@ -596,14 +647,14 @@ Discovers the themes directory by checking multiple locations and prints the pri
 **Examples:**
 ```bash
 # Print primary themes directory
-omarchy-themes-dir
+cosmikase-themes-dir
 # Output: /home/user/.local/share/cosmikase/themes
 
 # List all theme directories
-omarchy-themes-dir --all
+cosmikase-themes-dir --all
 
 # List available themes
-omarchy-themes-dir --list
+cosmikase-themes-dir --list
 ```
 
 **Exit Codes:**
@@ -676,7 +727,7 @@ Most commands are installed to `~/.local/bin` after running `make install`. Veri
 
 ```bash
 which cosmikase-theme
-which omarchy-config
+which cosmikase-config
 ```
 
 ### Using uv Run
@@ -684,7 +735,7 @@ which omarchy-config
 If commands aren't on PATH, use `uv run`:
 
 ```bash
-uv run omarchy-config list apt core
+uv run cosmikase-config list apt core
 uv run theme-tui
 ```
 
@@ -714,8 +765,9 @@ Most commands support `--help` or `-h`:
 
 ```bash
 cosmikase-theme --help
-omarchy-config --help
-omarchy-cursor-extensions --help
+cosmikase-cli --help
+cosmikase-config --help
+cosmikase-cursor-extensions --help
 ```
 
 For more information, see:

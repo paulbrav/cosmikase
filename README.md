@@ -6,7 +6,7 @@ Pop!_OS 24 workstation configuration with COSMIC hotkeys, apt + Flatpak packages
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/paulbrav/cosmikase ~/Repos/cosmikase
+git clone https://github.com/paulbrav/omarchy-for-popos ~/Repos/cosmikase
 cd ~/Repos/cosmikase
 
 # 2. Install dependencies
@@ -151,18 +151,21 @@ cosmikase
 
 | Theme | Description |
 |-------|-------------|
-| `tokyo-night` | Deep blues with vibrant accents |
-| `nord` | Arctic-inspired cool palette |
-| `gruvbox` | Retro warm earth tones |
 | `catppuccin` | Pastel dark theme |
 | `catppuccin-latte` | Pastel light theme |
-| `rose-pine` | Soft rosé pastels |
-| `kanagawa` | Japanese-inspired muted colors |
+| `ethereal` | Dreamy ethereal palette |
 | `everforest` | Forest green aesthetic |
+| `flexoki-light` | Warm, paper-like light theme |
+| `gruvbox` | Retro warm earth tones |
 | `hackerman` | Matrix-inspired green |
+| `kanagawa` | Japanese-inspired muted colors |
 | `matte-black` | High contrast minimal |
+| `nord` | Arctic-inspired cool palette |
 | `osaka-jade` | Cyan and jade aesthetic |
 | `pop-default` | Pop!_OS orange and teal |
+| `ristretto` | Coffee-inspired warm theme |
+| `rose-pine` | Soft rosé pastels |
+| `tokyo-night` | Deep blues with vibrant accents |
 
 ## Shell Utilities
 
@@ -246,6 +249,8 @@ Menu options include:
 - Optional software installation (from `cosmikase.yaml`, installs items marked `install: false`)
 - Docker development databases (PostgreSQL/MySQL/Redis/MongoDB)
 - System update (`cosmikase-update`)
+- Power settings (`cosmikase-power-helper`)
+- Cursor extensions (`cosmikase-cursor-extensions`)
 
 ### Safety / Undo
 - Optional software installs can be removed with `sudo apt remove <pkg>` or `flatpak uninstall <app-id>`.
@@ -371,11 +376,11 @@ chezmoi apply
 - [YubiKey Setup](docs/yubikey-setup.md) - PAM and SSH integration
 - [Browser Sandboxing](docs/firejail-browsers.md) - Firejail configuration
 - [Backup Strategy](docs/backup-strategy.md) - rsync and Timeshift setup
-- [Interactive Menu](docs/omarchy-pop-menu.md) - Optional software and databases
+- [Interactive Menu](docs/cosmikase-menu.md) - Optional software and databases
 
 ### Theme System
-- [Theme Documentation](../themes/README.md) - Theme structure and usage
-- [Wallpapers](../themes/WALLPAPERS.md) - Wallpaper sources and management
+- [Theme Documentation](themes/README.md) - Theme structure and usage
+- [Wallpapers](themes/WALLPAPERS.md) - Wallpaper sources and management
 
 ## HP ZBook Ultra G1a Notes
 

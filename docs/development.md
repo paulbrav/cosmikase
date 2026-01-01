@@ -32,7 +32,7 @@ Guide for developers contributing to cosmikase.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/paulbrav/cosmikase.git
+   git clone https://github.com/paulbrav/omarchy-for-popos.git cosmikase
    cd cosmikase
    ```
 
@@ -49,7 +49,7 @@ Guide for developers contributing to cosmikase.
 3. **Verify setup:**
    ```bash
    # Check Python tools
-   uv run omarchy-config --help
+   uv run cosmikase-config --help
    
    # Check Ansible
    uv run ansible-playbook --version
@@ -89,11 +89,11 @@ uv add --dev <package-name>
 **Running Python Tools:**
 ```bash
 # Use uv run prefix
-uv run omarchy-config list apt core
+uv run cosmikase-config list apt core
 
 # Or activate venv manually
 source .venv/bin/activate
-omarchy-config list apt core
+cosmikase-config list apt core
 ```
 
 ### Ansible Development
@@ -142,7 +142,7 @@ chezmoi edit ~/.config/zellij/config.kdl
 **Template Testing:**
 ```bash
 # Test template rendering
-chezmoi execute-template < chezmoi/dot_config/shell/cosmikase.sh.tmpl
+chezmoi execute-template < chezmoi/dot_config/Cursor/User/settings.json.tmpl
 ```
 
 ---
@@ -316,7 +316,7 @@ cosmikase/
 2. **Add entry point in `pyproject.toml`:**
    ```toml
    [project.scripts]
-   omarchy-my-tool = "cosmikase.my_tool:_main"
+   cosmikase-my-tool = "cosmikase.my_tool:_main"
    ```
 
 3. **Install:**
@@ -326,7 +326,7 @@ cosmikase/
 
 4. **Test:**
    ```bash
-   uv run omarchy-my-tool test
+   uv run cosmikase-my-tool test
    ```
 
 5. **Document:** Add to [CLI Reference](cli-reference.md)
@@ -652,7 +652,7 @@ chezmoi diff
 chezmoi doctor -v
 
 # Test template
-chezmoi execute-template < chezmoi/dot_config/shell/cosmikase.sh.tmpl
+chezmoi execute-template < chezmoi/dot_config/Cursor/User/settings.json.tmpl
 ```
 
 ---

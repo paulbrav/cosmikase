@@ -67,12 +67,12 @@ defaults:
 ```
 
 **Fields:**
-- `install`: If `false`, all items default to `install: false` unless explicitly set to `true`
+- `install`: Default install flag (note: items without `install` are currently treated as enabled; use `install: false` on each item to make it optional)
 - `ghostty`: Whether to build Ghostty terminal from source (requires Zig 0.13+)
 - `yubikey_setup`: Enable YubiKey PAM/SSH setup (see [yubikey-setup.md](yubikey-setup.md))
 - `theme`: Default theme to apply (must match a theme in `themes/` directory)
 - `run_fw_update`: Run `fwupdmgr` to check for firmware updates
-- `run_recovery_upgrade`: Run `pop-upgrade recovery upgrade` (use with caution)
+- `run_recovery_upgrade`: Reserved for recovery upgrade workflows (not executed by the current playbook)
 
 **Example:**
 ```yaml
@@ -132,13 +132,13 @@ apt:
 **Querying:**
 ```bash
 # List enabled packages in a group
-omarchy-config list apt core
+cosmikase-config list apt core
 
 # List only names
-omarchy-config list apt core --names-only
+cosmikase-config list apt core --names-only
 
 # List disabled packages
-omarchy-config list apt core --disabled
+cosmikase-config list apt core --disabled
 ```
 
 ---
@@ -182,10 +182,10 @@ flatpak:
 **Querying:**
 ```bash
 # List enabled Flatpak apps
-omarchy-config list flatpak utility
+cosmikase-config list flatpak utility
 
 # List as JSON
-omarchy-config list flatpak utility --json
+cosmikase-config list flatpak utility --json
 ```
 
 ---
@@ -363,10 +363,10 @@ npm:
 **Querying:**
 ```bash
 # List NPM packages
-omarchy-config list npm
+cosmikase-config list npm
 
 # Get specific value
-omarchy-config get npm
+cosmikase-config get npm
 ```
 
 ---
@@ -410,7 +410,7 @@ uv_tools:
 **Querying:**
 ```bash
 # List uv tools
-omarchy-config list uv_tools
+cosmikase-config list uv_tools
 ```
 
 ---
@@ -446,10 +446,10 @@ themes:
 **Querying:**
 ```bash
 # Get default theme
-omarchy-config get themes.default
+cosmikase-config get themes.default
 
 # Get themes base path
-omarchy-config get themes.paths.base
+cosmikase-config get themes.paths.base
 ```
 
 **See Also:**
@@ -501,8 +501,9 @@ Most items in the configuration follow a common schema:
 
 ### Optional Fields
 
-- `install`: Boolean flag (default: `true` if `defaults.install` is `true`)
+- `install`: Boolean flag (defaults to `true`)
   - Set to `false` to mark as optional (can install via `cosmikase-install`)
+  - `defaults.install` is currently informational only
 - `desc`: Human-readable description
 - `version`: Version constraint (NPM packages)
 - `alias`: Alternative command name (APT packages)
@@ -515,9 +516,9 @@ Most items in the configuration follow a common schema:
 
 ### Default Behavior
 
-- If `install` is not specified, it defaults to `defaults.install`
-- If `defaults.install` is `true`, items default to `install: true`
-- If `defaults.install` is `false`, items default to `install: false` unless explicitly set to `true`
+- If `install` is not specified, current tooling treats the item as enabled.
+- `defaults.install` is currently informational and not enforced by Ansible or helper scripts.
+- To make something optional, set `install: false` explicitly.
 
 ---
 
@@ -617,38 +618,37 @@ See [cosmikase.yaml](../cosmikase.yaml) in the repository root for a complete ex
 
 ## Querying Configuration
 
-Use `omarchy-config` to query the configuration:
+Use `cosmikase-config` to query the configuration:
 
 ```bash
 # Get a value
-omarchy-config get defaults.theme
+cosmikase-config get defaults.theme
 
 # List items in a section/group
-omarchy-config list apt core
+cosmikase-config list apt core
 
 # List only names
-omarchy-config list apt core --names-only
+cosmikase-config list apt core --names-only
 
 # List disabled items
-omarchy-config list flatpak utility --disabled
+cosmikase-config list flatpak utility --disabled
 
 # Output as JSON
-omarchy-config list npm --json
+cosmikase-config list npm --json
 ```
 
 **See Also:**
-- [CLI Reference](cli-reference.md) - Complete `omarchy-config` documentation
+- [CLI Reference](cli-reference.md) - Complete `cosmikase-config` documentation
 
 ---
 
 ## Configuration File Location
 
-The configuration file is searched in this order:
+The tools do not auto-discover configs outside the current directory. Use explicit paths or env vars:
 
-1. `--config` flag value
-2. `$COSMIKASE_CONFIG` environment variable
-3. `./cosmikase.yaml` (current directory)
-4. Repository root `cosmikase.yaml`
+- `cosmikase-config` / `cosmikase-validate-config`: `--config` (default: `./cosmikase.yaml`).
+- `cosmikase-install`: `--config`, or `COSMIKASE_CONFIG`, otherwise `./cosmikase.yaml`.
+- `make install`: pass `CONFIG_FILE=/path/to/config.yaml` (Makefile resolves it).
 
 **Examples:**
 ```bash
@@ -685,7 +685,7 @@ make install
 ls -la cosmikase.yaml
 
 # Verify path
-omarchy-config --config /path/to/config.yaml get defaults.theme
+cosmikase-config --config /path/to/config.yaml get defaults.theme
 ```
 
 ### Invalid YAML
@@ -699,10 +699,10 @@ python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
 
 ```bash
 # List available sections
-omarchy-config list apt  # Will show error with available sections
+cosmikase-config list apt  # Will show error with available sections
 
 # List available groups
-omarchy-config list apt core  # Will show error with available groups if invalid
+cosmikase-config list apt core  # Will show error with available groups if invalid
 ```
 
 **See Also:**

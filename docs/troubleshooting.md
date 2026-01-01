@@ -76,7 +76,7 @@ ERROR! couldn't resolve module/action 'ansible.posix.synchronize'
 # Install required collections
 uv run ansible-galaxy collection install community.general ansible.posix
 
-# Or run make setup which does this automatically
+# make setup installs community.general; run the command above for ansible.posix
 make setup
 ```
 
@@ -149,7 +149,7 @@ Error: Theme 'xyz' not found
 **Solution:**
 ```bash
 # List available themes
-omarchy-themes-dir --list
+cosmikase-themes-dir --list
 
 # Or check themes directory
 ls -la ~/.local/share/cosmikase/themes/
@@ -178,7 +178,7 @@ ls -la ~/.local/share/cosmikase/themes/nord/
    cursor --list-extensions | grep -i catppuccin
    
    # Install if missing
-   omarchy-cursor-extensions install
+   cosmikase-cursor-extensions install
    ```
 
 3. **Check settings.json:**
@@ -254,7 +254,7 @@ Error: No theme history found to roll back
 **Solution:**
 ```bash
 # Check history file
-cat ~/.local/share/cosmikase/theme-history.txt
+cat ~/.config/cosmikase/theme-history
 
 # Manually switch to previous theme
 cosmikase-theme <previous-theme-name>
@@ -291,12 +291,12 @@ cosmikase-theme: command not found
 
 4. **Use uv run:**
    ```bash
-   uv run omarchy-config list apt core
+   uv run cosmikase-config list apt core
    ```
 
 ---
 
-### omarchy-config Fails
+### cosmikase-config Fails
 
 **Symptom:**
 ```
@@ -307,14 +307,14 @@ Config file not found: cosmikase.yaml
 ```bash
 # Run from repository root
 cd ~/Repos/cosmikase
-omarchy-config list apt core
+cosmikase-config list apt core
 
 # Or specify config path
-omarchy-config --config /path/to/cosmikase.yaml list apt core
+cosmikase-config --config /path/to/cosmikase.yaml list apt core
 
 # Or set environment variable
 export COSMIKASE_CONFIG=/path/to/config.yaml
-omarchy-config list apt core
+cosmikase-config list apt core
 ```
 
 ---
@@ -341,7 +341,7 @@ cosmikase-install  # Select gum from optional software
 
 **Symptom:**
 ```
-omarchy-config: command not found
+cosmikase-config: command not found
 ```
 
 **Solutions:**
@@ -352,7 +352,7 @@ omarchy-config: command not found
 
 2. **Use uv run:**
    ```bash
-   uv run omarchy-config list apt core
+   uv run cosmikase-config list apt core
    ```
 
 3. **Check installation:**
@@ -407,7 +407,7 @@ Failed to install package: <package-name>
 
 4. **Check for typos in config:**
    ```bash
-   omarchy-config list apt core --names-only
+   cosmikase-config list apt core --names-only
    ```
 
 ---
@@ -521,7 +521,7 @@ Error: chezmoi.toml has invalid TOML syntax
 cp ~/.config/chezmoi/chezmoi.toml ~/.config/chezmoi/chezmoi.toml.bak
 
 # Regenerate config
-omarchy-chezmoi nord ~/.local/share/cosmikase/themes
+cosmikase-chezmoi nord ~/.local/share/cosmikase/themes
 
 # Or edit manually
 nano ~/.config/chezmoi/chezmoi.toml
@@ -597,7 +597,7 @@ Error: Section 'xyz' not found in config
 **Solution:**
 ```bash
 # List available sections
-omarchy-config list apt  # Will show error with available sections
+cosmikase-config list apt  # Will show error with available sections
 
 # Check config structure
 cat cosmikase.yaml | grep -E "^[a-z_]+:"
@@ -617,12 +617,12 @@ cat cosmikase.yaml | grep -E "^[a-z_]+:"
 **Solutions:**
 1. **Check install flag:**
    ```bash
-   omarchy-config list apt core --all | grep <package-name>
+   cosmikase-config list apt core --all | grep <package-name>
    ```
 
 2. **Verify defaults.install:**
    ```bash
-   omarchy-config get defaults.install
+   cosmikase-config get defaults.install
    ```
 
 3. **Check if package was skipped:**
@@ -651,7 +651,7 @@ cosmikase-theme --rollback
 cosmikase-theme <previous-theme-name>
 
 # Check theme history
-cat ~/.local/share/cosmikase/theme-history.txt
+cat ~/.config/cosmikase/theme-history
 ```
 
 ---
@@ -683,10 +683,10 @@ chezmoi apply
 cp cosmikase.yaml cosmikase.yaml.bak
 
 # Restore from repository
-git checkout cosmikase.yaml
+git restore cosmikase.yaml
 
-# Or start fresh
-cp cosmikase.yaml.example cosmikase.yaml
+# Or re-copy from a known-good file
+cp /path/to/repo/cosmikase.yaml cosmikase.yaml
 ```
 
 ---
@@ -714,10 +714,10 @@ rm -rf ~/.config/chezmoi
 **Note:** This does not uninstall packages. Remove those manually:
 ```bash
 # List installed packages
-omarchy-config list apt core --names-only | xargs sudo apt remove
+cosmikase-config list apt core --names-only | xargs sudo apt remove
 
 # Remove Flatpak apps
-omarchy-config list flatpak utility --names-only | xargs flatpak uninstall
+cosmikase-config list flatpak utility --names-only | xargs flatpak uninstall
 ```
 
 ---
@@ -731,10 +731,10 @@ omarchy-config list flatpak utility --names-only | xargs flatpak uninstall
 ls -la ~/.local/bin/cosmikase-*
 
 # Check Python tools
-uv run omarchy-config --help
+uv run cosmikase-config --help
 
 # Verify themes directory
-omarchy-themes-dir --list
+cosmikase-themes-dir --list
 
 # Check chezmoi status
 chezmoi status
@@ -749,10 +749,10 @@ chezmoi status
 python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
 
 # Check config structure
-omarchy-config get defaults.theme
+cosmikase-config get defaults.theme
 
 # List all sections
-omarchy-config list apt
+cosmikase-config list apt
 ```
 
 ---
@@ -770,7 +770,7 @@ chezmoi diff
 cat ~/.config/chezmoi/chezmoi.toml
 
 # Verify templates
-chezmoi execute-template < ~/.local/share/chezmoi/dot_config/shell/cosmikase.sh.tmpl
+chezmoi execute-template < ~/.local/share/chezmoi/dot_config/Cursor/User/settings.json.tmpl
 ```
 
 ---
@@ -779,10 +779,10 @@ chezmoi execute-template < ~/.local/share/chezmoi/dot_config/shell/cosmikase.sh.
 
 ```bash
 # Check current theme
-omarchy-config get defaults.theme
+cosmikase-config get defaults.theme
 
 # List available themes
-omarchy-themes-dir --list
+cosmikase-themes-dir --list
 
 # Check theme files
 ls -la ~/.local/share/cosmikase/themes/nord/
@@ -791,7 +791,7 @@ ls -la ~/.local/share/cosmikase/themes/nord/
 cat ~/.config/chezmoi/chezmoi.toml | grep theme
 
 # Check theme history
-cat ~/.local/share/cosmikase/theme-history.txt
+cat ~/.config/cosmikase/theme-history
 ```
 
 ---
@@ -819,7 +819,7 @@ uv run ansible-playbook -i inventory.yml playbook.yml --check
 
 ```bash
 # System logs (for udev/power helper)
-journalctl -t omarchy-power
+journalctl -t cosmikase-power
 
 # Ansible logs (if redirected)
 # Check output from make install
@@ -857,11 +857,11 @@ lsb_release -a
 
 # Installation status
 which cosmikase-theme
-omarchy-config --version 2>/dev/null || uv run omarchy-config --help
+cosmikase-config --help 2>/dev/null || uv run cosmikase-config --help
 
 # Configuration
-omarchy-config get defaults.theme
-omarchy-config get defaults.install
+cosmikase-config get defaults.theme
+cosmikase-config get defaults.install
 
 # Chezmoi status
 chezmoi doctor
@@ -879,7 +879,7 @@ chezmoi doctor
 If Python CLI tools aren't on PATH:
 
 ```bash
-uv run omarchy-config list apt core
+uv run cosmikase-config list apt core
 uv run theme-tui
 ```
 
@@ -889,7 +889,7 @@ If `cosmikase-theme` fails:
 
 ```bash
 # Update chezmoi manually
-omarchy-chezmoi nord ~/.local/share/cosmikase/themes
+cosmikase-chezmoi nord ~/.local/share/cosmikase/themes
 
 # Apply dotfiles
 chezmoi apply

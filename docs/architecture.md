@@ -67,7 +67,7 @@ flowchart TD
 
 **Processing:**
 - Loaded by Ansible playbook via `from_yaml` filter
-- Queried by Python CLI tools (`omarchy-config`)
+- Queried by Python CLI tools (`cosmikase-config`)
 - Used by shell scripts for optional software installation
 
 ### 2. Ansible Playbook
@@ -113,10 +113,10 @@ make dry-run  # Check mode (no changes)
 **Location:** `src/cosmikase/`
 
 **Tools:**
-- `omarchy-config`: Query YAML configuration
-- `omarchy-chezmoi`: Update chezmoi data
-- `omarchy-validate-ron`: Validate RON files
-- `omarchy-themes-dir`: Discover themes directory
+- `cosmikase-config`: Query YAML configuration
+- `cosmikase-chezmoi`: Update chezmoi data
+- `cosmikase-validate-ron`: Validate RON files
+- `cosmikase-themes-dir`: Discover themes directory
 - `theme-tui`: Interactive theme browser
 
 **Installation:** Via `uv` (Python package manager)
@@ -131,8 +131,8 @@ make dry-run  # Check mode (no changes)
 - `cosmikase-update`: System updates
 - `cosmikase-install`: Optional software installer
 - `cosmikase-databases`: Docker database setup
-- `omarchy-cursor-extensions`: Extension management
-- `omarchy-power-helper`: Power profile management
+- `cosmikase-cursor-extensions`: Extension management
+- `cosmikase-power-helper`: Power profile management
 
 **Installation:** Copied to `~/.local/bin/` by Ansible
 
@@ -189,7 +189,7 @@ sequenceDiagram
     participant Apps
 
     User->>ThemeScript: cosmikase-theme nord
-    ThemeScript->>PythonTool: omarchy-chezmoi nord <dir>
+    ThemeScript->>PythonTool: cosmikase-chezmoi nord <dir>
     PythonTool->>Chezmoi: Update chezmoi.toml
     ThemeScript->>Chezmoi: chezmoi apply
     Chezmoi->>Templates: Process templates
@@ -207,7 +207,7 @@ sequenceDiagram
     participant YAML
     participant Output
 
-    Script->>PythonTool: omarchy-config list apt core
+    Script->>PythonTool: cosmikase-config list apt core
     PythonTool->>YAML: Load cosmikase.yaml
     YAML->>PythonTool: Parse YAML
     PythonTool->>PythonTool: Filter enabled items
@@ -344,7 +344,7 @@ flowchart LR
    - Script validates theme exists
 
 2. **Chezmoi Update:**
-   - `omarchy-chezmoi` updates `chezmoi.toml` with theme name
+   - `cosmikase-chezmoi` updates `chezmoi.toml` with theme name
    - Theme directory path stored
 
 3. **Template Processing:**
@@ -554,7 +554,7 @@ padding = 14
 ```
 
 **Update Process:**
-1. `omarchy-chezmoi` reads existing config
+1. `cosmikase-chezmoi` reads existing config
 2. Updates `[data]` section atomically
 3. Preserves other chezmoi settings
 

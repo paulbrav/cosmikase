@@ -102,7 +102,7 @@ Theme extensions must be installed for themes to display correctly:
 
 ```bash
 # Install all extensions from the managed list
-omarchy-cursor-extensions install
+cosmikase-cursor-extensions install
 
 # Or install a specific theme extension
 cursor --install-extension catppuccin.catppuccin-vsc
@@ -232,7 +232,7 @@ publisher.my-theme-extension-id
 Then install:
 
 ```bash
-omarchy-cursor-extensions install
+cosmikase-cursor-extensions install
 ```
 
 ### 5. Test the Theme
@@ -349,7 +349,7 @@ Override syntax highlighting colors:
 cat ~/.config/Cursor/extensions.txt
 
 # Install all managed extensions
-omarchy-cursor-extensions install
+cosmikase-cursor-extensions install
 ```
 
 ### Antigravity Not Picking Up Theme
