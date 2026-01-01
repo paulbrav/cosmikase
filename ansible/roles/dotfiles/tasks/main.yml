@@ -9,13 +9,24 @@
     cmd: which chezmoi
   register: chezmoi_check
   changed_when: false
-  failed_when: false
+  failed_when: chezmoi_check.rc > 1
+
+- name: Download chezmoi installer
+  ansible.builtin.get_url:
+    url: https://get.chezmoi.io
+    dest: /tmp/chezmoi-install.sh
+    mode: "0755"
+  when: chezmoi_check.rc != 0
 
 - name: Install chezmoi
-  ansible.builtin.shell: |
-    curl -sfL https://get.chezmoi.io | sh
-  args:
-    creates: "{{ local_bin }}/chezmoi"
+  ansible.builtin.command:
+    cmd: /tmp/chezmoi-install.sh -b {{ local_bin }}
+  when: chezmoi_check.rc != 0
+
+- name: Clean up chezmoi installer
+  ansible.builtin.file:
+    path: /tmp/chezmoi-install.sh
+    state: absent
   when: chezmoi_check.rc != 0
 
 # ============================================================================
@@ -52,6 +63,37 @@
     dest: "{{ local_bin }}/omarchy-pop-theme"
     mode: "0755"
     remote_src: true
+
+- name: Install omarchy-pop theme helper library
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../bin/omarchy-pop-lib.sh"
+    dest: "{{ local_bin }}/omarchy-pop-lib.sh"
+    mode: "0755"
+    remote_src: true
+
+- name: Install omarchy-pop theme helper scripts
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../bin/{{ item }}"
+    dest: "{{ local_bin }}/{{ item }}"
+    mode: "0755"
+    remote_src: true
+  loop:
+    - omarchy-pop-theme-cosmic
+    - omarchy-pop-theme-cursor
+    - omarchy-pop-theme-terminal
+
+- name: Install omarchy-pop system helper scripts
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../bin/{{ item }}"
+    dest: "{{ local_bin }}/{{ item }}"
+    mode: "0755"
+    remote_src: true
+  loop:
+    - omarchy-pop
+    - omarchy-pop-install
+    - omarchy-pop-databases
+    - omarchy-pop-update
+    - omarchy-power-helper
 
 - name: Install omarchy-cursor-extensions script
   ansible.builtin.copy:
@@ -155,5 +197,4 @@
   when: uv_stat.stat.exists
   register: theme_tui_install
   changed_when: "'Installed' in theme_tui_install.stdout"
-  failed_when: false
 

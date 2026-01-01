@@ -73,7 +73,12 @@
   ansible.builtin.shell: |
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    npm install -g {{ item.name }}@{{ item.version | default('latest') }}
+    if ! npm list -g {{ item.name }} --depth=0 >/dev/null 2>&1; then
+      npm install -g {{ item.name }}@{{ item.version | default('latest') }}
+      echo "installed"
+    else
+      echo "already installed"
+    fi
   args:
     executable: /bin/bash
   loop: "{{ npm | default([]) }}"
@@ -83,8 +88,7 @@
   loop_control:
     label: "{{ item.name }}"
   register: npm_install
-  changed_when: "'added' in npm_install.stdout or 'updated' in npm_install.stdout"
-  failed_when: false
+  changed_when: "'installed' in npm_install.stdout"
 
 # ============================================================================
 # Fonts

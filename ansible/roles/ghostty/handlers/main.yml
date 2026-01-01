@@ -1,0 +1,8 @@
+---
+- name: Update desktop database
+  ansible.builtin.command:
+    cmd: update-desktop-database {{ local_share }}/applications
+
+- name: Update icon cache
+  ansible.builtin.command:
+    cmd: gtk-update-icon-cache -f -t {{ local_share }}/icons/hicolor
