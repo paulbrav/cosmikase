@@ -1,0 +1,113 @@
+[
+  {
+    "name": "Comments",
+    "scope": [
+      "comment",
+      "punctuation.definition.comment"
+    ],
+    "settings": {
+      "foreground": "COLOR_COMMENT",
+      "fontStyle": "italic"
+    }
+  },
+  {
+    "name": "Keywords",
+    "scope": [
+      "keyword",
+      "storage.type",
+      "storage.modifier",
+      "keyword.control"
+    ],
+    "settings": {
+      "foreground": "COLOR_KEYWORD"
+    }
+  },
+  {
+    "name": "Strings",
+    "scope": [
+      "string",
+      "punctuation.definition.string"
+    ],
+    "settings": {
+      "foreground": "COLOR_STRING"
+    }
+  },
+  {
+    "name": "Functions",
+    "scope": [
+      "entity.name.function",
+      "support.function",
+      "variable.function"
+    ],
+    "settings": {
+      "foreground": "COLOR_FUNCTION"
+    }
+  },
+  {
+    "name": "Types",
+    "scope": [
+      "entity.name.type",
+      "entity.name.class",
+      "support.type",
+      "support.class"
+    ],
+    "settings": {
+      "foreground": "COLOR_TYPE"
+    }
+  },
+  {
+    "name": "Constants",
+    "scope": [
+      "constant.numeric",
+      "constant.language",
+      "constant.character",
+      "constant.other"
+    ],
+    "settings": {
+      "foreground": "COLOR_CONSTANT"
+    }
+  },
+  {
+    "name": "Variables",
+    "scope": [
+      "variable",
+      "variable.parameter",
+      "variable.other.readwrite"
+    ],
+    "settings": {
+      "foreground": "COLOR_FOREGROUND"
+    }
+  },
+  {
+    "name": "Punctuation",
+    "scope": [
+      "punctuation",
+      "meta.delimiter"
+    ],
+    "settings": {
+      "foreground": "COLOR_FOREGROUND"
+    }
+  },
+  {
+    "name": "Markdown - Headings",
+    "scope": "markup.heading",
+    "settings": {
+      "foreground": "COLOR_KEYWORD",
+      "fontStyle": "bold"
+    }
+  },
+  {
+    "name": "Markdown - Bold",
+    "scope": "markup.bold",
+    "settings": {
+      "fontStyle": "bold"
+    }
+  },
+  {
+    "name": "Markdown - Italic",
+    "scope": "markup.italic",
+    "settings": {
+      "fontStyle": "italic"
+    }
+  }
+]
