@@ -1,227 +1,54 @@
-# Ghostty role: Build and install Ghostty terminal emulator from source
+# Ghostty role: Install Ghostty terminal emulator via Snap
 ---
-- name: Check if Ghostty is already installed
-  ansible.builtin.command:
-    cmd: which ghostty
-  register: ghostty_check
-  changed_when: false
-  failed_when: ghostty_check.rc > 1
-
-- name: Check if Ghostty binary exists in local bin
-  ansible.builtin.stat:
-    path: "{{ local_bin }}/ghostty"
-  register: ghostty_local
-
-- name: Set ghostty_installed fact
-  ansible.builtin.set_fact:
-    ghostty_installed: "{{ ghostty_check.rc == 0 or ghostty_local.stat.exists }}"
-
 # ============================================================================
-# Build Dependencies
+# Snap Installation
 # ============================================================================
-# Using source tarball (not git checkout) per official docs:
-# https://ghostty.org/docs/install/build
-# This requires fewer dependencies (no blueprint-compiler needed)
+# Using Snap package for reliable installation with bundled dependencies
+# (including gtk4-layer-shell which isn't packaged on Ubuntu/Pop!_OS)
 
-- name: Install Ghostty build dependencies
+- name: Ensure snapd is installed
   become: true
   ansible.builtin.apt:
-    name:
-      - libgtk-4-dev
-      - libadwaita-1-dev
-      - gettext
-      - libxml2-utils
+    name: snapd
     state: present
-  when: not ghostty_installed
 
-# ============================================================================
-# Zig Installation
-# ============================================================================
-
-- name: Check if Zig is installed
+- name: Check if Ghostty snap is installed
   ansible.builtin.command:
-    cmd: which zig
-  register: zig_check
+    cmd: snap list ghostty
+  register: ghostty_snap_check
   changed_when: false
-  failed_when: zig_check.rc > 1
+  failed_when: false
 
-- name: Check Zig version if installed
-  ansible.builtin.command:
-    cmd: zig version
-  register: zig_version
-  changed_when: false
-  failed_when: zig_version.rc > 1
-  when: zig_check.rc == 0
-
-# Ghostty requires Zig 0.15.2 (not 0.16.x which has breaking changes)
-- name: Set required Zig version
-  ansible.builtin.set_fact:
-    zig_required_version: "0.15.2"
-    zig_download_url: "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz"
-    zig_install_dir: "/opt/zig-0.15.2"
-
-- name: Download and install Zig for Ghostty
-  when:
-    - not ghostty_installed
-    - zig_check.rc != 0 or (zig_version.stdout is defined and (zig_version.stdout is version(zig_required_version, '<') or zig_version.stdout is version('0.16', '>=')))  # Need exactly 0.15.x
-  block:
-    - name: Create temp directory for Zig download
-      ansible.builtin.tempfile:
-        state: directory
-      register: zig_tmp
-
-    - name: Download Zig
-      ansible.builtin.get_url:
-        url: "{{ zig_download_url }}"
-        dest: "{{ zig_tmp.path }}/zig.tar.xz"
-        mode: "0644"
-
-    - name: Remove old Zig installation if exists
-      become: true
-      ansible.builtin.file:
-        path: "{{ zig_install_dir }}"
-        state: absent
-
-    - name: Create Zig installation directory
-      become: true
-      ansible.builtin.file:
-        path: "{{ zig_install_dir }}"
-        state: directory
-        mode: "0755"
-
-    - name: Extract Zig
-      become: true
-      ansible.builtin.unarchive:
-        src: "{{ zig_tmp.path }}/zig.tar.xz"
-        dest: "{{ zig_install_dir }}"
-        remote_src: true
-        extra_opts:
-          - --strip-components=1
-
-    - name: Remove old Zig symlink
-      become: true
-      ansible.builtin.file:
-        path: /usr/local/bin/zig
-        state: absent
-
-    - name: Create Zig symlink
-      become: true
-      ansible.builtin.file:
-        src: "{{ zig_install_dir }}/zig"
-        dest: /usr/local/bin/zig
-        state: link
-
-    - name: Clean up temp directory
-      ansible.builtin.file:
-        path: "{{ zig_tmp.path }}"
-        state: absent
+- name: Install Ghostty via Snap
+  become: true
+  community.general.snap:
+    name: ghostty
+    classic: true
+    state: present
+  when: ghostty_snap_check.rc != 0
 
 # ============================================================================
-# Download and Build Ghostty from Source Tarball
+# Cleanup: Remove old source-built Ghostty if present
 # ============================================================================
-# Using source tarball instead of git clone (recommended by official docs)
-# Tarballs contain preprocessed files, requiring fewer build dependencies
 
-- name: Create temp directory for Ghostty download
-  ansible.builtin.tempfile:
-    state: directory
-  register: ghostty_tmp
-  when: not ghostty_installed
+- name: Check for old source-built Ghostty binary
+  ansible.builtin.stat:
+    path: "{{ local_bin }}/ghostty"
+  register: old_ghostty_binary
 
-- name: Download Ghostty source tarball
-  ansible.builtin.get_url:
-    url: "https://github.com/ghostty-org/ghostty/releases/download/tip/ghostty-source.tar.gz"
-    dest: "{{ ghostty_tmp.path }}/ghostty-source.tar.gz"
-    mode: "0644"
-  when: not ghostty_installed
+- name: Remove old source-built Ghostty binary
+  ansible.builtin.file:
+    path: "{{ local_bin }}/ghostty"
+    state: absent
+  when: old_ghostty_binary.stat.exists | default(false)
+
+- name: Check for old Ghostty source directory
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/ghostty-source"
+  register: old_ghostty_source
 
 - name: Remove old Ghostty source directory
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/ghostty-source"
     state: absent
-  when: not ghostty_installed
-
-- name: Create Ghostty source directory
-  ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/ghostty-source"
-    state: directory
-    mode: "0755"
-  when: not ghostty_installed
-
-- name: Extract Ghostty source tarball
-  ansible.builtin.unarchive:
-    src: "{{ ghostty_tmp.path }}/ghostty-source.tar.gz"
-    dest: "{{ ansible_env.HOME }}/ghostty-source"
-    remote_src: true
-    extra_opts:
-      - --strip-components=1
-  when: not ghostty_installed
-
-- name: Clean up Ghostty temp directory
-  ansible.builtin.file:
-    path: "{{ ghostty_tmp.path }}"
-    state: absent
-  when: not ghostty_installed
-
-- name: Build Ghostty
-  ansible.builtin.command:
-    # -fno-sys=gtk4-layer-shell: Build gtk4-layer-shell from source (not packaged on Ubuntu/Pop!_OS)
-    cmd: zig build -Doptimize=ReleaseFast -fno-sys=gtk4-layer-shell
-    chdir: "{{ ansible_env.HOME }}/ghostty-source"
-  environment:
-    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
-  when: not ghostty_installed
-  register: ghostty_build
-
-- name: Create local bin directory
-  ansible.builtin.file:
-    path: "{{ local_bin }}"
-    state: directory
-    mode: "0755"
-
-- name: Install Ghostty binary
-  ansible.builtin.copy:
-    src: "{{ ansible_env.HOME }}/ghostty-source/zig-out/bin/ghostty"
-    dest: "{{ local_bin }}/ghostty"
-    mode: "0755"
-    remote_src: true
-  when: ghostty_build.changed | default(false)
-
-# ============================================================================
-# Desktop Integration
-# ============================================================================
-
-- name: Create applications directory
-  ansible.builtin.file:
-    path: "{{ local_share }}/applications"
-    state: directory
-    mode: "0755"
-
-- name: Copy desktop files
-  ansible.builtin.copy:
-    src: "{{ ansible_env.HOME }}/ghostty-source/zig-out/share/applications/"
-    dest: "{{ local_share }}/applications/"
-    mode: "0644"
-    remote_src: true
-  when: ghostty_build.changed | default(false)
-  notify: Update desktop database
-
-- name: Copy icons
-  ansible.builtin.copy:
-    src: "{{ ansible_env.HOME }}/ghostty-source/zig-out/share/icons/"
-    dest: "{{ local_share }}/icons/"
-    mode: "0644"
-    remote_src: true
-  when: ghostty_build.changed | default(false)
-  notify: Update icon cache
-
-- name: Copy terminfo
-  ansible.builtin.copy:
-    src: "{{ ansible_env.HOME }}/ghostty-source/zig-out/share/terminfo/"
-    dest: "{{ local_share }}/terminfo/"
-    mode: "0644"
-    remote_src: true
-  when: ghostty_build.changed | default(false)
-
-# ... (removed explicit desktop/icon database update tasks as they are now handlers)
-
+  when: old_ghostty_source.stat.exists | default(false)

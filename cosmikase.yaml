@@ -198,7 +198,7 @@ installers:
     # Systems Languages
     - { name: rust, desc: "Systems programming language", method: script, url: "https://sh.rustup.rs", args: "-y", check: rustc, install: true }
     - { name: go, desc: "Go programming language", method: tarball, url: "https://go.dev/dl/go1.24.4.linux-amd64.tar.gz", check: go, install: true }
-    - { name: zig, desc: "Zig (required for Ghostty)", method: tarball, url: "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz", version: "0.15.2", check: zig, install: true }
+    - { name: zig, desc: "Zig programming language", method: tarball, url: "https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz", version: "0.15.2", check: zig, install: false }
 
     # JavaScript/TypeScript
     - { name: nvm, desc: "Node Version Manager", method: custom_nvm, check: nvm, install: true }
