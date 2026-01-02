@@ -1,8 +1,8 @@
 {
   "mcpServers": {
-    "deepwiki": {
-      "serverUrl": "https://mcp.deepwiki.com/sse"
+    "mcp-deepwiki": {
+      "command": "npx",
+      "args": ["-y", "mcp-deepwiki@latest"]
     }
   }
 }
-

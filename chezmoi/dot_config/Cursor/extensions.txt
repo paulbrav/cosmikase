@@ -1,56 +1,28 @@
-# Cursor/VS Code Extensions
-# Install with: cat ~/.config/Cursor/extensions.txt | grep -v '^#' | xargs -L 1 cursor --install-extension
-# Or run: cosmikase-cursor-extensions install
+# Cursor Extensions - Minimal Set
+# Install with: cosmikase-cursor-extensions install
 
-# AI & Coding Assistants
-# (Cursor has built-in AI, but you may want additional extensions)
-
-# Language Support
+# Python
 ms-python.python
-ms-python.vscode-pylance
+charliermarsh.ruff
+meta.pyrefly
+
+# Rust
 rust-lang.rust-analyzer
-golang.go
-ms-vscode.cpptools
 
-# Web Development
-dbaeumer.vscode-eslint
-esbenp.prettier-vscode
-bradlc.vscode-tailwindcss
+# C/C++
+ms-vscode.cmake-tools
+xaver.clang-format
 
-# Git
-eamodio.gitlens
-mhutchie.git-graph
+# Mojo
+modular-mojotools.vscode-mojo
 
-# Editor Enhancement
-vscodevim.vim
-streetsidesoftware.code-spell-checker
-usernamehw.errorlens
-christian-kohler.path-intellisense
+# Julia
+julialang.language-julia
 
-# Themes (extensions defined in each theme's cursor.json)
-# Install all themes at once or just the one you use
+# Themes (for cosmikase theme system)
 catppuccin.catppuccin-vsc
 arcticicestudio.nord-visual-studio-code
 enkia.tokyo-night
 jdinhlife.gruvbox
 sainnhe.everforest
-qufiwefefwoyn.kanagawa
 mvllow.rose-pine
-kepano.flexoki-vscode
-robbowen.synthwave-vscode
-monokai.theme-monokai-pro-vscode
-zhuangtongfa.material-theme
-
-# File Support
-redhat.vscode-yaml
-tamasfe.even-better-toml
-mechatroner.rainbow-csv
-
-# Remote Development
-ms-vscode-remote.remote-ssh
-ms-vscode-remote.remote-containers
-
-# Productivity
-alefragnani.project-manager
-gruntfuggly.todo-tree
-

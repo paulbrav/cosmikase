@@ -1,17 +1,28 @@
 {{- /* Read theme configuration from cursor.json */ -}}
-{{- $cursorJson := joinPath .themes_dir .theme "cursor.json" | include | fromJson -}}
+{{- $cursor := joinPath .themes_dir .theme "cursor.json" | include | fromJson -}}
 {{- $isLight := false -}}
-{{- if hasKey $cursorJson "light" -}}
-{{-   $isLight = $cursorJson.light -}}
+{{- if hasKey $cursor "light" -}}
+{{-   $isLight = $cursor.light -}}
 {{- end -}}
 {
     "window.commandCenter": true,
-    "workbench.colorTheme": "{{ $cursorJson.colorTheme }}",
+    "workbench.colorTheme": "{{ $cursor.colorTheme }}",
 {{- if $isLight }}
     "workbench.preferredDarkColorTheme": "Cursor Dark Midnight",
-    "workbench.preferredLightColorTheme": "{{ $cursorJson.colorTheme }}"
+    "workbench.preferredLightColorTheme": "{{ $cursor.colorTheme }}",
 {{- else }}
-    "workbench.preferredDarkColorTheme": "{{ $cursorJson.colorTheme }}",
-    "workbench.preferredLightColorTheme": "Cursor Light"
+    "workbench.preferredDarkColorTheme": "{{ $cursor.colorTheme }}",
+    "workbench.preferredLightColorTheme": "Cursor Light",
+{{- end }}
+    "workbench.colorCustomizations": {
+        "editor.background": "{{ $cursor.colors.background }}",
+        "sideBar.background": "{{ $cursor.colors.sidebar | default $cursor.colors.background }}",
+        "terminal.background": "{{ $cursor.colors.terminal | default $cursor.colors.background }}",
+        "activityBar.background": "{{ $cursor.colors.sidebar | default $cursor.colors.background }}"
+    }
+{{- if hasKey $cursor "tokenColors" }},
+    "editor.tokenColorCustomizations": {
+        "textMateRules": {{ $cursor.tokenColors | toJson }}
+    }
 {{- end }}
 }
