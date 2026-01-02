@@ -109,7 +109,6 @@ fi
 apply_cosmic_configs() {
     local tmp_dir
     tmp_dir=$(mktemp -d)
-    trap 'rm -rf "$tmp_dir"' EXIT
     
     # Prepare all files in tmp
     if [[ "$IS_LIGHT" == "true" ]]; then
@@ -139,7 +138,7 @@ apply_cosmic_configs() {
         log "  - Set COSMIC mode via cosmic-config"
     else
         mkdir -p "$COSMIC_MODE_DIR"
-        mv "$tmp_dir/is_dark" "$COSMIC_MODE_DIR/is_dark"
+        cp "$tmp_dir/is_dark" "$COSMIC_MODE_DIR/is_dark"
         log "  - Set COSMIC mode via file write"
     fi
     
@@ -150,16 +149,19 @@ apply_cosmic_configs() {
             COSMIC_THEME_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Dark/v1"
         fi
         mkdir -p "$COSMIC_THEME_DIR"
-        mv "$tmp_dir/theme" "$COSMIC_THEME_DIR/theme"
+        cp "$tmp_dir/theme" "$COSMIC_THEME_DIR/theme"
         log "  - Applied COSMIC color theme"
     fi
     
     if [[ -f "$tmp_dir/color_scheme" ]]; then
         COSMIC_TERM_DIR="$HOME/.config/cosmic/com.system76.CosmicTerm/v1"
         mkdir -p "$COSMIC_TERM_DIR"
-        mv "$tmp_dir/color_scheme" "$COSMIC_TERM_DIR/color_scheme"
+        cp "$tmp_dir/color_scheme" "$COSMIC_TERM_DIR/color_scheme"
         log "  - Applied COSMIC terminal color scheme"
     fi
+
+    # Cleanup manually instead of using a trap that might fail at exit
+    rm -rf "$tmp_dir"
 }
 
 # Set COSMIC paths
