@@ -15,13 +15,26 @@ use std::process::{Command, Stdio};
 /// Requests received from pop-launcher via stdin
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
+#[allow(non_snake_case, dead_code)]
 enum Request {
-    Activate { Activate: u32 },
-    ActivateContext { ActivateContext: ActivateContextData },
-    Complete { Complete: u32 },
-    Context { Context: u32 },
-    Quit { Quit: u32 },
-    Search { Search: String },
+    Activate {
+        Activate: u32,
+    },
+    ActivateContext {
+        ActivateContext: ActivateContextData,
+    },
+    Complete {
+        Complete: u32,
+    },
+    Context {
+        Context: u32,
+    },
+    Quit {
+        Quit: u32,
+    },
+    Search {
+        Search: String,
+    },
     Simple(SimpleRequest),
 }
 
@@ -40,6 +53,7 @@ enum SimpleRequest {
 /// Responses sent to pop-launcher via stdout
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
+#[allow(non_snake_case, dead_code)]
 enum PluginResponse {
     Append { Append: PluginSearchResult },
     Clear(ClearResponse),
@@ -77,6 +91,7 @@ struct PluginSearchResult {
 }
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 enum IconSource {
     Name(String),
     Mime(String),
@@ -221,7 +236,7 @@ impl Plugin {
             let _ = collection.unlock();
         }
 
-        let attributes = vec![(KEYRING_ATTRIBUTE, KEYRING_SERVICE)];
+        let attributes = std::collections::HashMap::from([(KEYRING_ATTRIBUTE, KEYRING_SERVICE)]);
         let items = match collection.search_items(attributes) {
             Ok(items) => items,
             Err(_) => return None,
@@ -236,6 +251,7 @@ impl Plugin {
         None
     }
 
+    #[allow(dead_code)]
     fn store_session_in_keyring(&self, session: &str) -> bool {
         let ss = match secret_service::blocking::SecretService::connect(
             secret_service::EncryptionType::Dh,
@@ -254,9 +270,9 @@ impl Plugin {
             let _ = collection.unlock();
         }
 
-        let attributes = vec![(KEYRING_ATTRIBUTE, KEYRING_SERVICE)];
+        let attributes = std::collections::HashMap::from([(KEYRING_ATTRIBUTE, KEYRING_SERVICE)]);
 
-        collection
+        let result = collection
             .create_item(
                 "Bitwarden Session",
                 attributes,
@@ -264,7 +280,8 @@ impl Plugin {
                 true, // replace if exists
                 "text/plain",
             )
-            .is_ok()
+            .is_ok();
+        result
     }
 
     fn handle_search(&mut self, query: &str, stdout: &mut io::Stdout) {
@@ -306,7 +323,14 @@ impl Plugin {
 
         // Search Bitwarden vault
         let output = Command::new("bw")
-            .args(["list", "items", "--search", search_query, "--session", &session])
+            .args([
+                "list",
+                "items",
+                "--search",
+                search_query,
+                "--session",
+                &session,
+            ])
             .output();
 
         match output {
@@ -360,7 +384,7 @@ impl Plugin {
                             stdout,
                         );
                     } else {
-                        self.send_error_result("Bitwarden error", &stderr.to_string(), stdout);
+                        self.send_error_result("Bitwarden error", &stderr, stdout);
                     }
                 }
             }
@@ -442,42 +466,50 @@ impl Plugin {
         self.copy_credential(id, credential_type, stdout);
     }
 
-    fn copy_credential(&mut self, id: u32, credential_type: CredentialType, stdout: &mut io::Stdout) {
-        if let Some(item) = self.results.get(&id) {
-            let session = match self.get_session() {
-                Some(s) => s,
-                None => {
-                    return;
-                }
-            };
+    fn copy_credential(
+        &mut self,
+        id: u32,
+        credential_type: CredentialType,
+        stdout: &mut io::Stdout,
+    ) {
+        let item_id = match self.results.get(&id) {
+            Some(item) => item.id.clone(),
+            None => return,
+        };
 
-            let (bw_type, type_name) = match credential_type {
-                CredentialType::Password => ("password", "Password"),
-                CredentialType::Username => ("username", "Username"),
-                CredentialType::Totp => ("totp", "TOTP"),
-            };
+        let session = match self.get_session() {
+            Some(s) => s,
+            None => {
+                return;
+            }
+        };
 
-            let output = Command::new("bw")
-                .args(["get", bw_type, &item.id, "--session", &session])
-                .output();
+        let (bw_type, type_name) = match credential_type {
+            CredentialType::Password => ("password", "Password"),
+            CredentialType::Username => ("username", "Username"),
+            CredentialType::Totp => ("totp", "TOTP"),
+        };
 
-            match output {
-                Ok(output) => {
-                    if output.status.success() {
-                        let value = String::from_utf8_lossy(&output.stdout);
-                        self.copy_to_clipboard(value.trim());
-                    } else {
-                        let stderr = String::from_utf8_lossy(&output.stderr);
-                        eprintln!("Failed to get {}: {}", type_name, stderr);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Failed to run bw: {}", e);
+        let output = Command::new("bw")
+            .args(["get", bw_type, &item_id, "--session", &session])
+            .output();
+
+        match output {
+            Ok(output) => {
+                if output.status.success() {
+                    let value = String::from_utf8_lossy(&output.stdout);
+                    self.copy_to_clipboard(value.trim());
+                } else {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    eprintln!("Failed to get {}: {}", type_name, stderr);
                 }
             }
-
-            self.send_response(PluginResponse::Close(CloseResponse::Close), stdout);
+            Err(e) => {
+                eprintln!("Failed to run bw: {}", e);
+            }
         }
+
+        self.send_response(PluginResponse::Close(CloseResponse::Close), stdout);
     }
 
     fn copy_to_clipboard(&self, text: &str) {
@@ -512,10 +544,7 @@ impl Plugin {
     }
 
     fn send_finished(&self, stdout: &mut io::Stdout) {
-        self.send_response(
-            PluginResponse::Finished(FinishedResponse::Finished),
-            stdout,
-        );
+        self.send_response(PluginResponse::Finished(FinishedResponse::Finished), stdout);
     }
 
     fn send_response(&self, response: PluginResponse, stdout: &mut io::Stdout) {
@@ -570,4 +599,3 @@ mod tests {
         assert_eq!(plugin.format_item_description(&item), "Login item");
     }
 }
-

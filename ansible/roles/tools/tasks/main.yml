@@ -6,8 +6,8 @@
 
 - name: Set enabled tools lists
   ansible.builtin.set_fact:
-    enabled_ai_tools: "{{ installers.ai_tools | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.ai_tools | default([]) | rejectattr('install', 'defined') | list }}"
-    enabled_security: "{{ installers.security | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.security | default([]) | rejectattr('install', 'defined') | list }}"
+    tools_enabled_ai: "{{ installers.ai_tools | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.ai_tools | default([]) | rejectattr('install', 'defined') | list }}"
+    tools_enabled_security: "{{ installers.security | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + installers.security | default([]) | rejectattr('install', 'defined') | list }}"
 
 # ============================================================================
 # Brave Browser (official apt repo)
@@ -16,14 +16,14 @@
 - name: Check if Brave is installed
   ansible.builtin.command:
     cmd: which brave-browser
-  register: brave_check
+  register: tools_brave_check
   changed_when: false
-  failed_when: brave_check.rc > 1
+  failed_when: tools_brave_check.rc > 1
 
 - name: Install Brave Browser
   when:
-    - enabled_security | selectattr('name', 'equalto', 'brave-browser') | list | length > 0
-    - brave_check.rc != 0
+    - tools_enabled_security | selectattr('name', 'equalto', 'brave-browser') | list | length > 0
+    - tools_brave_check.rc != 0
   block:
     - name: Install curl for Brave setup
       become: true
@@ -63,14 +63,14 @@
 - name: Check if Dangerzone is installed
   ansible.builtin.command:
     cmd: which dangerzone
-  register: dangerzone_check
+  register: tools_dangerzone_check
   changed_when: false
-  failed_when: dangerzone_check.rc > 1
+  failed_when: tools_dangerzone_check.rc > 1
 
 - name: Install Dangerzone
   when:
-    - enabled_security | selectattr('name', 'equalto', 'dangerzone') | list | length > 0
-    - dangerzone_check.rc != 0
+    - tools_enabled_security | selectattr('name', 'equalto', 'dangerzone') | list | length > 0
+    - tools_dangerzone_check.rc != 0
   block:
     - name: Install GPG prerequisites
       become: true
@@ -101,14 +101,14 @@
     - name: Get Ubuntu codename
       ansible.builtin.command:
         cmd: lsb_release -cs
-      register: ubuntu_codename
+      register: tools_ubuntu_codename
       changed_when: false
 
     - name: Add Dangerzone repository
       become: true
       ansible.builtin.copy:
         content: |
-          deb [signed-by=/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg] https://packages.freedom.press/apt-tools-prod {{ ubuntu_codename.stdout }} main
+          deb [signed-by=/etc/apt/keyrings/fpf-apt-tools-archive-keyring.gpg] https://packages.freedom.press/apt-tools-prod {{ tools_ubuntu_codename.stdout }} main
         dest: /etc/apt/sources.list.d/fpf-apt-tools.list
         mode: "0644"
 
@@ -130,14 +130,14 @@
 - name: Check if Antigravity is installed
   ansible.builtin.command:
     cmd: which antigravity
-  register: antigravity_check
+  register: tools_antigravity_check
   changed_when: false
-  failed_when: antigravity_check.rc > 1
+  failed_when: tools_antigravity_check.rc > 1
 
 - name: Install Antigravity
   when:
-    - enabled_ai_tools | selectattr('name', 'equalto', 'antigravity') | list | length > 0
-    - antigravity_check.rc != 0
+    - tools_enabled_ai | selectattr('name', 'equalto', 'antigravity') | list | length > 0
+    - tools_antigravity_check.rc != 0
   block:
     - name: Create keyrings directory
       become: true
@@ -180,40 +180,40 @@
 - name: Check if Cursor is installed
   ansible.builtin.command:
     cmd: which cursor
-  register: cursor_check
+  register: tools_cursor_check
   changed_when: false
-  failed_when: cursor_check.rc > 1
+  failed_when: tools_cursor_check.rc > 1
 
 - name: Install Cursor
   when:
-    - enabled_ai_tools | selectattr('name', 'equalto', 'cursor') | list | length > 0
-    - cursor_check.rc != 0
+    - tools_enabled_ai | selectattr('name', 'equalto', 'cursor') | list | length > 0
+    - tools_cursor_check.rc != 0
   block:
     - name: Get Cursor item config
       ansible.builtin.set_fact:
-        cursor_config: "{{ enabled_ai_tools | selectattr('name', 'equalto', 'cursor') | first }}"
+        tools_cursor_config: "{{ tools_enabled_ai | selectattr('name', 'equalto', 'cursor') | first }}"
 
     - name: Create temp directory for Cursor
       ansible.builtin.tempfile:
         state: directory
-      register: cursor_tmp
+      register: tools_cursor_tmp
 
     - name: Download Cursor deb
       ansible.builtin.get_url:
-        url: "{{ cursor_config.deb_url }}"
-        dest: "{{ cursor_tmp.path }}/cursor.deb"
+        url: "{{ tools_cursor_config.deb_url }}"
+        dest: "{{ tools_cursor_tmp.path }}/cursor.deb"
         mode: "0644"
-      when: cursor_config.deb_url is defined
+      when: tools_cursor_config.deb_url is defined
 
     - name: Install Cursor
       become: true
       ansible.builtin.apt:
-        deb: "{{ cursor_tmp.path }}/cursor.deb"
-      when: cursor_config.deb_url is defined
+        deb: "{{ tools_cursor_tmp.path }}/cursor.deb"
+      when: tools_cursor_config.deb_url is defined
 
     - name: Clean up Cursor temp
       ansible.builtin.file:
-        path: "{{ cursor_tmp.path }}"
+        path: "{{ tools_cursor_tmp.path }}"
         state: absent
 
 # ============================================================================
@@ -223,9 +223,9 @@
 - name: Check if Claude Code is installed
   ansible.builtin.command:
     cmd: which claude
-  register: claude_check
+  register: tools_claude_check
   changed_when: false
-  failed_when: claude_check.rc > 1
+  failed_when: tools_claude_check.rc > 1
 
 - name: Install Claude Code via npm
   ansible.builtin.shell: |
@@ -235,8 +235,9 @@
   args:
     executable: /bin/bash
   when:
-    - enabled_ai_tools | selectattr('name', 'equalto', 'claude-code') | list | length > 0
-    - claude_check.rc != 0
+    - tools_enabled_ai | selectattr('name', 'equalto', 'claude-code') | list | length > 0
+    - tools_claude_check.rc != 0
+  changed_when: true
 
 # ============================================================================
 # OpenCode (bun)
@@ -245,9 +246,9 @@
 - name: Check if OpenCode is installed
   ansible.builtin.command:
     cmd: which opencode
-  register: opencode_check
+  register: tools_opencode_check
   changed_when: false
-  failed_when: opencode_check.rc > 1
+  failed_when: tools_opencode_check.rc > 1
 
 - name: Install OpenCode via bun
   ansible.builtin.shell: |
@@ -257,8 +258,9 @@
   args:
     executable: /bin/bash
   when:
-    - enabled_ai_tools | selectattr('name', 'equalto', 'opencode') | list | length > 0
-    - opencode_check.rc != 0
+    - tools_enabled_ai | selectattr('name', 'equalto', 'opencode') | list | length > 0
+    - tools_opencode_check.rc != 0
+  changed_when: true
 
 # ============================================================================
 # Power Management (udev rules)
@@ -277,7 +279,7 @@
     src: "{{ playbook_dir }}/../cosmikase/udev/99-cosmikase-power.rules"
     dest: /etc/udev/rules.d/99-cosmikase-power.rules
     mode: "0644"
-  register: udev_rules
+  register: tools_udev_rules
   notify:
     - Reload udev rules
     - Trigger udev rules
@@ -293,19 +295,19 @@
   ansible.builtin.command:
     cmd: fwupdmgr update -y
   when: defaults.run_fw_update | default(false)
-  register: fwupd_update
-  changed_when: "'Successfully installed' in fwupd_update.stdout"
+  register: tools_fwupd_update
+  changed_when: "'Successfully installed' in tools_fwupd_update.stdout"
   failed_when:
-    - fwupd_update.rc != 0
-    - "'No upgrades available' not in fwupd_update.stdout"
-    - "'Nothing to do' not in fwupd_update.stderr"
-    - "'no supported devices' not in fwupd_update.stderr | lower"
+    - tools_fwupd_update.rc != 0
+    - "'No upgrades available' not in tools_fwupd_update.stdout"
+    - "'Nothing to do' not in tools_fwupd_update.stderr"
+    - "'no supported devices' not in tools_fwupd_update.stderr | lower"
 
 - name: Enable fingerprint authentication in PAM
   become: true
   ansible.builtin.command:
     cmd: pam-auth-update --enable fprintd
-  register: pam_update
+  register: tools_pam_update
   changed_when: false
 
 # ============================================================================
@@ -316,8 +318,8 @@
   ansible.builtin.command:
     cmd: xdg-settings set default-web-browser brave-browser.desktop
   when:
-    - enabled_security | selectattr('name', 'equalto', 'brave-browser') | list | length > 0
-  register: brave_default
-  changed_when: brave_default.rc == 0
-  failed_when: brave_default.rc > 1
+    - tools_enabled_security | selectattr('name', 'equalto', 'brave-browser') | list | length > 0
+  register: tools_brave_default
+  changed_when: tools_brave_default.rc == 0
+  failed_when: tools_brave_default.rc > 1
 

@@ -1,0 +1,10 @@
+/home/paulbrav/github_software/omarchy-for-popos/plugins/bw-launcher/target/debug/deps/zbus_macros-1442aba38f9ad115.d: /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/lib.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/error.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/iface.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/proxy.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/utils.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/../README.md
+
+/home/paulbrav/github_software/omarchy-for-popos/plugins/bw-launcher/target/debug/deps/libzbus_macros-1442aba38f9ad115.so: /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/lib.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/error.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/iface.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/proxy.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/utils.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/../README.md
+
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/lib.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/error.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/iface.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/proxy.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/utils.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zbus_macros-4.4.0/src/../README.md:

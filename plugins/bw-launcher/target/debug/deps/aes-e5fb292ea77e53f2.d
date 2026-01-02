@@ -1,0 +1,13 @@
+/home/paulbrav/github_software/omarchy-for-popos/plugins/bw-launcher/target/debug/deps/aes-e5fb292ea77e53f2.d: /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/lib.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/soft.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/soft/fixslice64.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/autodetect.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/utils.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes128.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes192.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes256.rs
+
+/home/paulbrav/github_software/omarchy-for-popos/plugins/bw-launcher/target/debug/deps/libaes-e5fb292ea77e53f2.rmeta: /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/lib.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/soft.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/soft/fixslice64.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/autodetect.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/utils.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes128.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes192.rs /home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes256.rs
+
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/lib.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/soft.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/soft/fixslice64.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/autodetect.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/utils.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes128.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes192.rs:
+/home/paulbrav/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aes-0.8.4/src/ni/aes256.rs:

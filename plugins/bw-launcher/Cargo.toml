@@ -9,7 +9,8 @@ license = "MIT"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 dirs = "6.0"
-secret-service = "4.0"
+secret-service = { version = "4.0", features = ["rt-async-io-crypto-rust"] }
+zbus = { version = "4.4", features = ["async-io"] }
 
 [profile.release]
 strip = true

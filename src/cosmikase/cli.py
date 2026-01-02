@@ -131,20 +131,14 @@ def main(argv: list[str] | None = None) -> int:
     theme_parser = subparsers.add_parser("theme", help="Switch themes")
     theme_parser.add_argument("name", nargs="?", help="Theme name to apply")
     theme_parser.add_argument("--list", "-l", action="store_true", help="List available themes")
-    theme_parser.add_argument(
-        "--no-apply", action="store_true", help="Skip chezmoi apply"
-    )
-    theme_parser.add_argument(
-        "--no-helpers", action="store_true", help="Skip helper scripts"
-    )
+    theme_parser.add_argument("--no-apply", action="store_true", help="Skip chezmoi apply")
+    theme_parser.add_argument("--no-helpers", action="store_true", help="Skip helper scripts")
     theme_parser.set_defaults(func=cmd_theme)
 
     # config command
     config_parser = subparsers.add_parser("config", help="Query configuration")
     config_parser.add_argument("path", help="Dot-separated path (e.g., defaults.theme)")
-    config_parser.add_argument(
-        "--config", "-c", default="cosmikase.yaml", help="Config file path"
-    )
+    config_parser.add_argument("--config", "-c", default="cosmikase.yaml", help="Config file path")
     config_parser.add_argument("--default", "-d", default="", help="Default if not found")
     config_parser.set_defaults(func=cmd_config)
 
@@ -177,4 +171,3 @@ def run() -> None:
 
 if __name__ == "__main__":
     run()
-

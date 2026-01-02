@@ -7,27 +7,28 @@
 - name: Check if chezmoi is installed
   ansible.builtin.command:
     cmd: which chezmoi
-  register: chezmoi_check
+  register: dotfiles_chezmoi_check
   changed_when: false
-  failed_when: chezmoi_check.rc > 1
+  failed_when: dotfiles_chezmoi_check.rc > 1
 
 - name: Download chezmoi installer
   ansible.builtin.get_url:
     url: https://get.chezmoi.io
     dest: /tmp/chezmoi-install.sh
     mode: "0755"
-  when: chezmoi_check.rc != 0
+  when: dotfiles_chezmoi_check.rc != 0
 
 - name: Install chezmoi
   ansible.builtin.command:
     cmd: /tmp/chezmoi-install.sh -b {{ local_bin }}
-  when: chezmoi_check.rc != 0
+  when: dotfiles_chezmoi_check.rc != 0
+  changed_when: true
 
 - name: Clean up chezmoi installer
   ansible.builtin.file:
     path: /tmp/chezmoi-install.sh
     state: absent
-  when: chezmoi_check.rc != 0
+  when: dotfiles_chezmoi_check.rc != 0
 
 # ============================================================================
 # Sync themes
@@ -128,7 +129,7 @@
     cmd: "{{ local_bin }}/chezmoi apply --force"
   environment:
     PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
-  register: chezmoi_apply
+  register: dotfiles_chezmoi_apply
   # chezmoi manages its own state; always succeeds means changes were applied as needed
   changed_when: false
 
@@ -139,7 +140,7 @@
 - name: Check if .bashrc exists
   ansible.builtin.stat:
     path: "{{ ansible_env.HOME }}/.bashrc"
-  register: bashrc_stat
+  register: dotfiles_bashrc_stat
 
 - name: Add cosmikase to .bashrc
   ansible.builtin.blockinfile:
@@ -152,12 +153,12 @@
       [ -f "{{ config_dir }}/shell/cosmikase.sh" ] && source "{{ config_dir }}/shell/cosmikase.sh"
     create: true
     mode: "0644"
-  when: bashrc_stat.stat.exists or true
+  when: dotfiles_bashrc_stat.stat.exists or true
 
 - name: Check if .zshrc exists
   ansible.builtin.stat:
     path: "{{ ansible_env.HOME }}/.zshrc"
-  register: zshrc_stat
+  register: dotfiles_zshrc_stat
 
 - name: Add cosmikase to .zshrc
   ansible.builtin.blockinfile:
@@ -170,7 +171,7 @@
       [ -f "{{ config_dir }}/shell/cosmikase.sh" ] && source "{{ config_dir }}/shell/cosmikase.sh"
     create: false
     mode: "0644"
-  when: zshrc_stat.stat.exists
+  when: dotfiles_zshrc_stat.stat.exists
 
 # ============================================================================
 # Install theme-tui
@@ -179,16 +180,16 @@
 - name: Check if uv is available
   ansible.builtin.stat:
     path: "{{ local_bin }}/uv"
-  register: uv_stat
+  register: dotfiles_uv_stat
 
 - name: Install theme-tui via uv
   ansible.builtin.command:
     cmd: "{{ local_bin }}/uv tool install --reinstall {{ playbook_dir }}/.."
   environment:
     PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
-  when: uv_stat.stat.exists
-  register: theme_tui_install
-  changed_when: "'Installed' in theme_tui_install.stdout"
+  when: dotfiles_uv_stat.stat.exists
+  register: dotfiles_theme_tui_install
+  changed_when: "'Installed' in dotfiles_theme_tui_install.stdout"
 
 # ============================================================================
 # Install Cursor/VS Code extensions
@@ -197,23 +198,23 @@
 - name: Check if cursor command is available
   ansible.builtin.command:
     cmd: which cursor
-  register: cursor_check
+  register: dotfiles_cursor_check
   changed_when: false
   failed_when: false
 
 - name: Check if code command is available
   ansible.builtin.command:
     cmd: which code
-  register: code_check
+  register: dotfiles_code_check
   changed_when: false
   failed_when: false
-  when: cursor_check.rc != 0
+  when: dotfiles_cursor_check.rc != 0
 
 - name: Set editor command
   ansible.builtin.set_fact:
-    editor_cmd: "{{ 'cursor' if cursor_check.rc == 0 else ('code' if code_check.rc | default(1) == 0 else '') }}"
+    dotfiles_editor_cmd: "{{ 'cursor' if dotfiles_cursor_check.rc == 0 else ('code' if dotfiles_code_check.rc | default(1) == 0 else '') }}"
 
-- name: Install Cursor/VS Code extensions
+- name: Install Cursor/VS Code extensions  # noqa: risky-shell-pipe
   ansible.builtin.shell: |
     set -e
     EXTENSIONS_FILE="{{ config_dir }}/Cursor/extensions.txt"
@@ -222,14 +223,13 @@
       exit 0
     fi
     grep -v '^\s*#' "$EXTENSIONS_FILE" | grep -v '^\s*$' | while read -r ext; do
-      {{ editor_cmd }} --install-extension "$ext" --force 2>/dev/null || true
+      {{ dotfiles_editor_cmd }} --install-extension "$ext" --force 2>/dev/null || true
     done
   args:
     executable: /bin/bash
   environment:
     PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
-  when: editor_cmd != ''
-  register: extensions_install
+  when: dotfiles_editor_cmd != ''
+  register: dotfiles_extensions_install
   changed_when: false
   # Extensions installation is best-effort; some may fail if not available
-

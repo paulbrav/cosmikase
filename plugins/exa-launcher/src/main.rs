@@ -15,13 +15,26 @@ use std::process::Command;
 /// Requests received from pop-launcher via stdin
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
+#[allow(non_snake_case, dead_code)]
 enum Request {
-    Activate { Activate: u32 },
-    ActivateContext { ActivateContext: ActivateContextData },
-    Complete { Complete: u32 },
-    Context { Context: u32 },
-    Quit { Quit: u32 },
-    Search { Search: String },
+    Activate {
+        Activate: u32,
+    },
+    ActivateContext {
+        ActivateContext: ActivateContextData,
+    },
+    Complete {
+        Complete: u32,
+    },
+    Context {
+        Context: u32,
+    },
+    Quit {
+        Quit: u32,
+    },
+    Search {
+        Search: String,
+    },
     Simple(SimpleRequest),
 }
 
@@ -40,6 +53,7 @@ enum SimpleRequest {
 /// Responses sent to pop-launcher via stdout
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
+#[allow(non_snake_case, dead_code)]
 enum PluginResponse {
     Append { Append: PluginSearchResult },
     Clear(ClearResponse),
@@ -77,6 +91,7 @@ struct PluginSearchResult {
 }
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 enum IconSource {
     Name(String),
     Mime(String),
@@ -215,7 +230,9 @@ impl Plugin {
                 Request::Context { Context: id } => {
                     self.handle_context(id, &mut stdout);
                 }
-                Request::ActivateContext { ActivateContext: data } => {
+                Request::ActivateContext {
+                    ActivateContext: data,
+                } => {
                     self.handle_activate_context(data.id, data.context, &mut stdout);
                 }
                 _ => {
@@ -253,7 +270,9 @@ impl Plugin {
             query: search_query.to_string(),
             num_results: self.config.num_results.or(Some(8)),
             contents: Some(ExaContents {
-                text: ExaTextOptions { max_characters: 200 },
+                text: ExaTextOptions {
+                    max_characters: 200,
+                },
             }),
         };
 
@@ -303,10 +322,7 @@ impl Plugin {
                         }
                     }
                 } else {
-                    self.send_error_result(
-                        &format!("API error: {}", resp.status()),
-                        stdout,
-                    );
+                    self.send_error_result(&format!("API error: {}", resp.status()), stdout);
                 }
             }
             Err(e) => {
@@ -438,8 +454,3 @@ mod tests {
         assert_eq!(truncated, "héllo...");
     }
 }
-
-
-
-
-

@@ -106,7 +106,7 @@ def load_manifest(theme_path: Path) -> ThemeManifest:
 
     # Fallback to legacy
     is_light = (theme_path / "light.mode").exists()
-    
+
     # Try to load cursor.json if it exists
     cursor_json = theme_path / "cursor.json"
     cursor_theme = None
@@ -131,22 +131,22 @@ def load_manifest(theme_path: Path) -> ThemeManifest:
 
 def _main() -> None:
     """CLI entry point for theme directory discovery.
-    
+
     Used by shell scripts to get the canonical themes directory.
     """
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(
-        description="Discover cosmikase theme directories"
-    )
+    parser = argparse.ArgumentParser(description="Discover cosmikase theme directories")
     parser.add_argument(
-        "--all", "-a",
+        "--all",
+        "-a",
         action="store_true",
         help="Print all discovered theme directories (one per line)",
     )
     parser.add_argument(
-        "--list", "-l",
+        "--list",
+        "-l",
         action="store_true",
         help="List available themes in the primary directory",
     )

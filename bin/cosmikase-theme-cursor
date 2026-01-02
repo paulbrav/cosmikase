@@ -293,7 +293,6 @@ if [[ "$ATTEMPT_RELOAD" == "true" ]] && [[ ${#UPDATED_EDITORS[@]} -gt 0 ]]; then
         if [[ -z "${WAYLAND_DISPLAY:-}" ]] && command -v xdotool >/dev/null 2>&1; then
             for editor in "${running_editors[@]}"; do
                 # Map display name to WM_CLASS for precise window matching
-                local class_name
                 case "$editor" in
                     "Cursor") class_name="cursor" ;;
                     "VS Code") class_name="code" ;;

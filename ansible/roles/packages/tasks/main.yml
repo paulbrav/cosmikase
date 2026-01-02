@@ -67,16 +67,16 @@
     label: "{{ item.id }}"
   async: 300
   poll: 0
-  register: flatpak_jobs
+  register: packages_flatpak_jobs
 
 - name: "⏳ Waiting for Flatpak installs (retries are normal, not errors)"
   ansible.builtin.async_status:
     jid: "{{ item.ansible_job_id }}"
-  loop: "{{ flatpak_jobs.results | default([]) }}"
+  loop: "{{ packages_flatpak_jobs.results | default([]) }}"
   loop_control:
     label: "{{ item.item.id | default('unknown') }}"
-  register: flatpak_results
-  until: flatpak_results.finished
+  register: packages_flatpak_results
+  until: packages_flatpak_results.finished
   retries: 60
   delay: 5
   when: item.ansible_job_id is defined
@@ -103,8 +103,8 @@
     - item.install | default(true)
   loop_control:
     label: "{{ item.name }}"
-  register: npm_install
-  changed_when: "'installed' in npm_install.stdout"
+  register: packages_npm_install
+  changed_when: "'installed' in packages_npm_install.stdout"
 
 # ============================================================================
 # Fonts

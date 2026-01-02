@@ -39,11 +39,7 @@ def enabled_items(
     items = config.get(section, {}).get(group, [])
     if include_disabled:
         return items
-    return [
-        item
-        for item in items
-        if item.get("install", True)
-    ]
+    return [item for item in items if item.get("install", True)]
 
 
 def enabled_top_level(
@@ -115,7 +111,7 @@ def to_json(
     include_disabled: bool = False,
 ) -> str:
     """Output enabled items as JSON for shell consumption.
-    
+
     Args:
         config: Parsed YAML configuration dict.
         section: Section name.
@@ -134,9 +130,7 @@ def _main() -> None:
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(
-        description="Query cosmikase YAML configuration"
-    )
+    parser = argparse.ArgumentParser(description="Query cosmikase YAML configuration")
     parser.add_argument(
         "--config",
         "-c",
@@ -157,12 +151,8 @@ def _main() -> None:
     list_parser.add_argument(
         "--names-only", "-n", action="store_true", help="Output only package names"
     )
-    list_parser.add_argument(
-        "--json", "-j", action="store_true", help="Output as JSON"
-    )
-    list_parser.add_argument(
-        "--all", "-a", action="store_true", help="Include disabled items"
-    )
+    list_parser.add_argument("--json", "-j", action="store_true", help="Output as JSON")
+    list_parser.add_argument("--all", "-a", action="store_true", help="Include disabled items")
     list_parser.add_argument(
         "--disabled", "-d", action="store_true", help="Show ONLY disabled items"
     )
@@ -188,7 +178,7 @@ def _main() -> None:
             print(f"Error: Section '{args.section}' not found in config", file=sys.stderr)
             print(f"Available sections: {', '.join(config.keys())}", file=sys.stderr)
             sys.exit(1)
-        
+
         # Validate group exists if specified (only for dict sections, not lists)
         section_data = config.get(args.section)
         if args.group and isinstance(section_data, dict) and args.group not in section_data:
@@ -209,10 +199,10 @@ def _main() -> None:
                 items = enabled_items(config, args.section, args.group, include_disabled)
             else:
                 items = enabled_top_level(config, args.section, include_disabled)
-            
+
             if args.disabled:
                 items = [i for i in items if not i.get("install", True)]
-            
+
             for item in items:
                 print(item.get("name") or item.get("id") or "")
         else:
@@ -220,10 +210,10 @@ def _main() -> None:
                 items = enabled_items(config, args.section, args.group, include_disabled)
             else:
                 items = enabled_top_level(config, args.section, include_disabled)
-            
+
             if args.disabled:
                 items = [i for i in items if not i.get("install", True)]
-                
+
             for item in items:
                 name = item.get("name") or item.get("id") or ""
                 desc = item.get("desc", "")
@@ -235,4 +225,3 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
-

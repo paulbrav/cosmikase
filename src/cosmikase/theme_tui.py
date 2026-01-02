@@ -22,14 +22,14 @@ from cosmikase.themes import discover_theme_dirs, find_theme_cli, list_themes, l
 
 class ThemePreview(Static):
     """Shows color swatches for selected theme."""
-    
+
     def update_preview(self, theme_path: Path) -> None:
         try:
             manifest = load_manifest(theme_path)
             text = Text()
             text.append(f"Theme: {manifest.name}\n", style="bold")
             text.append(f"Variant: {manifest.variant}\n\n")
-            
+
             if manifest.colors:
                 text.append("Colors:\n")
                 for name, hex_color in manifest.colors.items():
@@ -39,12 +39,12 @@ class ThemePreview(Static):
                     text.append(f"{name}: {hex_color}\n")
             else:
                 text.append("No colors defined in manifest.\n")
-                
+
             if manifest.cursor_theme:
                 text.append(f"\nCursor: {manifest.cursor_theme}\n")
             if manifest.wallpaper:
                 text.append(f"Wallpaper: {manifest.wallpaper}\n")
-                
+
             self.update(text)
         except Exception as e:
             self.update(f"Error loading preview: {e}")
@@ -120,13 +120,13 @@ class ThemeTui(App):
                 else "No theme directory found. Set THEMES_DIR or run 'make install'."
             )
             yield Static(path_text, id="path")
-            
+
             with Horizontal(id="main-content"):
                 self.option_list = OptionList()
                 yield self.option_list
                 self.preview = ThemePreview()
                 yield self.preview
-                
+
             yield Static("Select a theme and press Enter to apply.", id="status")
         yield Footer()
 
@@ -167,7 +167,7 @@ class ThemeTui(App):
         cli = find_theme_cli()
         if not cli:
             return "ERROR: cosmikase-theme not found."
-            
+
         result = subprocess.run([cli, theme], capture_output=True, text=True)
         if result.returncode == 0:
             return f"SUCCESS: Applied '{theme}'."

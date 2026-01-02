@@ -46,8 +46,18 @@ class InstallerItem(BaseModel):
 
     name: str
     desc: str | None = None
-    method: Literal["script", "deb", "npm", "bun", "custom_nvm", "custom_antigravity", 
-                    "custom_brave", "custom_dangerzone", "manual"]
+    method: Literal[
+        "script",
+        "deb",
+        "npm",
+        "bun",
+        "tarball",
+        "custom_nvm",
+        "custom_antigravity",
+        "custom_brave",
+        "custom_dangerzone",
+        "manual",
+    ]
     url: str | None = None
     deb_url: str | None = None
     npm_package: str | None = None
@@ -226,7 +236,8 @@ def _main() -> None:
         help="Path to config file (default: cosmikase.yaml)",
     )
     parser.add_argument(
-        "--quiet", "-q",
+        "--quiet",
+        "-q",
         action="store_true",
         help="Only print errors",
     )
@@ -248,4 +259,3 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
-

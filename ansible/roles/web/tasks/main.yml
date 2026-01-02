@@ -6,7 +6,7 @@
 
 - name: Set enabled web apps list
   ansible.builtin.set_fact:
-    enabled_web_apps: "{{ web.apps | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + web.apps | default([]) | rejectattr('install', 'defined') | list }}"
+    web_enabled_apps: "{{ web.apps | default([]) | selectattr('install', 'defined') | selectattr('install', 'equalto', true) | list + web.apps | default([]) | rejectattr('install', 'defined') | list }}"
 
 # ============================================================================
 # Create directories
@@ -29,18 +29,18 @@
 # ============================================================================
 
 - name: Download web app icons
-  loop: "{{ enabled_web_apps | selectattr('icon_url', 'defined') | list }}"
+  loop: "{{ web_enabled_apps | selectattr('icon_url', 'defined') | list }}"
   loop_control:
     label: "{{ item.name }}"
   ansible.builtin.get_url:
     url: "{{ item.icon_url }}"
     dest: "{{ local_share }}/icons/web2app/{{ item.name | lower | replace(' ', '-') }}.png"
     mode: "0644"
-  register: icon_downloads
+  register: web_icon_downloads
   failed_when: false
 
 - name: Create desktop entries for web apps
-  loop: "{{ enabled_web_apps }}"
+  loop: "{{ web_enabled_apps }}"
   loop_control:
     label: "{{ item.name }}"
   vars:

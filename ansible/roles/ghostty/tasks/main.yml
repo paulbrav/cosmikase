@@ -34,21 +34,21 @@
 - name: Check for old source-built Ghostty binary
   ansible.builtin.stat:
     path: "{{ local_bin }}/ghostty"
-  register: old_ghostty_binary
+  register: ghostty_old_binary
 
 - name: Remove old source-built Ghostty binary
   ansible.builtin.file:
     path: "{{ local_bin }}/ghostty"
     state: absent
-  when: old_ghostty_binary.stat.exists | default(false)
+  when: ghostty_old_binary.stat.exists | default(false)
 
 - name: Check for old Ghostty source directory
   ansible.builtin.stat:
     path: "{{ ansible_env.HOME }}/ghostty-source"
-  register: old_ghostty_source
+  register: ghostty_old_source
 
 - name: Remove old Ghostty source directory
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/ghostty-source"
     state: absent
-  when: old_ghostty_source.stat.exists | default(false)
+  when: ghostty_old_source.stat.exists | default(false)
