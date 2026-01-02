@@ -1,11 +1,112 @@
 {
-  "colorTheme": "One Dark Pro",
-  "extension": "zhuangtongfa.material-theme",
+  "colorTheme": "Default Dark Modern",
+  "extension": null,
   "colors": {
     "background": "#0b1314",
     "foreground": "#c8f3e4",
     "accent": "#3ecf8e",
+    "sidebar": "#0a1010",
+    "terminal": "#0b1314",
     "error": "#ff6b6b",
     "warning": "#ffd166"
-  }
+  },
+  "tokenColors": [
+    {
+      "name": "Comments",
+      "scope": [
+        "comment",
+        "punctuation.definition.comment"
+      ],
+      "settings": {
+        "foreground": "#4a5f5a",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Keywords",
+      "scope": [
+        "keyword",
+        "storage.type",
+        "storage.modifier",
+        "keyword.control"
+      ],
+      "settings": {
+        "foreground": "#3ecf8e"
+      }
+    },
+    {
+      "name": "Strings",
+      "scope": [
+        "string",
+        "punctuation.definition.string"
+      ],
+      "settings": {
+        "foreground": "#7dd3c0"
+      }
+    },
+    {
+      "name": "Functions",
+      "scope": [
+        "entity.name.function",
+        "support.function",
+        "variable.function"
+      ],
+      "settings": {
+        "foreground": "#4fd1c5"
+      }
+    },
+    {
+      "name": "Types",
+      "scope": [
+        "entity.name.type",
+        "entity.name.class",
+        "support.type",
+        "support.class"
+      ],
+      "settings": {
+        "foreground": "#81e6d9"
+      }
+    },
+    {
+      "name": "Constants",
+      "scope": [
+        "constant.numeric",
+        "constant.language",
+        "constant.character",
+        "constant.other"
+      ],
+      "settings": {
+        "foreground": "#a3e635"
+      }
+    },
+    {
+      "name": "Variables",
+      "scope": [
+        "variable",
+        "variable.parameter",
+        "variable.other.readwrite"
+      ],
+      "settings": {
+        "foreground": "#c8f3e4"
+      }
+    },
+    {
+      "name": "Punctuation",
+      "scope": [
+        "punctuation",
+        "meta.delimiter"
+      ],
+      "settings": {
+        "foreground": "#c8f3e4"
+      }
+    },
+    {
+      "name": "Markdown - Headings",
+      "scope": "markup.heading",
+      "settings": {
+        "foreground": "#3ecf8e",
+        "fontStyle": "bold"
+      }
+    }
+  ]
 }

@@ -5,6 +5,8 @@
     "background": "#060b1e",
     "foreground": "#ffcead",
     "accent": "#7d82d9",
+    "sidebar": "#040816",
+    "terminal": "#060b1e",
     "error": "#ed5b5a",
     "warning": "#e9bb4f"
   }
