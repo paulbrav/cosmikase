@@ -30,6 +30,9 @@ redhat.vscode-yaml
 # Editor Enhancement
 usernamehw.errorlens
 
+# Git
+graphite.gti-vscode
+
 # Themes (for cosmikase theme system)
 catppuccin.catppuccin-vsc
 arcticicestudio.nord-visual-studio-code
