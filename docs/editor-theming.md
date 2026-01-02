@@ -62,20 +62,31 @@ Templates use `.theme` and `.themes_dir` variables from chezmoi config.
 
 Cursor is a VS Code fork, so it uses VS Code's theming system with `workbench.colorTheme` in settings.
 
+### Hybrid Theming Approach
+
+Cosmikase uses a hybrid approach for Cursor theming:
+
+1.  **Extension-Based (12 themes)**: Uses established VS Code theme extensions for high-fidelity syntax highlighting.
+2.  **Custom Dotfile (5 themes)**: Uses pure dotfile definitions for themes without good extension matches (e.g., COSMIC themes).
+3.  **UI Consistency Layer**: Applies `workbench.colorCustomizations` to all themes to ensure the sidebar, activity bar, and terminal background match the cosmikase palette exactly.
+
 ### How Cosmikase Themes Cursor
 
-The template `chezmoi/dot_config/Cursor/User/settings.json.tmpl` maps cosmikase theme names to VS Code theme extensions:
+The template `chezmoi/dot_config/Cursor/User/settings.json.tmpl` reads configuration from each theme's `cursor.json`.
 
-```jsonc
-{{- if eq .theme "catppuccin" }}
-    "workbench.colorTheme": "Catppuccin Mocha",
-{{- else if eq .theme "nord" }}
-    "workbench.colorTheme": "Nord",
-{{- else if eq .theme "tokyo-night" }}
-    "workbench.colorTheme": "Tokyo Night",
-// ... more mappings
-{{- end }}
+```json
+{
+  "colorTheme": "Tokyo Night",
+  "extension": "enkia.tokyo-night",
+  "colors": {
+    "background": "#1a1b26",
+    "sidebar": "#16161e",
+    "terminal": "#1a1b26"
+  }
+}
 ```
+
+For custom themes, `tokenColors` are embedded directly in `cursor.json` to provide full syntax highlighting without an extension.
 
 ### Theme-to-Extension Mapping
 
@@ -190,14 +201,25 @@ mkdir -p themes/my-new-theme
 
 ```json
 {
-  "name": "My New Theme",
-  "background": "#1a1b26",
-  "foreground": "#c0caf5",
-  "accent": "#7aa2f7",
-  "error": "#f7768e",
-  "warning": "#e0af68"
+  "colorTheme": "Default Dark Modern",
+  "extension": null,
+  "colors": {
+    "background": "#1a1b26",
+    "foreground": "#c0caf5",
+    "accent": "#7aa2f7",
+    "sidebar": "#16161e",
+    "terminal": "#1a1b26"
+  },
+  "tokenColors": [
+    {
+      "scope": "comment",
+      "settings": { "foreground": "#565f89", "fontStyle": "italic" }
+    }
+  ]
 }
 ```
+
+> **Tip**: Use `themes/_base/tokenColors.json` as a reference for a complete set of syntax highlighting rules.
 
 **`themes/my-new-theme/antigravity.conf`**:
 
@@ -210,36 +232,13 @@ warning=#e0af68
 error=#f7768e
 ```
 
-### 3. Map Cursor Theme Extension
-
-Edit `chezmoi/dot_config/Cursor/User/settings.json.tmpl` to add your theme mapping:
-
-```jsonc
-{{- else if eq .theme "my-new-theme" }}
-    "workbench.colorTheme": "My Theme Extension Name",
-```
-
-The extension name must match exactly what appears in Cursor's Color Theme picker.
-
-### 4. Install the VS Code Theme Extension
-
-Add to `chezmoi/dot_config/Cursor/extensions.txt`:
-
-```
-publisher.my-theme-extension-id
-```
-
-Then install:
-
-```bash
-cosmikase-cursor-extensions install
-```
-
-### 5. Test the Theme
+### 3. Apply Theme
 
 ```bash
 cosmikase-theme my-new-theme
 ```
+
+The template automatically reads your `cursor.json` and applies the theme.
 
 ---
 
