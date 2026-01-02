@@ -8,6 +8,7 @@ meta.pyrefly
 
 # Rust
 rust-lang.rust-analyzer
+tamasfe.even-better-toml
 
 # C/C++
 ms-vscode.cmake-tools
@@ -18,6 +19,16 @@ modular-mojotools.vscode-mojo
 
 # Julia
 julialang.language-julia
+
+# Markdown & Docs
+bierner.markdown-mermaid
+bierner.markdown-preview-github-styles
+
+# Config Files
+redhat.vscode-yaml
+
+# Editor Enhancement
+usernamehw.errorlens
 
 # Themes (for cosmikase theme system)
 catppuccin.catppuccin-vsc
