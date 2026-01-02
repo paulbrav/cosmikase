@@ -30,13 +30,13 @@ cursor = "#eaeaea"
 
 [colors.selection]
 text = "CellForeground"
-background = "#333333"
+background = "#121212"
 
 [colors.normal]
-black = "#333333"
-red = "#D35F5F"
-green = "#FFC107"
-yellow = "#b91c1c"
+black = "#0a0a0a"
+red = "#d35f5f"
+green = "#ffc107"
+yellow = "#ffc107"
 blue = "#e68e0d"
 magenta = "#D35F5F"
 cyan = "#bebebe"

@@ -6,16 +6,16 @@ return {
         filter = "ristretto",
         override = function()
           return {
-            NonText = { fg = "#948a8b" },
-            MiniIconsGrey = { fg = "#948a8b" },
-            MiniIconsRed = { fg = "#fd6883" },
-            MiniIconsBlue = { fg = "#85dacc" },
-            MiniIconsGreen = { fg = "#adda78" },
-            MiniIconsYellow = { fg = "#f9cc6c" },
-            MiniIconsOrange = { fg = "#f38d70" },
-            MiniIconsPurple = { fg = "#a8a9eb" },
-            MiniIconsAzure = { fg = "#a8a9eb" },
-            MiniIconsCyan = { fg = "#85dacc" }, -- same value as MiniIconsBlue for consistency
+            NonText = { fg = "#fff1f3" },
+            MiniIconsGrey = { fg = "#fff1f3" },
+            MiniIconsRed = { fg = "#fff1f3" },
+            MiniIconsBlue = { fg = "#fff1f3" },
+            MiniIconsGreen = { fg = "#fff1f3" },
+            MiniIconsYellow = { fg = "#fff1f3" },
+            MiniIconsOrange = { fg = "#fff1f3" },
+            MiniIconsPurple = { fg = "#fff1f3" },
+            MiniIconsAzure = { fg = "#fff1f3" },
+            MiniIconsCyan = { fg = "#fff1f3" }, -- same value as MiniIconsBlue for consistency
           }
         end,
       })

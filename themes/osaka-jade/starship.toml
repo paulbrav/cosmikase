@@ -5,7 +5,7 @@ format = "$all"
 [palettes.osaka_jade]
 base = "#0b1314"
 text = "#c8f3e4"
-accent = "#52e0a0"
+accent = "#3ecf8e"
 warn = "#ffd166"
 err = "#ff6b6b"
 

@@ -4,7 +4,7 @@ local colors = {
   accent = "#48b9c7",
   warn = "#f6d32d",
   error = "#e95420",
-  subtle = "#20222b",
+  subtle = "#08090d",
 }
 
 vim.opt.background = "dark"

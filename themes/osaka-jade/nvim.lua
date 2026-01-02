@@ -1,10 +1,10 @@
 local colors = {
   bg = "#0b1314",
   fg = "#c8f3e4",
-  accent = "#52e0a0",
+  accent = "#3ecf8e",
   warn = "#ffd166",
   error = "#ff6b6b",
-  subtle = "#1a2324",
+  subtle = "#0a1010",
 }
 
 vim.opt.background = "dark"

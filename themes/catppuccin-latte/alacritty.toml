@@ -15,31 +15,31 @@ text = "#eff1f5"
 cursor = "#7287fd"
 
 [colors.search.matches]
-foreground = "#eff1f5"
-background = "#6c6f85"
+foreground = "#4c4f69"
+background = "#eff1f5"
 
 [colors.search.focused_match]
-foreground = "#eff1f5"
-background = "#40a02b"
+foreground = "#4c4f69"
+background = "#eff1f5"
 
 [colors.footer_bar]
-foreground = "#eff1f5"
-background = "#6c6f85"
+foreground = "#4c4f69"
+background = "#eff1f5"
 
 [colors.hints.start]
-foreground = "#eff1f5"
-background = "#df8e1d"
+foreground = "#4c4f69"
+background = "#eff1f5"
 
 [colors.hints.end]
-foreground = "#eff1f5"
-background = "#6c6f85"
+foreground = "#4c4f69"
+background = "#eff1f5"
 
 [colors.selection]
 text = "#eff1f5"
-background = "#dc8a78"
+background = "#eff1f5"
 
 [colors.normal]
-black = "#bcc0cc"
+black = "#e6e9ef"
 red = "#d20f39"
 green = "#40a02b"
 yellow = "#df8e1d"

@@ -10,9 +10,9 @@ cursor = "#3380d9"
 text = "#f0f0f0"
 
 [colors.normal]
-black = "#373737"
+black = "#e6e6e6"
 red = "#cc3333"
-green = "#009a4d"
+green = "#3380d9"
 yellow = "#b39900"
 blue = "#3380d9"
 magenta = "#8c59bf"

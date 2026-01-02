@@ -3,11 +3,11 @@ add_newline = false
 format = "$all"
 
 [palettes.pop_default]
-base = "#0c0d11"
-text = "#e6e6e6"
-accent = "#48b9c7"
-warn = "#f6d32d"
-err = "#e95420"
+base = "#faf4ed"
+text = "#575279"
+accent = "#56949f"
+warn = "#ea9d34"
+err = "#b4637a"
 
 [character]
 success_symbol = "[➜](accent) "
