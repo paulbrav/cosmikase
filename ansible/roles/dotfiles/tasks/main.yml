@@ -57,6 +57,18 @@
     state: directory
     mode: "0755"
 
+- name: Create local share directory
+  ansible.builtin.file:
+    path: "{{ local_share }}"
+    state: directory
+    mode: "0755"
+
+- name: Create applications directory
+  ansible.builtin.file:
+    path: "{{ local_share }}/applications"
+    state: directory
+    mode: "0755"
+
 - name: Install all cosmikase bin scripts
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../bin/{{ item }}"
@@ -177,4 +189,47 @@
   when: uv_stat.stat.exists
   register: theme_tui_install
   changed_when: "'Installed' in theme_tui_install.stdout"
+
+# ============================================================================
+# Install Cursor/VS Code extensions
+# ============================================================================
+
+- name: Check if cursor command is available
+  ansible.builtin.command:
+    cmd: which cursor
+  register: cursor_check
+  changed_when: false
+  failed_when: false
+
+- name: Check if code command is available
+  ansible.builtin.command:
+    cmd: which code
+  register: code_check
+  changed_when: false
+  failed_when: false
+  when: cursor_check.rc != 0
+
+- name: Set editor command
+  ansible.builtin.set_fact:
+    editor_cmd: "{{ 'cursor' if cursor_check.rc == 0 else ('code' if code_check.rc | default(1) == 0 else '') }}"
+
+- name: Install Cursor/VS Code extensions
+  ansible.builtin.shell: |
+    set -e
+    EXTENSIONS_FILE="{{ config_dir }}/Cursor/extensions.txt"
+    if [[ ! -f "$EXTENSIONS_FILE" ]]; then
+      echo "Extensions file not found: $EXTENSIONS_FILE"
+      exit 0
+    fi
+    grep -v '^\s*#' "$EXTENSIONS_FILE" | grep -v '^\s*$' | while read -r ext; do
+      {{ editor_cmd }} --install-extension "$ext" --force 2>/dev/null || true
+    done
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ local_bin }}:{{ ansible_env.PATH }}"
+  when: editor_cmd != ''
+  register: extensions_install
+  changed_when: false
+  # Extensions installation is best-effort; some may fail if not available
 
