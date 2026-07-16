@@ -1,0 +1,13 @@
+# Colour palette for Everforest — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme everforest
+name: Everforest
+variant: dark
+colors:
+  background: "#2d353b"
+  foreground: "#d3c6aa"
+  accent: "#7fbbb3"
+  sidebar: "#272e33"
+  terminal: "#2d353b"
+  error: "#e67e80"
+  warning: "#dbbc7f"

@@ -1,0 +1,13 @@
+# Colour palette for Ristretto — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme ristretto
+name: Ristretto
+variant: dark
+colors:
+  background: "#2c2525"
+  foreground: "#fff1f3"
+  accent: "#85dacc"
+  sidebar: "#231d1d"
+  terminal: "#2c2525"
+  error: "#fd6883"
+  warning: "#f9cc6c"

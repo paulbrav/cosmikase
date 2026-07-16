@@ -16,7 +16,7 @@ A comprehensive guide to theming Cursor and Antigravity within the cosmikase eco
 
 ## Cosmikase Theme System Overview
 
-The cosmikase system provides unified theming across multiple applications with a single command. When you run `cosmikase-theme`, it updates configurations for COSMIC desktop, terminals (Ghostty, Kitty, Alacritty), Cursor, Antigravity, and other tools simultaneously.
+The cosmikase system provides unified theming across multiple applications with a single command. When you run `cosmikase-theme`, it updates configurations for COSMIC desktop, terminals (cosmic-term and Ghostty), Cursor, Antigravity, and other tools simultaneously.
 
 ### How Theme Switching Works
 
@@ -37,8 +37,9 @@ Each theme lives in `themes/<name>/` with application-specific files:
 themes/catppuccin/
 ├── antigravity.conf    # Antigravity color palette
 ├── cursor.json         # Cursor/VS Code color metadata
+├── palette.yaml        # 7-key color palette (source of truth)
 ├── ghostty.conf        # Ghostty terminal colors
-├── kitty.conf          # Kitty terminal colors
+├── cosmic-term.ron     # cosmic-term colors
 ├── cosmic.ron          # COSMIC desktop theme
 ├── btop.theme          # btop system monitor
 └── ...

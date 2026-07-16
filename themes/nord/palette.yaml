@@ -1,0 +1,13 @@
+# Colour palette for Nord — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme nord
+name: Nord
+variant: dark
+colors:
+  background: "#2e3440"
+  foreground: "#eceff4"
+  accent: "#88c0d0"
+  sidebar: "#242933"
+  terminal: "#2e3440"
+  error: "#bf616a"
+  warning: "#ebcb8b"

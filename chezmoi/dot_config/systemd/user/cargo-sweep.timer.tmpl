@@ -1,0 +1,14 @@
+{{- if lookPath "cargo-sweep" -}}
+[Unit]
+Description=Weekly cargo-sweep timer (cosmikase)
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target
+
+# Enable with:  systemctl --user daemon-reload && systemctl --user enable --now cargo-sweep.timer
+{{ end -}}

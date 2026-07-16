@@ -2,7 +2,9 @@
 # Shared functions for cosmikase theme scripts
 # This library is sourced by bin/ scripts and provides common utilities.
 
-# Find themes directory using Python CLI (canonical source) with fallbacks
+# Find themes directory (env override, then installed and repo locations).
+# The Python CLI that used to provide the canonical path was removed; discovery
+# is now purely filesystem-based.
 find_themes_dir() {
     # 1. Environment variable override
     if [[ -n "${THEMES_DIR:-}" ]] && [[ -d "$THEMES_DIR" ]]; then
@@ -10,34 +12,14 @@ find_themes_dir() {
         return
     fi
 
-    # 2. Use Python CLI if available (canonical implementation)
-    if command -v cosmikase-themes-dir >/dev/null 2>&1; then
-        local py_result
-        py_result=$(cosmikase-themes-dir 2>/dev/null)
-        if [[ -n "$py_result" ]] && [[ -d "$py_result" ]]; then
-            echo "$py_result"
-            return
-        fi
-    fi
-
-    # 3. Try uv run if cosmikase-themes-dir not in PATH
-    if command -v uv >/dev/null 2>&1; then
-        local py_result
-        py_result=$(uv run cosmikase-themes-dir 2>/dev/null)
-        if [[ -n "$py_result" ]] && [[ -d "$py_result" ]]; then
-            echo "$py_result"
-            return
-        fi
-    fi
-
-    # 4. Fallback: check common locations directly
+    # 2. Installed location (run_before_05 symlinks the repo themes/ here)
     local installed="$HOME/.local/share/cosmikase/themes"
     if [[ -d "$installed" ]]; then
         echo "$installed"
         return
     fi
 
-    # 5. Repo location (relative to this script)
+    # 3. Repo location (relative to this script)
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local repo_themes="$script_dir/../themes"
@@ -46,7 +28,7 @@ find_themes_dir() {
         return
     fi
 
-    # 6. Current working directory
+    # 4. Current working directory
     if [[ -d "./themes" ]]; then
         (cd "./themes" && pwd)
         return
@@ -56,7 +38,7 @@ find_themes_dir() {
     echo "$HOME/.local/share/cosmikase/themes"
 }
 
-# Find helper script - simplified since Ansible installs to ~/.local/bin
+# Find helper script (script dir, then ~/.local/bin, then PATH)
 find_helper() {
     local name="$1"
     local script_dir
@@ -68,7 +50,7 @@ find_helper() {
         return
     fi
 
-    # 2. Check ~/.local/bin (installed by Ansible)
+    # 2. Check ~/.local/bin (symlinked by install.sh / run_before_05)
     if [[ -x "$HOME/.local/bin/$name" ]]; then
         echo "$HOME/.local/bin/$name"
         return

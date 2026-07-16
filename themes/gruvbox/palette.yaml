@@ -1,0 +1,13 @@
+# Colour palette for Gruvbox — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme gruvbox
+name: Gruvbox
+variant: dark
+colors:
+  background: "#1d2021"
+  foreground: "#ebdbb2"
+  accent: "#458588"
+  sidebar: "#161819"
+  terminal: "#1d2021"
+  error: "#cc241d"
+  warning: "#d79921"

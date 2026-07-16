@@ -13,21 +13,23 @@ A Pop!_OS launcher plugin that provides quick access to your Bitwarden vault. Se
 ### From the project root:
 
 ```bash
-make bw-install
+make plugins-install
 ```
 
-This will:
-1. Build the plugin with `cargo build --release`
-2. Copy the binary and config to `~/.local/share/pop-launcher/plugins/bw/`
+This builds every plugin in the `plugins/` Cargo workspace and copies each
+binary plus its `plugin.ron` into `~/.local/share/pop-launcher/plugins/<name>/`.
 
 ### Manual installation:
 
+The plugins live in one Cargo workspace, so binaries land in the shared
+`plugins/target/` directory:
+
 ```bash
-cd plugins/bw-launcher
-cargo build --release
+cd plugins
+cargo build --release -p bw-launcher
 mkdir -p ~/.local/share/pop-launcher/plugins/bw
 cp target/release/bw-launcher ~/.local/share/pop-launcher/plugins/bw/
-cp plugin.ron ~/.local/share/pop-launcher/plugins/bw/
+cp bw-launcher/plugin.ron ~/.local/share/pop-launcher/plugins/bw/
 ```
 
 ## Session Management
@@ -111,7 +113,7 @@ fi
 ### Plugin not showing up
 
 - Verify the plugin files exist in `~/.local/share/pop-launcher/plugins/bw/`
-- Restart Pop Shell: `killall pop-shell` or log out and back in
+- Restart the launcher (`systemctl --user restart cosmic-launcher.service` on COSMIC) or log out and back in
 - Check if other plugins work to ensure pop-launcher is running
 
 ### "Vault locked" error

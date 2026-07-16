@@ -1,0 +1,16 @@
+{{- if lookPath "cargo-sweep" -}}
+[Unit]
+Description=Weekly cargo-sweep — prune stale Rust build artifacts (cosmikase)
+
+[Service]
+Type=oneshot
+# `cargo sweep` is a cargo subcommand, so run it through a login shell to get cargo
+# and the rustup shims (~/.cargo/bin) on PATH. --recursive finds every target dir
+# under the path; --time 30 removes artifacts not accessed in 30 days.
+# Narrow "$HOME" to your projects dir if the recursive scan is too broad.
+ExecStart=/bin/sh -lc 'cargo sweep --recursive --time 30 "$HOME"'
+Nice=19
+IOSchedulingClass=idle
+
+# Driven by cargo-sweep.timer; enable that, not this service.
+{{ end -}}

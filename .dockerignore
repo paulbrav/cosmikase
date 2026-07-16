@@ -1,0 +1,14 @@
+# Keep the smoke-test build context (tests/Containerfile.smoke) small and fast.
+.git
+.github
+**/target
+**/__pycache__
+*.pyc
+*.pyo
+build
+dist
+*.egg-info
+.venv
+venv
+node_modules
+*.log

@@ -1,0 +1,121 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["tomlkit>=0.13"]
+# ///
+"""Safely update chezmoi's [data] section so themes switch atomically.
+
+This is the single-file, dependency-light successor to the deleted
+``cosmikase.chezmoi`` Python module. It preserves the exact CLI contract that
+``bin/cosmikase-theme`` relies on:
+
+    cosmikase-chezmoi <theme> <themes_dir>
+
+It writes ``~/.config/chezmoi/chezmoi.toml`` atomically (temp file + rename),
+preserving any pre-existing keys and comments (via tomlkit), and exits 0 on
+success or 1 on failure.
+
+Run directly (``./cosmikase-chezmoi ...``) it uses ``uv`` to fetch tomlkit into
+an ephemeral environment. If ``uv`` is not installed the kernel cannot launch
+the interpreter in the shebang; callers should guard with ``command -v uv`` and
+surface an actionable error (see bin/cosmikase-theme). The module is also
+importable for tests: ``update_chezmoi_data`` runs against whatever tomlkit is
+already on ``sys.path`` without needing uv.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import tomlkit
+from tomlkit.exceptions import ParseError
+
+# Defaults written only when the key is absent (never clobber user overrides).
+_DEFAULTS: dict[str, object] = {
+    "font_family": "JetBrainsMono Nerd Font",
+    "font_size": 9,
+    "padding": 14,
+}
+
+
+def update_chezmoi_data(theme: str, themes_dir: str) -> bool:
+    """Update chezmoi.toml's ``[data]`` section with the selected theme.
+
+    Args:
+        theme: Theme name to set.
+        themes_dir: Directory containing themes.
+
+    Returns:
+        True on success, False on any handled error (the existing file is left
+        untouched when it cannot be read or parsed).
+    """
+    config_path = Path.home() / ".config" / "chezmoi" / "chezmoi.toml"
+
+    # Ensure the parent directory exists.
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    doc = tomlkit.document()
+
+    # Read and parse any existing config, bailing out (without writing) on error.
+    if config_path.exists():
+        try:
+            text = config_path.read_text(encoding="utf-8")
+        except PermissionError as exc:
+            print(f"Error: Cannot read chezmoi config (permission denied): {exc}")
+            return False
+        except OSError as exc:
+            print(f"Error reading chezmoi config: {exc}")
+            return False
+
+        try:
+            doc = tomlkit.parse(text)
+        except ParseError as exc:
+            print(f"Error: chezmoi.toml has invalid TOML syntax: {exc}")
+            print("Please fix the file manually or remove it to start fresh.")
+            return False
+
+    # Ensure the [data] table exists.
+    if "data" not in doc:
+        doc["data"] = tomlkit.table()
+    data = doc["data"]
+
+    # Always set the theme and themes_dir.
+    data["theme"] = theme
+    data["themes_dir"] = themes_dir
+
+    # Fill in defaults only where the user has not set a value.
+    for key, val in _DEFAULTS.items():
+        if key not in data:
+            data[key] = val
+
+    # Write atomically: render to a temp file in the same directory, then rename.
+    tmp_path = config_path.with_suffix(".tmp")
+    try:
+        tmp_path.write_text(tomlkit.dumps(doc), encoding="utf-8")
+        os.replace(tmp_path, config_path)
+        return True
+    except Exception as exc:  # noqa: BLE001 - report and clean up any write failure
+        print(f"Error writing chezmoi config: {exc}")
+        if tmp_path.exists():
+            tmp_path.unlink()
+        return False
+
+
+def _main() -> None:
+    """CLI entry point: ``cosmikase-chezmoi <theme> <themes_dir>``."""
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        description="Update chezmoi's [data] section (theme + themes_dir) atomically.",
+    )
+    parser.add_argument("theme", help="Theme name to write to chezmoi data")
+    parser.add_argument("themes_dir", help="Absolute path to the themes directory")
+
+    args = parser.parse_args()
+    sys.exit(0 if update_chezmoi_data(args.theme, args.themes_dir) else 1)
+
+
+if __name__ == "__main__":
+    _main()

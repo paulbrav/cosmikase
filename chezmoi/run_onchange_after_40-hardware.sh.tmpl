@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# run_onchange_after_40-hardware.sh — HP ZBook Ultra power management + fingerprint.
+# Carries over the udev/power/PAM steps from the old install automation.
+#
+# Reruns when the power helper or the udev rule change:
+#   power-helper-sha256: {{ include (joinPath .chezmoi.sourceDir ".." "bin" "cosmikase-power-helper") | sha256sum }}
+#   udev-rule-sha256:    {{ include (joinPath .chezmoi.sourceDir ".." "cosmikase" "udev" "99-cosmikase-power.rules") | sha256sum }}
+#
+# Only acts on real hardware: gated on `system76-power` (present on Pop!_OS /
+# System76 machines) and skipped in CI. Best-effort throughout.
+set -euo pipefail
+
+REPO="{{ .chezmoi.sourceDir }}/.."
+CI="${COSMIKASE_CI:-0}"
+
+if [ "$CI" = "1" ]; then
+    echo "==> CI mode: skipping hardware setup"
+    exit 0
+fi
+
+# ── Power profile auto-switch (needs System76's power daemon) ─────────────────
+if command -v system76-power >/dev/null 2>&1; then
+    HELPER_SRC="$REPO/bin/cosmikase-power-helper"
+    RULE_SRC="$REPO/cosmikase/udev/99-cosmikase-power.rules"
+    if [ -f "$HELPER_SRC" ] && [ -f "$RULE_SRC" ]; then
+        echo "==> power management (udev + helper)"
+        sudo install -m 0755 "$HELPER_SRC" /usr/local/bin/cosmikase-power-helper
+        sudo install -m 0644 "$RULE_SRC" /etc/udev/rules.d/99-cosmikase-power.rules
+        sudo udevadm control --reload-rules || true
+        sudo udevadm trigger --subsystem-match=power_supply || true
+        # Apply once for the current AC/battery state.
+        /usr/local/bin/cosmikase-power-helper --apply || true
+    fi
+else
+    echo "  (system76-power not found; skipping power automation)"
+fi
+
+# ── Fingerprint (Synaptics sensor via fprintd) ───────────────────────────────
+if command -v fprintd-enroll >/dev/null 2>&1 && command -v pam-auth-update >/dev/null 2>&1; then
+    echo "==> enabling fprintd in PAM"
+    sudo pam-auth-update --enable fprintd || true
+fi
+
+echo "==> hardware setup done"

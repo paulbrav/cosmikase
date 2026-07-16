@@ -10,7 +10,7 @@ Keys are processed in layers. The first layer to match a shortcut consumes it:
 ┌─────────────────────────────────────────────────────────────┐
 │ Layer 1: COSMIC Desktop (captures Super+* shortcuts)       │
 ├─────────────────────────────────────────────────────────────┤
-│ Layer 2: Terminal Emulator (Ghostty/Kitty/Alacritty)        │
+│ Layer 2: Terminal Emulator (cosmic-term / Ghostty)          │
 ├─────────────────────────────────────────────────────────────┤
 │ Layer 3: Zellij (Normal mode captures Ctrl+g/t/r/s/p/m/o)   │
 │          (Locked mode passes all except Ctrl+g)             │
@@ -35,7 +35,7 @@ COSMIC uses **Super** key combinations for desktop actions. These are captured b
 | `Super + Q` | Close window |
 | `Super + M` | Maximize/restore window |
 | `Super + Tab` | Switch applications |
-| `Super + `` ` | Switch windows of current app |
+| `Super + grave` (`` ` ``) | Toggle Ghostty drop-down quick terminal (`cosmikase-dropterm`) |
 | `Super + ←/→` | Snap window left/right |
 | `Super + Ctrl + ←/→` | Snap window left/right half |
 | `Super + ↑/↓` | Navigate between panes |
@@ -62,21 +62,26 @@ COSMIC uses **Super** key combinations for desktop actions. These are captured b
 
 ## Layer 2: Terminal Emulators
 
-Terminal emulators (Ghostty, Kitty, Alacritty) have minimal keybindings that don't conflict with Zellij.
+The daily terminal is **cosmic-term**; **Ghostty** runs as the drop-down quick terminal
+(toggled with `Super + grave`). Both keep minimal keybindings that don't conflict with Zellij.
 
-### Ghostty
-
-| Shortcut | Action |
-|----------|--------|
-| `Shift + Insert` | Paste from clipboard |
-| `Ctrl + Insert` | Copy to clipboard |
-
-### Kitty
+### cosmic-term
 
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl + Shift + C` | Copy |
 | `Ctrl + Shift + V` | Paste |
+| `Ctrl + Shift + T` | New tab |
+
+### Ghostty (quick terminal)
+
+Ghostty runs as the drop-down quick terminal, toggled by `Super + grave` (a COSMIC-layer
+global — see Layer 1). Its in-window bindings:
+
+| Shortcut | Action |
+|----------|--------|
+| `Shift + Insert` | Paste from clipboard |
+| `Ctrl + Insert` | Copy to clipboard |
 
 ---
 

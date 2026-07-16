@@ -134,9 +134,15 @@ if [[ "$APPLY_CHEZMOI" == "true" ]]; then
         exit 1
     fi
 
-    # Update chezmoi data using Python helper for safe TOML editing
+    # Update chezmoi data using the single-file helper for safe atomic TOML editing.
+    # cosmikase-chezmoi is a PEP 723 uv script (shebang runs it via uv), so guard.
     echo "  - Updating chezmoi configuration..."
-    if ! uv run cosmikase-chezmoi "$THEME" "$THEMES_DIR"; then
+    if ! command -v uv >/dev/null 2>&1; then
+        echo "Error: 'uv' is required to update the chezmoi theme (bin/cosmikase-chezmoi)." >&2
+        echo "  Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
+        exit 1
+    fi
+    if ! "$SCRIPT_DIR/cosmikase-chezmoi" "$THEME" "$THEMES_DIR"; then
         echo "Error: Failed to update chezmoi configuration" >&2
         exit 1
     fi

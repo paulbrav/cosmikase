@@ -1,37 +1,77 @@
 # Repository Guidelines
 
-Use these conventions to keep contributions consistent and easy to review.
+Conventions for working in this repo. It is a single-user setup project for Pop!_OS 24 /
+COSMIC, not a general library — read [docs/design.md](docs/design.md) before making structural
+changes, so you preserve the "one orchestrator" shape on purpose.
 
-## Project Structure & Module Organization
-- Place runtime code in `src/`; keep entrypoints or CLIs in `cmd/` or `app/` and shared helpers in `scripts/`.
-- Mirror modules with tests in `tests/` (e.g., `src/example.py` → `tests/test_example.py`, or `src/example.rs` → `tests/example_tests.rs`).
-- Store docs in `docs/` and assets in `assets/`. Keep configuration in versioned files (e.g., `.editorconfig`, `pyproject.toml`, `package.json`, `Cargo.toml`) and provide `.env.example` for environment keys.
+## Project Layout
+
+```
+install.sh          Bootstrap: prereqs + chezmoi binary + `chezmoi init --apply`.
+cosmikase.yaml      The manifest. Only keys that code actually reads belong here.
+Makefile            Dev conveniences (help, setup, install, apply, preflight, theme,
+                    lint, test, plugins, plugins-install, clean).
+bin/                Runtime bash scripts (cosmikase menu, theme trio, update, databases,
+                    power-helper, preflight, dropterm, wallpapers) + cosmikase-lib.sh
+                    (sourced) + cosmikase-chezmoi (a PEP 723 `uv run --script` helper).
+chezmoi/            chezmoi source dir. Dotfiles as dot_* files/templates, COSMIC UX under
+                    dot_config/cosmic/, and run_onchange_/run_after_ scripts that read the
+                    manifest and install packages. `.chezmoi.toml.tmpl` is the single source
+                    of the default theme (nord).
+themes/             One dir per theme: palette.yaml (7-key source of truth) + curated app
+                    configs; render.py regenerates configs; wallpapers.yaml is a fetch manifest.
+plugins/            Cargo workspace: plugin-common crate + five pop-launcher plugins.
+docs/               design.md, cli-reference.md, configuration-reference.md, keybindings.md,
+                    troubleshooting.md, pop-launcher-plugins.md, private-tools.md, and six
+                    researched guides.
+tests/              pytest (cosmikase-chezmoi + surviving scripts) + container smoke test.
+```
 
 ## Build, Test, and Development Commands
-- Prefer Make targets or wrapper scripts so everyone runs the same steps. Suggested defaults: `make setup` (install deps), `make dev` (run locally), `make test` (full suite), `make fmt` and `make lint` (format + static checks).
-- If Make targets are absent, use the stack’s native commands (e.g., `pip install -r requirements.txt` / `npm install`, `pytest` / `npm test`), and add the wrappers to a `Makefile` for repeatability.
 
-## Coding Style & Naming Conventions
-- Default to 4-space indentation and a 100-character line guide unless a formatter enforces otherwise.
-- Use `snake_case` for files, functions, and variables; `PascalCase` for classes/types; `UPPER_SNAKE_CASE` for constants and env vars.
-- Run formatters and linters before committing (e.g., `ruff`/`black`, `eslint`/`prettier`, or `cargo fmt`/`cargo clippy` based on language). Do not introduce lint warnings.
+Always go through the Makefile or `install.sh`, so behavior stays reproducible:
 
-## Testing Guidelines
-- Keep tests close to the code they cover under `tests/` and name them after the module under test.
-- Prefer fast, deterministic tests; avoid network calls or system mutations. Use fakes/mocks for external services.
-- Add regression tests when fixing bugs. Target high coverage on critical paths; required checks must pass.
+- `./install.sh` — bootstrap and apply on a real machine (`--dry-run` to preview).
+- `make apply` — `chezmoi apply` only (re-render dotfiles, no bootstrap).
+- `make preflight` — run `bin/cosmikase-preflight` (hardware/environment gate).
+- `make lint` — `shellcheck` on `bin/*` + `install.sh`, `ruff` on the Python files.
+- `make test` — the pytest suite (via `uv run`).
+- `make plugins` / `make plugins-install` — build / install the Cargo workspace plugins.
 
-## Documentation Guidelines
-- Pair every “do X” with “undo/restore/verify X” (e.g., backups need restore steps; config changes need rollback notes).
-- Call out safety rails for operational steps (mount checks before writing, fallbacks/recovery users for auth changes).
-- Include quick validation or troubleshooting snippets so readers can confirm behavior and debug common breakages.
-- Note platform-specific limits or conflicts (e.g., Timeshift scope, AppArmor/Firejail stacking).
+The chezmoi source directory is `chezmoi/`. Locally you can point chezmoi at it with
+`chezmoi --source ./chezmoi ...`.
 
-## Commit & Pull Request Guidelines
-- Write commits in imperative mood (`Add CI pipeline`, `Fix input validation`). Keep summaries under ~72 characters and include a short body for rationale or edge cases.
-- Open PRs with a clear description, linked issue numbers, and any screenshots or logs that help reviewers. List what changed, how it was tested, and any follow-up work.
-- Keep PRs focused and small; avoid unrelated refactors. Address review feedback promptly and document decisions.
+## Coding Style
 
-## Security & Configuration Tips
-- Never commit secrets or personal tokens; load them via environment variables and keep a sanitized `.env.example` updated.
-- Pin dependencies where practical and review new packages for licensing and security risk before adding them.
+- **Shell** is the default. Every script starts with `#!/usr/bin/env bash` and
+  `set -euo pipefail`, uses 4-space indentation, and must pass `shellcheck`.
+- **Guard every action** — check before you act (`command -v`, `dpkg -s`, `flatpak info`) so
+  scripts are idempotent and safe to re-run.
+- Reuse helpers from `bin/cosmikase-lib.sh` (`log`, `notify`, `require_theme`, `find_helper`,
+  history helpers) instead of reimplementing them.
+- **Python** is limited to two PEP 723 single-file `uv` scripts (`bin/cosmikase-chezmoi`,
+  `themes/render.py`); keep them lint-clean under `ruff`. Do not reintroduce an installable
+  Python package.
+- `snake_case` for functions and variables; `UPPER_SNAKE_CASE` for constants and env vars.
+
+## Security & Secrets
+
+- **Never commit secrets or private identifiers.** No content from `~/.ssh/config`, `~/.aws`,
+  `~/.gitconfig` identity, and no private hostnames. Templates use placeholders and chezmoi
+  template guards (e.g. `{{ if lookPath "agent-balance" }}`).
+- Out-of-repo private tooling is documented — by name and restore step, never with secrets —
+  in [docs/private-tools.md](docs/private-tools.md).
+- Keep `.env.example` sanitized and up to date.
+
+## Documentation
+
+- Pair every "do X" with "undo / restore / verify X" (backups need restore steps; config
+  changes need rollback notes).
+- Call out platform-specific limits and safety rails (mount checks before writing, fallback
+  users for auth changes, Timeshift/Firejail scope).
+- Keep the six researched guides intact; prune only references to deleted machinery.
+
+## Commits & PRs
+
+- Imperative mood, summary under ~72 chars, short body for rationale.
+- Keep PRs focused; avoid unrelated refactors. Note what changed and how it was tested.

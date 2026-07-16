@@ -1,0 +1,13 @@
+# Colour palette for Pop Default — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme pop-default
+name: Pop Default
+variant: dark
+colors:
+  background: "#0c0d11"
+  foreground: "#e6e6e6"
+  accent: "#48b9c7"
+  sidebar: "#08090d"
+  terminal: "#0c0d11"
+  error: "#e95420"
+  warning: "#f6d32d"

@@ -1,0 +1,13 @@
+# Colour palette for COSMIC Light — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme cosmic-light
+name: COSMIC Light
+variant: light
+colors:
+  background: "#f0f0f0"
+  foreground: "#373737"
+  accent: "#3380d9"
+  sidebar: "#e6e6e6"
+  terminal: "#f0f0f0"
+  error: "#cc3333"
+  warning: "#b39900"

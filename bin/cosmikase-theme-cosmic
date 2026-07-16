@@ -85,20 +85,6 @@ fi
 
 log "Applying COSMIC theme: $THEME"
 
-# Validate RON files before applying
-if [[ -f "$THEME_PATH/cosmic.ron" ]]; then
-    if ! uv run cosmikase-validate-ron "$THEME_PATH/cosmic.ron" >/dev/null 2>&1; then
-        echo "Error: Invalid RON syntax in $THEME_PATH/cosmic.ron" >&2
-        exit 1
-    fi
-fi
-if [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
-    if ! uv run cosmikase-validate-ron "$THEME_PATH/cosmic-term.ron" >/dev/null 2>&1; then
-        echo "Error: Invalid RON syntax in $THEME_PATH/cosmic-term.ron" >&2
-        exit 1
-    fi
-fi
-
 # Determine if this is a light theme
 IS_LIGHT=false
 if [[ -f "$THEME_PATH/light.mode" ]]; then
@@ -170,9 +156,31 @@ COSMIC_MODE_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1"
 # Execute atomic update
 apply_cosmic_configs
 
-# Set COSMIC wallpaper
-if [[ "$APPLY_WALLPAPER" == "true" ]] && [[ -d "$THEME_PATH/backgrounds" ]]; then
-    WALLPAPER=$(find "$THEME_PATH/backgrounds" -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) 2>/dev/null | head -1)
+# Find the first wallpaper image in a backgrounds dir (ignores .gitkeep).
+first_wallpaper() {
+    find "$1" -maxdepth 1 -type f \
+        \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) \
+        2>/dev/null | sort | head -1
+}
+
+# Set COSMIC wallpaper. Wallpapers may live in the repo theme dir (source
+# "unknown") or, for removed-source themes, in the fetched runtime dir. If
+# neither has images, ask cosmikase-wallpapers to fetch them (offline-safe).
+if [[ "$APPLY_WALLPAPER" == "true" ]]; then
+    RUNTIME_BG="${XDG_DATA_HOME:-$HOME/.local/share}/cosmikase/backgrounds/$THEME"
+    WALLPAPER=""
+    [[ -d "$RUNTIME_BG" ]] && WALLPAPER=$(first_wallpaper "$RUNTIME_BG")
+    if [[ -z "$WALLPAPER" ]] && [[ -d "$THEME_PATH/backgrounds" ]]; then
+        WALLPAPER=$(first_wallpaper "$THEME_PATH/backgrounds")
+    fi
+    if [[ -z "$WALLPAPER" ]]; then
+        WALLPAPERS_HELPER=$(find_helper "cosmikase-wallpapers")
+        if [[ -n "$WALLPAPERS_HELPER" ]]; then
+            log "  - Fetching wallpapers for $THEME..."
+            "$WALLPAPERS_HELPER" fetch "$THEME" >/dev/null 2>&1 || true
+            [[ -d "$RUNTIME_BG" ]] && WALLPAPER=$(first_wallpaper "$RUNTIME_BG")
+        fi
+    fi
     if [[ -n "$WALLPAPER" ]]; then
         WALLPAPER=$(realpath "$WALLPAPER")
         COSMIC_BG_DIR="$HOME/.config/cosmic/com.system76.CosmicBackground/v1"

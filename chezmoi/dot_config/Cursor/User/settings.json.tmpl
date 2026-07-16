@@ -1,5 +1,7 @@
-{{- /* Read theme configuration from cursor.json */ -}}
-{{- $cursor := joinPath .themes_dir .theme "cursor.json" | include | fromJson -}}
+{{- /* Read theme configuration from the repo's themes/<theme>/cursor.json.
+       Uses sourceDir (not .themes_dir) because chezmoi's `include` resolves
+       relative to the source dir and does not expand the ~ in .themes_dir. */ -}}
+{{- $cursor := joinPath .chezmoi.sourceDir ".." "themes" .theme "cursor.json" | include | fromJson -}}
 {{- $isLight := false -}}
 {{- if hasKey $cursor "light" -}}
 {{-   $isLight = $cursor.light -}}

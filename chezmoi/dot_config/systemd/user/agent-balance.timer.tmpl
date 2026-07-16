@@ -1,0 +1,14 @@
+{{- if lookPath "agent-balance" -}}
+[Unit]
+Description=Run agent-balance every 15 minutes (cosmikase)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+
+# Enable with:  systemctl --user daemon-reload && systemctl --user enable --now agent-balance.timer
+{{ end -}}

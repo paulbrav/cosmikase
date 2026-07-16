@@ -1,16 +1,11 @@
 -- Theme configuration for Neovim
 -- This file is managed by chezmoi and sets the current theme
 
--- Load the theme from the themes directory
+-- Load the theme from the themes directory. Every theme ships neovim.lua.
 local theme_file = "{{ .themes_dir }}/{{ .theme }}/neovim.lua"
 local ok, err = pcall(dofile, theme_file)
 if not ok then
-  -- Try alternate name
-  theme_file = "{{ .themes_dir }}/{{ .theme }}/nvim.lua"
-  ok, err = pcall(dofile, theme_file)
-  if not ok then
-    vim.notify("Could not load theme: " .. tostring(err), vim.log.levels.WARN)
-  end
+  vim.notify("Could not load theme: " .. tostring(err), vim.log.levels.WARN)
 end
 
 

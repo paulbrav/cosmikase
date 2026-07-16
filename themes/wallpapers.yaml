@@ -1,0 +1,435 @@
+# Wallpaper manifest for cosmikase themes.
+#
+# Records provenance + verified sha256 for every wallpaper that shipped under
+# themes/*/backgrounds/. Files with a known upstream source were REMOVED from
+# git; bin/cosmikase-wallpapers re-fetches them (sha256-verified) into
+#   ${XDG_DATA_HOME:-~/.local/share}/cosmikase/backgrounds/<theme>/
+# Files with source 'unknown' REMAIN in the repo tree (no verified re-fetch path,
+# so removing them would be irreversible data loss). 'broken' files (0/near-0
+# bytes, no recoverable data) were deleted outright.
+#
+# Provenance verified 2026-07-16 by downloading each candidate and comparing
+# sha256 (bin/cosmikase-wallpapers verify re-runs the check).
+
+# Files kept IN-TREE because their source is unknown/unverifiable:
+#   - catppuccin/1-catppuccin-palette.png
+#   - catppuccin/2-catppuccin-purple.jpg
+#   - catppuccin-latte/1-catppuccin-latte.png
+#   - cosmic-dark/andromeda_galaxy.jpg
+#   - cosmic-dark/orion_nebula.jpg
+#   - cosmic-dark/pillars_of_creation.jpg
+#   - cosmic-dark/stormy_stellar_nursery.jpg
+#   - cosmic-dark/tarantula_nebula.jpg
+#   - cosmic-light/abstract_light.jpg
+#   - cosmic-light/andromeda_galaxy.jpg
+#   - cosmic-light/cloudy_sky.jpg
+#   - cosmic-light/gradient_blue.jpg
+#   - cosmic-light/orion_nebula.jpg
+#   - cosmic-light/pillars_of_creation.jpg
+#   - ethereal/1.jpg
+#   - everforest/1-everforest.jpg
+#   - flexoki-light/1-flexoki-light-orb.png
+#   - flexoki-light/2-flexoki-light-omarchy.png
+#   - gruvbox/1-grubox.jpg
+#   - hackerman/1.jpg
+#   - hackerman/2.jpg
+#   - matte-black/1-matte-black.jpg
+#   - matte-black/2-matte-black-hands.jpg
+#   - nord/1-nord.png
+#   - nord/2-nord.png
+#   - osaka-jade/1-osaka-jade-teal.jpg
+#   - osaka-jade/2-osaka-jade-nature.jpg
+#   - ristretto/1-ristretto.jpg
+#   - ristretto/2-ristretto.jpg
+#   - ristretto/3-ristretto.jpg
+#   - rose-pine/1-rose-pine.jpg
+#   - rose-pine/2-wave-light.png
+#   - rose-pine/3-leafy-dawn-omarchy.png
+#   - tokyo-night/1-scenery-pink-lakeside-sunset-lake-landscape-scenic-panorama-7680x3215-144.png
+#   - tokyo-night/2-Pawel-Czerwinski-Abstract-Purple-Blue.jpg
+#   - tokyo-night/3-Milad-Fakurian-Abstract-Purple-Blue.jpg
+
+# Files DELETED as broken (no recoverable data):
+#   - osaka-jade/1-osaka-jade-city.jpg
+#   - pop-default/2-pop-geometric.jpg
+
+sources:
+  pop-wallpapers:
+    base_url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original
+    repo: https://github.com/pop-os/wallpapers
+    license: CC-BY-SA-4.0
+    artists: [Kate Hazen, Nick Nazzaro]
+  omarchy:
+    base_url: https://raw.githubusercontent.com/basecamp/omarchy/master/themes
+    repo: https://github.com/basecamp/omarchy
+    license: MIT
+
+# Per-theme wallpaper records. in_tree=true files are present in the repo;
+# in_tree=false files must be re-fetched from url (source pop-wallpapers/omarchy).
+themes:
+  catppuccin:
+    - filename: 1-catppuccin-palette.png
+      bytes: 490
+      sha256: 1b836489b264e4718e70a87a8dcd5c267432a9d35eb57ef6cacc5e14f8ab5bfc
+      source: unknown
+      in_tree: true
+      note: "custom: Catppuccin palette image"
+    - filename: 2-catppuccin-purple.jpg
+      bytes: 74199
+      sha256: c45ef04173e4544e00e0da43c6de434cba5429add2106fee43fde8a4f9f4beb0
+      source: unknown
+      in_tree: true
+      note: "custom: purple gradient (Unsplash)"
+  catppuccin-latte:
+    - filename: 1-catppuccin-latte.png
+      bytes: 667231
+      sha256: 7f0ea4054c817e6535cfd1a01133bc9e414cc11459bb9ced2ce37aa03b0dcab7
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  cosmic-dark:
+    - filename: andromeda_galaxy.jpg
+      bytes: 5600934
+      sha256: 303609ae6a414fdd3381bc5bb62ba06388782f9f28a82b77c0f9cd4ac72ab38a
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified"
+    - filename: orion_nebula.jpg
+      bytes: 4310951
+      sha256: 4a7b3bc283bbaa49fb395a76ec4eb2ef3f430b267aaa6768cd9c7114ee2c567a
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified"
+    - filename: pillars_of_creation.jpg
+      bytes: 13296877
+      sha256: a301f79a2c40f4d021e17e835b8f3f26aa5febf7653aa3d855b356d512f01d17
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified"
+    - filename: stormy_stellar_nursery.jpg
+      bytes: 158086
+      sha256: cd5e59860eefff0c980e1e1136b84880cf5a55f06bb95abca63bd3796316dcd2
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified"
+    - filename: tarantula_nebula.jpg
+      bytes: 534271
+      sha256: 17755aae85aa961d5f0ee91f97fa9b49d64f1f437127e948ec09ccce3d0c8cca
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified"
+  cosmic-light:
+    - filename: abstract_light.jpg
+      bytes: 485580
+      sha256: 83ab317dd98f7e4646c485cf0be9ec3b45b8182b8427014ddbf82a84895eb1a0
+      source: unknown
+      in_tree: true
+      note: "abstract imagery, source unverified"
+    - filename: andromeda_galaxy.jpg
+      bytes: 5600934
+      sha256: 303609ae6a414fdd3381bc5bb62ba06388782f9f28a82b77c0f9cd4ac72ab38a
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified (dup of cosmic-dark)"
+    - filename: cloudy_sky.jpg
+      bytes: 2964344
+      sha256: 9fc18cbd016a6117ce94eec73ffd6b1a9dd74dce2cefd381a3c5ca7994dd41fd
+      source: unknown
+      in_tree: true
+      note: "abstract imagery, source unverified"
+    - filename: gradient_blue.jpg
+      bytes: 1922785
+      sha256: db8750e50c3c80df18421629c0a0c2d6953256d9765902df17d05626c4531d6a
+      source: unknown
+      in_tree: true
+      note: "abstract imagery, source unverified"
+    - filename: orion_nebula.jpg
+      bytes: 4310951
+      sha256: 4a7b3bc283bbaa49fb395a76ec4eb2ef3f430b267aaa6768cd9c7114ee2c567a
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified (dup of cosmic-dark)"
+    - filename: pillars_of_creation.jpg
+      bytes: 13296877
+      sha256: a301f79a2c40f4d021e17e835b8f3f26aa5febf7653aa3d855b356d512f01d17
+      source: unknown
+      in_tree: true
+      note: "space imagery, source unverified (dup of cosmic-dark)"
+  ethereal:
+    - filename: 1.jpg
+      bytes: 1433563
+      sha256: 0db02097c8ddd3a8c029d18b18e4594ad28928b2fa64ebde7934997ad77f9bd0
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  everforest:
+    - filename: 1-everforest.jpg
+      bytes: 322827
+      sha256: 0f00a5e2d0f78d5e75c7a2f48101f6dee69179c6d94e9f4ebc6fb7c0f39462bf
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  flexoki-light:
+    - filename: 1-flexoki-light-orb.png
+      bytes: 293452
+      sha256: 5fec32ec9b7270c4afe5f36ac2885a8f37bff1a5a8ae4edb3b01b7d262628456
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 2-flexoki-light-omarchy.png
+      bytes: 41659
+      sha256: 647ebe0d07288455a856fcdb9fa8abb6cf20048941725aa25cb480dea6c7bad8
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  gruvbox:
+    - filename: 1-grubox.jpg
+      bytes: 443959
+      sha256: cdbd3cd7b34a2c8e7e74818af5101a8531786878b0a3afcb8f6985b27394f66d
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  hackerman:
+    - filename: 1.jpg
+      bytes: 2330372
+      sha256: c7d2594935f204e0df1b43dfe7a12389ea1c1d3fd8e57a92a9f08497f27a377e
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 2.jpg
+      bytes: 1936468
+      sha256: 8f2c2aaf95cb2fa83620f54b854642e14369e24981ff540357e46b31bc978de0
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  kanagawa:
+    - filename: 1-kanagawa.jpg
+      bytes: 1624027
+      sha256: 9b817d717688539f0db87603b661992839c3cbb5d4918a02a4efc05c9f88b27d
+      source: omarchy
+      in_tree: false
+      url: https://raw.githubusercontent.com/basecamp/omarchy/master/themes/kanagawa/backgrounds/1-kanagawa.jpg
+  matte-black:
+    - filename: 0-ship-at-sea.jpg
+      bytes: 1681677
+      sha256: 55fa691adfd3fb8a9102b826a28d8de679938f04879799da499b8ace2fe039ac
+      source: omarchy
+      in_tree: false
+      url: https://raw.githubusercontent.com/basecamp/omarchy/master/themes/matte-black/backgrounds/0-ship-at-sea.jpg
+    - filename: 1-matte-black.jpg
+      bytes: 1033920
+      sha256: 98f0c2b65a2587d114949e8125c22f891c993e0305ca36537bd9b7a9869e8a93
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 2-matte-black-hands.jpg
+      bytes: 482067
+      sha256: e8d73aa65be29bf9d0bec62f64add450485ca52367701ff683e0f2bd66f0791a
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  nord:
+    - filename: 1-nord.png
+      bytes: 393681
+      sha256: b1186fa7ee4e9d90087b86934c4de31a867daa4a23c401885181b07ba12fff75
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 2-nord.png
+      bytes: 1825628
+      sha256: 61a4bc49c13711121de87f5f7f2407ff8235051cd17f9cded7e20e15b19d5692
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  osaka-jade:
+    - filename: 1-osaka-jade-city.jpg
+      bytes: 0
+      sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      source: broken
+      in_tree: false
+      note: "0 bytes: empty placeholder"
+    - filename: 1-osaka-jade-teal.jpg
+      bytes: 680795
+      sha256: a996dedb46a57c9e9dd1647da454e08adf8556d4e9eb7b317fb8b5f5f98d03a4
+      source: unknown
+      in_tree: true
+      note: custom (Unsplash/Wallhaven jade/teal imagery)
+    - filename: 2-osaka-jade-nature.jpg
+      bytes: 609366
+      sha256: 8d0c2a3511d1d1d27478e60aa0c67e9d8347902327b68442f89aede39b0d0696
+      source: unknown
+      in_tree: true
+      note: custom (Unsplash/Wallhaven jade/teal imagery)
+  pop-default:
+    - filename: 1-pop-default.jpg
+      bytes: 160673
+      sha256: 8ac25ce58679e32761789e9c8015d64d3e5efb3bb8abb8bf1fe5674b2dcce585
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-fractal-mountains.png
+      note: renamed .jpg copy of kate-hazen-fractal-mountains.png
+    - filename: 1-pop-fractal-mountains.png
+      bytes: 160673
+      sha256: 8ac25ce58679e32761789e9c8015d64d3e5efb3bb8abb8bf1fe5674b2dcce585
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-fractal-mountains.png
+    - filename: 2-pop-geometric.jpg
+      bytes: 14
+      sha256: d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed
+      source: broken
+      in_tree: false
+      note: "14 bytes: failed download placeholder"
+    - filename: kate-hazen-COSMIC-desktop-wallpaper.png
+      bytes: 795583
+      sha256: 20dadacaf0b080f7d1fe36a8c1c52a2f1e7731fec627727d4d151ce0ee169613
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-COSMIC-desktop-wallpaper.png
+    - filename: kate-hazen-mort1mer.png
+      bytes: 94186
+      sha256: d7af3671b7dd33829d99b37e66e56f79a0805cfd2795f9bf873e56d882faf2bb
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-mort1mer.png
+    - filename: kate-hazen-pop-m3lvin.png
+      bytes: 661048
+      sha256: bd3985ac7862a1b1b1b6ddaa1d62ce484ebbd2f3576845662d7df6afc7fb894a
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-m3lvin.png
+    - filename: kate-hazen-pop-retro1.png
+      bytes: 18742795
+      sha256: 1edfb33f45ed6baaaec03d0967464cd5af0a33d86a593c19a343be605821f2e6
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-retro1.png
+    - filename: kate-hazen-pop-retro2.png
+      bytes: 5856453
+      sha256: 9cce6111f5445ab8d0f14bff346df034d7b79f0d5316f18d46f71c83e08309b8
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-retro2.png
+    - filename: kate-hazen-pop-space.png
+      bytes: 581393
+      sha256: 95fa00cf12286199fcf9f97256937f2d71aaf38ff40807cfb9130a53784d0813
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-space.png
+    - filename: kate-hazen-unleash-your-robot-blue.png
+      bytes: 131608
+      sha256: f7fc1451d5a4aa7d8df1c4144a86131ba11711ad874b1497ffc00fde1b784dbc
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-unleash-your-robot-blue.png
+    - filename: kate-hazen-unleash-your-robot.png
+      bytes: 127060
+      sha256: bb04e9090371ce92cd4013c43e8973d0f49383dad423ff1f345701bf607a9e5a
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-unleash-your-robot.png
+    - filename: nick-nazzaro-bedroom.png
+      bytes: 14644023
+      sha256: 75f303714d68dad77aa60f859688f4046657b2551e05e673ac096a0ee470817e
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-bedroom.png
+    - filename: nick-nazzaro-desert.png
+      bytes: 5734143
+      sha256: a696180658501a2689d52d992c73fdd910f39709e32487f50acf684ca353aa59
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-desert.png
+    - filename: nick-nazzaro-ice-cave.png
+      bytes: 7351760
+      sha256: 607933d283d0c5f71eac37c144eb8db073e4fe83983854ba684962509342c502
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-ice-cave.png
+    - filename: nick-nazzaro-jungle-green.png
+      bytes: 5784909
+      sha256: 7eab639a280b4d6574d9874508716a599ac809c01fadee36507b51f2e1e9baac
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-jungle-green.png
+    - filename: nick-nazzaro-jungle-red.png
+      bytes: 5582176
+      sha256: da563ed2700fdfbc53bae2190092de7d8f4fd75e0021f75925d65f6a3bfd5665
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-jungle-red.png
+    - filename: nick-nazzaro-space-blue.png
+      bytes: 13589426
+      sha256: 27194f621cca0b810c4e547447f866e7e835db95b0103f1401b6019ccd17191c
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-space-blue.png
+    - filename: nick-nazzaro-space-red.png
+      bytes: 13514231
+      sha256: 59866d11d448962b83ce0f07b0ebcfed2c28d0d65010014e186e8f0acac1dee7
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-space-red.png
+    - filename: nick-nazzaro-underwater.png
+      bytes: 15193506
+      sha256: 5c75e6dd8328a7eab813302a6f36d5d8613095fc533f3a79bcff0ae6b4f80631
+      source: pop-wallpapers
+      in_tree: false
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-underwater.png
+  ristretto:
+    - filename: 1-ristretto.jpg
+      bytes: 210019
+      sha256: 9cbb0937c4413dbffb418742972dd952286205fdc08656578537d0d48e22879d
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 2-ristretto.jpg
+      bytes: 1538954
+      sha256: 1f691430c72083f547871019c8c3f3632af1962f882ce54a45fcf07eaf2a330a
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 3-ristretto.jpg
+      bytes: 816682
+      sha256: 7c769ace17a62fff2f4a8efdac121b21c8c78a8a2b0fb528a766c4e8ff641bdc
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  rose-pine:
+    - filename: 1-rose-pine.jpg
+      bytes: 254046
+      sha256: 6f5a9ea3dc223fbe910467cc73967ba6dd9f7e80a7d806bc15e985563d15fe03
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 2-wave-light.png
+      bytes: 1231653
+      sha256: 5677cd61e3472270bbdac862df5574e47e8109a0e47e4d78c0dcb386165bd7f6
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 3-leafy-dawn-omarchy.png
+      bytes: 1182471
+      sha256: 3d19aff7875609d8c28811b150ac59afa5863b5dee83b4bac8530ffe59c949cb
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+  tokyo-night:
+    - filename: 1-scenery-pink-lakeside-sunset-lake-landscape-scenic-panorama-7680x3215-144.png
+      bytes: 2804358
+      sha256: 06dfb9fce029ec35adb40ea3939296777c2b140d1232b5a1697b15052d575362
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 2-Pawel-Czerwinski-Abstract-Purple-Blue.jpg
+      bytes: 4793425
+      sha256: 69cc4dd4a407c07f554600f9e3d04fec0293b8c885ddd851fe583efc2eadcb52
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"
+    - filename: 3-Milad-Fakurian-Abstract-Purple-Blue.jpg
+      bytes: 269193
+      sha256: 2868c67434bce109a4863a47f37f302596fe36df33430b508b74c800c368f25a
+      source: unknown
+      in_tree: true
+      note: "historical: basecamp/omarchy theme backgrounds; upstream renamed, not byte-verifiable"

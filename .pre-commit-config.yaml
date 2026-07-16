@@ -1,3 +1,8 @@
+# Pre-commit hooks for cosmikase.
+#
+# After the Python-package removal there are exactly two Python files
+# (bin/cosmikase-chezmoi, themes/render.py) and a set of bash scripts. No
+# mypy/pytest of deleted modules, no ansible-lint (Ansible is gone).
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -10,17 +15,17 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
+      # cosmikase-chezmoi has no .py extension, so match both scripts by path
+      # and bypass pre-commit's python type detection with types: [file].
       - id: ruff
-        args: [ --fix ]
+        args: [--fix]
+        types: [file]
+        files: ^(bin/cosmikase-chezmoi|themes/render\.py)$
       - id: ruff-format
+        types: [file]
+        files: ^(bin/cosmikase-chezmoi|themes/render\.py)$
 
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0
     hooks:
       - id: shellcheck
-
-  - repo: https://github.com/ansible/ansible-lint
-    rev: v24.2.3
-    hooks:
-      - id: ansible-lint
-        files: \.(yaml|yml)$

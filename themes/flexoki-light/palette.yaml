@@ -1,0 +1,13 @@
+# Colour palette for Flexoki Light — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme flexoki-light
+name: Flexoki Light
+variant: light
+colors:
+  background: "#fffcf0"
+  foreground: "#100f0f"
+  accent: "#205ea6"
+  sidebar: "#f2f0e5"
+  terminal: "#fffcf0"
+  error: "#af3029"
+  warning: "#ad8301"

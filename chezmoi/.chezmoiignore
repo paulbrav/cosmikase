@@ -1,34 +1,25 @@
-# Files and directories to ignore during chezmoi apply
+# Entries here are NOT applied to the target ($HOME). Paths are relative to the
+# chezmoi source dir (chezmoi/). Package scripts live in run_onchange_* and are
+# executed, not ignored.
 
-# README and documentation
+# Documentation / license (should any land under the source dir)
 README.md
 *.md
-
-# License files
 LICENSE*
 
-# Git files
+# VCS + editor noise
 .git
 .gitignore
 .gitattributes
-
-# Editor/IDE files
 .vscode
 .idea
 *.swp
 *.swo
 *~
 
-# OS generated files
+# OS + language caches
 .DS_Store
 Thumbs.db
-
-# Python cache
 __pycache__
 *.pyc
 .pytest_cache
-
-
-
-
-

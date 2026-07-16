@@ -1,0 +1,13 @@
+# Colour palette for Osaka Jade — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme osaka-jade
+name: Osaka Jade
+variant: dark
+colors:
+  background: "#0b1314"
+  foreground: "#c8f3e4"
+  accent: "#3ecf8e"
+  sidebar: "#0a1010"
+  terminal: "#0b1314"
+  error: "#ff6b6b"
+  warning: "#ffd166"

@@ -12,6 +12,14 @@ ENV/
 dist/
 build/
 
+# Rust / Cargo (plugins workspace)
+# `target/` matches any build dir at any depth; the explicit plugin path is kept
+# for clarity. The single workspace lock (plugins/Cargo.lock) is committed.
+target/
+plugins/**/target/
+**/*.rs.bk
+*.pdb
+
 # uv
 .uv/
 
@@ -28,11 +36,6 @@ build/
 # OS
 .DS_Store
 Thumbs.db
-
-# Ansible
-*.retry
-ansible/.ansible/
-/tmp/ansible_facts_cache/
 
 # Test artifacts
 tests/*.log

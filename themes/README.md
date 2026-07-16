@@ -1,201 +1,164 @@
-# Cosmikase Themes for Pop!_OS
+# Cosmikase Themes
 
-This directory contains a comprehensive collection of themes optimized for both Pop!_OS and COSMIC desktop environments.
+A palette-first theme collection for Pop!_OS / COSMIC. Each theme declares its
+colours once in `palette.yaml`; the app-specific files are generated from that
+palette (for the two files that are fully derivable) or hand-curated (for the
+rest). Wallpapers live in a manifest, not in git.
 
-## Available Themes
+## Available themes
 
-### Your Custom Themes
+**Custom (built for cosmikase)**
 
-- **pop-default** - Pop!_OS-inspired palette with signature orange and teal accents
-- **catppuccin** - Dark Catppuccin variant with pastel colors  
-- **osaka-jade** - Cyan and jade green aesthetic inspired by Osaka
+- **pop-default** — Pop!_OS palette, signature orange + teal accents
+- **osaka-jade** — cyan/jade green aesthetic
+- **catppuccin** — dark Catppuccin Mocha variant
 
-### Official Themes
+**Ported from [basecamp/omarchy](https://github.com/basecamp/omarchy)**
 
-- **tokyo-night** - Flagship theme with deep blues and vibrant colors
-- **nord** - Cool northern palette with Arctic-inspired colors
-- **gruvbox** - Retro warm colors with earthy tones
-- **kanagawa** - Japanese-inspired with muted natural colors
-- **everforest** - Forest green aesthetic with comfortable colors
-- **rose-pine** - Rosé Pine color scheme with soft pastels
-- **catppuccin-latte** - Light Catppuccin variant (distinct from dark catppuccin)
-- **matte-black** - Minimalist dark theme with high contrast
-- **ristretto** - Coffee-inspired warm theme
-- **ethereal** - Dreamy ethereal color palette
-- **flexoki-light** - Light theme with warm, paper-like aesthetics
-- **hackerman** - Matrix-inspired green terminal theme
+- **tokyo-night**, **nord**, **gruvbox**, **kanagawa**, **everforest**,
+  **rose-pine**, **catppuccin-latte**, **matte-black**, **ristretto**,
+  **ethereal**, **flexoki-light**, **hackerman**
+- **cosmic-dark**, **cosmic-light** — COSMIC default-style dark/light schemes
 
-## Theme File Structure
+The default theme is **nord**, defined in exactly one place:
+`chezmoi/.chezmoi.toml.tmpl`.
 
-Each theme directory contains configuration files for various applications:
+## Theme file structure
 
-### Terminal Emulators
-- `alacritty.toml` - Alacritty terminal color scheme
-- `ghostty.conf` - Ghostty terminal color scheme
-- `kitty.conf` - Kitty terminal color scheme
+Each `themes/<name>/` directory contains:
 
-### Desktop Environment (Hyprland/Wayland)
-- `hyprland.conf` - Hyprland compositor theming
-- `hyprlock.conf` - Hyprlock screen lock styling
-- `waybar.css` - Waybar status bar styling
-- `mako.ini` - Mako notification daemon styling
-- `swayosd.css` - SwayOSD on-screen display styling
-- `walker.css` - Walker app launcher styling
+| File | Purpose |
+|------|---------|
+| `palette.yaml` | **Declared colour source of truth** — 7 colour keys + `variant` (see below) |
+| `cursor.json` | Cursor / VS Code / Antigravity colour theme name, extension id, and colours |
+| `ghostty.conf` | Ghostty terminal colours (generated from palette or curated) |
+| `cosmic-term.ron` | COSMIC Terminal colour scheme (generated from palette or curated) |
+| `cosmic.ron` | COSMIC desktop colour theme |
+| `neovim.lua` | Neovim colourscheme snippet |
+| `btop.theme` | btop resource-monitor theme |
+| `opencode.json` | OpenCode colour theme |
+| `antigravity.conf` | Antigravity launcher palette |
+| `backgrounds/` | Wallpapers still tracked in git (see Wallpapers) |
+| `preview.png` | Theme preview image (ported themes) |
+| `light.mode` | Present only for light themes — marks COSMIC light mode |
 
-### Development Tools
-- `nvim.lua` / `neovim.lua` - Neovim color scheme
-- `btop.theme` - Resource monitor theming
-- `starship.toml` - Shell prompt configuration
+Terminals are **cosmic-term** (daily driver) and **ghostty** (quick-terminal
+dropdown). Kitty and Alacritty were removed, so their per-theme configs are gone.
+Hyprland/waybar/mako/walker/swayosd/starship/chromium/icons theme files were also
+removed — cosmikase targets COSMIC, not a Hyprland stack.
 
-### Editor/IDE Integration
-- `cursor.json` - Cursor/VS Code theme config (see schema below)
-- `antigravity.conf` - Antigravity launcher colors
-
-### System Integration
-- `theme.yaml` - Unified theme manifest (replaces legacy indicators)
-- `cosmic.ron` - COSMIC desktop theme
-- `cosmic-term.ron` - COSMIC Terminal theme
-- `icons.theme` - Preferred icon theme name
-- `chromium.theme` - Browser theme color (RGB format)
-- `light.mode` - Legacy light theme indicator (obsolete in v0.3)
-
-### Wallpapers
-- `backgrounds/` - Directory containing wallpaper images
-- `preview.png` - Theme preview image (official themes)
-
-## Usage
-
-### On Pop!_OS (GNOME/COSMIC)
-
-The following theme files work directly on Pop!_OS without Hyprland:
-
-- Terminal configs (alacritty, ghostty, kitty)
-- Development tools (nvim, btop, starship)
-- System integration (cursor, icons, chromium)
-- Wallpapers
-
-### With Hyprland Installed
-
-If you install Hyprland on Pop!_OS, you can use the full theme experience:
-
-- All terminal and development configs
-- Hyprland compositor theming
-- Waybar status bar
-- Mako notifications
-- Walker launcher
-- Full desktop environment theming
-
-### Applying Themes
-
-To switch themes, update your configuration files to import the desired theme:
-
-**For Alacritty** (`~/.config/alacritty/alacritty.toml`):
-```toml
-import = ["/path/to/cosmikase/themes/tokyo-night/alacritty.toml"]
-```
-
-**For Ghostty** (`~/.config/ghostty/config`):
-```
-import = /path/to/cosmikase/themes/tokyo-night/ghostty.conf
-```
-
-**For Neovim**, source the theme file in your init.lua:
-```lua
-dofile("/path/to/cosmikase/themes/tokyo-night/nvim.lua")
-```
-
-## theme.yaml Schema (v0.3+)
-
-Each theme directory contains a `theme.yaml` file that defines its metadata and key properties:
+## palette.yaml — the colour source of truth
 
 ```yaml
-name: Catppuccin Mocha
-variant: dark              # dark or light
+name: Nord
+variant: dark          # dark | light
 colors:
-  background: "#1e1e2e"    # hex color code
-  foreground: "#cdd6f4"
-  accent: "#89b4fa"
-  error: "#f38ba8"
-  warning: "#f9e2af"
-cursor:
-  theme: Catppuccin Mocha  # VS Code colorTheme name
-  extension: catppuccin.catppuccin-vsc
-wallpaper: backgrounds/cat_mountains.png  # Path relative to theme dir
+  background: "#2e3440"
+  foreground: "#eceff4"
+  accent:     "#88c0d0"
+  sidebar:    "#242933"
+  terminal:   "#2e3440"
+  error:      "#bf616a"
+  warning:    "#ebcb8b"
 ```
 
-The theme system uses this manifest to:
-- Generate color previews in the TUI
-- Set the correct `workbench.colorTheme` in Cursor/VS Code
-- Determine dark/light mode for COSMIC
-- Select the default wallpaper
+These 7 keys were extracted from each theme's `cursor.json` `colors` block.
+`variant` comes from `cursor.json`'s `light` flag (the declared truth), which is
+also mirrored by the `light.mode` marker on light themes.
 
-## Legacy Migration (v0.2 to v0.3)
+### Regenerating ghostty.conf / cosmic-term.ron
 
-If you have custom themes from v0.2, you can migrate them using the included script:
+`ghostty.conf` and `cosmic-term.ron` are the two files whose colours are fully
+derivable from the palette. Regenerate them with the single-file renderer:
 
 ```bash
-uv run python scripts/migrate-themes.py
+themes/render.py --theme nord      # one theme
+themes/render.py --all             # every theme
+themes/render.py --all --dry-run   # preview without writing
 ```
 
-This will automatically generate a `theme.yaml` for each theme directory based on existing `cursor.json`, `light.mode`, and background files.
+`render.py` is a PEP 723 script (`uv run themes/render.py …`, deps: pyyaml,
+jinja2) using the templates in `themes/_templates/`. The renderer reproduces the
+palette-defined slots exactly (background, foreground, cursor, and the
+black/red/green/yellow ANSI colours) and fills the remaining ANSI slots from the
+accent. Use it for **new themes** or to fix drift; richer hand-curated palettes
+that ship today are left as-is.
 
-## cursor.json Schema (Legacy)
+### Why there is no `theme.yaml`
 
-```json
-{
-  "colorTheme": "Theme Name",      // VS Code theme name (required)
-  "extension": "publisher.ext-id", // Extension ID (null if built-in)
-  "light": true,                   // Light theme flag (optional, default: false)
-  "colors": {
-    "background": "#1e1e2e",       // Primary background color
-    "foreground": "#cdd6f4",       // Primary text color
-    "accent": "#89b4fa",           // Accent/highlight color
-    "error": "#f38ba8",            // Error color
-    "warning": "#f9e2af"           // Warning color
-  }
-}
+Earlier revisions carried a `theme.yaml` manifest whose only consumer was the
+(now deleted) Python package. It was removed. `palette.yaml` is the colour source
+of truth, `cursor.json` carries the editor theme metadata, and the default
+wallpaper is simply the first image found in `backgrounds/` — so nothing reads a
+per-theme manifest any more.
+
+## Wallpapers
+
+Wallpapers are described by [`wallpapers.yaml`](wallpapers.yaml), which records
+every wallpaper's `sha256`, byte size, and provenance (`source`). To keep the
+repo small, wallpapers with a **verified upstream source** were removed from git;
+wallpapers whose source is **unknown** stay in the tree (removing them would be
+irreversible data loss — they are listed at the top of the manifest).
+
+Restore or verify the removed wallpapers with:
+
+```bash
+bin/cosmikase-wallpapers fetch            # download all removed wallpapers
+bin/cosmikase-wallpapers fetch nord       # just one theme
+bin/cosmikase-wallpapers verify           # sha256-check what's present
+bin/cosmikase-wallpapers list             # show state of every wallpaper
 ```
 
-The chezmoi templates read from this file to:
-- Set the correct `workbench.colorTheme` in Cursor settings
-- Apply colors to Antigravity launcher
-- Generate consistent color overrides across tools
+`fetch` downloads (sha256-verified) into
+`${XDG_DATA_HOME:-~/.local/share}/cosmikase/backgrounds/<theme>/` and is
+idempotent and offline-safe. The theme `run_after` hook and
+`cosmikase-theme-cosmic` call it automatically when a theme's backgrounds are
+missing.
 
-## antigravity.conf Format
+### Attribution
 
-Simple key-value format for the Antigravity launcher:
+- **pop-default** — official Pop!_OS wallpapers by **Kate Hazen** and
+  **Nick Nazzaro**, from [pop-os/wallpapers](https://github.com/pop-os/wallpapers),
+  licensed **CC BY-SA 4.0**. These are re-fetched, not committed.
+- **omarchy-ported themes** — wallpapers originate from
+  [basecamp/omarchy](https://github.com/basecamp/omarchy) (MIT). Two are still
+  byte-verifiable upstream and are re-fetched; the rest were renamed/changed
+  upstream and are kept in-tree as `unknown` provenance.
+- **catppuccin / osaka-jade** — custom (Catppuccin palette art, Unsplash /
+  Wallhaven imagery); kept in-tree as `unknown`.
+- **cosmic-dark / cosmic-light** — space and abstract imagery; kept in-tree as
+  `unknown` pending provenance verification.
 
-```ini
-# Theme Name palette
-background=#1e1e2e
-foreground=#cdd6f4
-accent=#89b4fa
-warning=#f9e2af
-error=#f38ba8
+## Applying a theme
+
+```bash
+cosmikase-theme nord            # switch theme (updates chezmoi, reapplies, reloads apps)
+cosmikase-theme --rollback      # revert to the previous theme
 ```
 
-## Theme Consistency
+`cosmikase-theme` updates the chezmoi `theme` value (via `bin/cosmikase-chezmoi`),
+reapplies dotfiles, and calls the per-app helpers:
 
-All themes maintain consistent color palettes across applications:
-- Primary colors for active elements and highlights
-- Secondary colors for borders and accents
-- Background colors for surfaces and containers
-- Text colors optimized for readability
+- `cosmikase-theme-cosmic` — COSMIC colours, terminal scheme, dark/light mode, wallpaper
+- `cosmikase-theme-cursor` — Cursor / VS Code / Antigravity `workbench.colorTheme`
+- `cosmikase-theme-terminal` — reloads ghostty (SIGUSR1); cosmic-term auto-reloads
 
-## Customization
+## Adding a new theme
 
-Feel free to:
-- Modify existing themes to match your preferences
-- Create new theme directories following the same structure
-- Mix and match configurations from different themes
-- Add wallpapers to the `backgrounds/` directories
+1. Create `themes/<name>/palette.yaml` with the 7 colour keys and a `variant`.
+2. Run `themes/render.py --theme <name>` to generate `ghostty.conf` and
+   `cosmic-term.ron`.
+3. Add `cursor.json` (editor theme name + extension + colours), and optionally
+   `cosmic.ron`, `neovim.lua`, `btop.theme`, `opencode.json`, `antigravity.conf`.
+4. Add wallpapers under `backgrounds/`, then record them in `wallpapers.yaml`
+   (`bin/cosmikase-wallpapers verify` re-checks sha256s).
 
 ## Credits
 
-- Official themes: [basecamp/omarchy](https://github.com/basecamp/omarchy) (source repository)
-- Custom Pop!_OS themes: Created for cosmikase project
+- Ported themes: [basecamp/omarchy](https://github.com/basecamp/omarchy)
 - Catppuccin: [catppuccin/catppuccin](https://github.com/catppuccin/catppuccin)
 - Nord: [nordtheme/nord](https://github.com/nordtheme/nord)
 - Gruvbox: [morhetz/gruvbox](https://github.com/morhetz/gruvbox)
-- Tokyo Night: [tokyo-night](https://github.com/enkia/tokyo-night-vscode-theme)
-- Rose Pine: [rose-pine](https://github.com/rose-pine/rose-pine-theme)
+- Tokyo Night: [enkia/tokyo-night-vscode-theme](https://github.com/enkia/tokyo-night-vscode-theme)
+- Rosé Pine: [rose-pine/rose-pine-theme](https://github.com/rose-pine/rose-pine-theme)
+- Pop!_OS wallpapers: [pop-os/wallpapers](https://github.com/pop-os/wallpapers) (CC BY-SA 4.0)

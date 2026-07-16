@@ -1,0 +1,15 @@
+{{- /* Guarded: renders empty (chezmoi skips the file) unless agent-balance is on PATH. */ -}}
+{{- if lookPath "agent-balance" -}}
+# See docs/private-tools.md for what agent-balance is and how to restore it.
+[Unit]
+Description=agent-balance periodic refresh (cosmikase)
+
+[Service]
+Type=oneshot
+# Placeholder subcommand — verify against your agent-balance CLI (see private-tools.md).
+ExecStart={{ lookPath "agent-balance" }} balance
+Nice=10
+
+# Enable with:  systemctl --user enable --now agent-balance.timer
+# (the timer, below, drives this oneshot service; do not enable the .service itself)
+{{ end -}}

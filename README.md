@@ -1,413 +1,149 @@
-# Cosmikase - COSMIC Omakase for Pop!_OS
+# Cosmikase — COSMIC Omakase for Pop!_OS
 
-Pop!_OS 24 workstation configuration with COSMIC hotkeys, apt + Flatpak packages, Ghostty terminal, and a comprehensive theme system.
+> Rebuild my daily-driver environment on Pop!_OS 24 / COSMIC in one command, the moment my
+> hardware (HP ZBook Ultra G1a) is fully supported — with my workflows expressed the
+> COSMIC-native way.
+
+Cosmikase is a single-user, single-machine setup repo. One orchestrator (**chezmoi**) applies
+the dotfiles and installs everything the manifest (`cosmikase.yaml`) declares. There is no
+Ansible, no Python package, and no hidden second orchestration layer — see
+[docs/design.md](docs/design.md) for the first-principles rationale.
 
 ## Quick Start
 
 ```bash
-# 1. Clone the repo
 git clone https://github.com/paulbrav/cosmikase ~/Repos/cosmikase
 cd ~/Repos/cosmikase
 
-# 2. Install dependencies
-make setup
+# Bootstrap: install prereqs + chezmoi, then apply dotfiles and packages.
+./install.sh
 
-# 3. Review configuration
-nano cosmikase.yaml
+# Preview everything without changing the system first:
+./install.sh --dry-run
 
-# 4. Run the installer
-make install
-
-# 5. (Optional) Dry-run to preview changes
-make dry-run
+# Then confirm the hardware is ready for the COSMIC-native workflow:
+bin/cosmikase-preflight
 ```
 
-## Architecture
+`install.sh` checks the OS, installs `curl` / `git` / `python3-yaml`, drops the `chezmoi`
+binary into `~/.local/bin`, and runs `chezmoi init --source ./chezmoi --apply`. chezmoi's
+`run_onchange_` scripts read `cosmikase.yaml` and install apt/flatpak packages, language
+runtimes, and CLI tools — each step guarded so re-runs are idempotent.
 
-This project uses:
-- **Ansible** for package installation and system configuration
-- **chezmoi** for dotfile management with theme templating
-- **YAML configuration** (`cosmikase.yaml`) to control what gets installed
+## Hardware Gate — HP ZBook Ultra G1a
 
-## What Gets Installed
+This machine is the reference target. `bin/cosmikase-preflight` prints a PASS/FAIL/WARN table
+so you know whether the environment is ready before committing to it: COSMIC session, kernel
+support, webcam firmware/driver, fingerprint (fprintd + Synaptics), the power udev rule,
+Flathub reachability, and disk space.
 
-### Packages
-- **Core CLI tools**: fzf, zoxide, ripgrep, fd, bat, btop, tmux, zellij, neovim, eza, gum
-- **Build tools**: build-essential, cmake, ninja-build
-- **GUI apps**: xournalpp, fonts-jetbrains-mono
-- **Terminals**: Ghostty (built from source), Kitty, Alacritty
+The one blocker worth knowing up front is the **webcam**:
 
-### Runtimes
-- Rust (via rustup)
-- Bun (JavaScript runtime)
-- uv (Python package manager)
-- nvm + Node.js LTS
-- Julia
+- Sensor **OV05C10** behind the **AMD ISP4** block, driven by the `amd_capture` kernel module.
+- Requires firmware `isp_4_1_1.bin` under `/lib/firmware/amdgpu/` — no libcamera needed.
+- The driver merged into **mainline Linux 7.2**. Pop!_OS 24.04 ships 6.17.9, so until 7.2
+  lands you need an interim path: the Ubuntu **OEM kernel**, a **DKMS backport**, or a
+  self-built **≥ 7.2** kernel.
 
-### Flatpak Apps
-- Obsidian, LocalSend, Flatseal
-- Bitwarden, ProtonVPN, Proton Mail
-- Discord, Signal, Telegram
-- Chromium, OnlyOffice
+Until the webcam driver is generally available, preflight will WARN — the rest of the
+environment still installs and runs.
 
-### AI Tools
-- Cursor (AI code editor)
-- Antigravity, Claude Code, OpenCode
+## Structure
 
-### NPM Global Packages
-- Bitwarden CLI (secrets management)
-- OpenAI Codex CLI
+```
+cosmikase/
+├── install.sh          # bootstrap: prereqs + chezmoi + apply
+├── cosmikase.yaml      # THE manifest — the only keys code reads
+├── Makefile            # dev conveniences (lint, test, plugins, …)
+├── bin/                # runtime bash scripts + one PEP 723 uv helper
+├── chezmoi/            # dotfiles + COSMIC UX + run_onchange package scripts
+├── themes/             # per-theme palette.yaml + curated app configs + renderer
+├── plugins/            # Cargo workspace: shared crate + 5 pop-launcher plugins
+├── docs/               # design + reference + researched guides
+└── tests/              # pytest + container smoke test of install.sh
+```
 
-## Cursor Extensions
+## Terminals
 
-Manage Cursor/VS Code extensions via a text file for easy reinstallation:
+Two terminals, each with a clear job:
+
+- **cosmic-term** — the daily driver, themed from each theme's palette.
+- **Ghostty** — the drop-down quick terminal, toggled with `Super + grave` via
+  `bin/cosmikase-dropterm` (Ghostty's own `quick-terminal` is the primary path).
+
+Kitty and Alacritty are not used anywhere in this repo.
+
+## Themes
+
+Each theme is **palette-first**: `themes/<name>/palette.yaml` holds seven color keys
+(background, foreground, accent, error, warning, success, cursor) as the declared source of
+truth. `themes/render.py` regenerates the per-app configs (ghostty, cosmic-term) from a
+palette, so adding a theme is cheap.
+
+Wallpapers are **not committed to git**. `themes/wallpapers.yaml` records each file's source
+URL and sha256; `bin/cosmikase-wallpapers fetch [theme]` downloads and verifies them into
+`~/.local/share/cosmikase/backgrounds/`. The default theme is **nord**, defined in exactly one
+place: `chezmoi/.chezmoi.toml.tmpl`.
 
 ```bash
-# Export your current extensions
-cosmikase-cursor-extensions export
-
-# Install extensions on a new machine
-cosmikase-cursor-extensions install
-
-# See what's different between list and installed
-cosmikase-cursor-extensions diff
+cosmikase-theme tokyo-night   # switch theme (updates chezmoi + running apps)
+cosmikase                     # interactive menu (gum), if installed
 ```
 
-Edit `~/.config/Cursor/extensions.txt` to customize your extension list.
+See [themes/README.md](themes/README.md) for the full roster and per-theme details.
 
-## Cursor Rules
+## Pop Launcher Plugins
 
-### Sharing Rules Across Projects
+A single Cargo workspace under `plugins/` (shared `plugin-common` crate + five plugins).
+Build and install all of them with `make plugins-install`.
 
-**Recommended approach: Template Copy**
+- **bw** (`bw-launcher`) — search your Bitwarden vault; copy password / username / TOTP.
+- **exa** (`exa-launcher`) — AI-powered web search via [Exa.ai](https://exa.ai/).
+- **ssh** (`ssh-launcher`) — connect to hosts from `~/.ssh/config`.
+- **man** (`man-launcher`) — fuzzy-search and open man pages.
+- **clip** (`clip-launcher`) — browse and paste clipboard history via cliphist.
 
-Keep a canonical set of rules in a dotfiles repo (e.g., [paulbrav/dotfiles](https://github.com/paulbrav/dotfiles)), then copy them to each project where they can diverge as needed:
-
-```bash
-# Copy rules to a new project from your dotfiles
-cp -r ~/dotfiles/.cursor/rules .cursor/rules
-
-# Or clone fresh from GitHub
-git clone --depth 1 https://github.com/paulbrav/dotfiles /tmp/dotfiles
-cp -r /tmp/dotfiles/.cursor/rules .cursor/rules
-```
-
-This approach:
-- Gives each project its own copy that can be customized
-- Tracks per-project changes in that project's git history
-- Avoids symlink complexity and submodule overhead
-- Lets you update the canonical version independently
-
-### Rule File Format
-
-Rules use `.mdc` (Markdown Cursor) format:
-
-```markdown
----
-description: Python development guidelines
-globs: ["**/*.py"]
-alwaysApply: false
----
-
-# Python Rules
-
-- Use type hints for all function signatures
-- Prefer dataclasses over plain dicts for structured data
-```
-
-### Updating Rules
-
-When you improve your canonical rules:
-
-```bash
-# See what changed
-diff -r ~/dotfiles/.cursor/rules .cursor/rules
-
-# Pull in updates (review before overwriting)
-cp ~/dotfiles/.cursor/rules/python.mdc .cursor/rules/
-```
-
-## Theme System
-
-15+ themes available, consistently applied across:
-- Terminal emulators (Ghostty, Kitty, Alacritty)
-- Development tools (Neovim, btop, Starship prompt)
-- Desktop (COSMIC wallpaper, dark/light mode)
-
-### Switching Themes
-
-```bash
-# CLI
-cosmikase-theme tokyo-night
-
-# Interactive TUI
-theme-tui
-
-# Interactive menu (gum)
-cosmikase
-```
-
-### Available Themes
-
-| Theme | Description |
-|-------|-------------|
-| `catppuccin` | Pastel dark theme |
-| `catppuccin-latte` | Pastel light theme |
-| `ethereal` | Dreamy ethereal palette |
-| `everforest` | Forest green aesthetic |
-| `flexoki-light` | Warm, paper-like light theme |
-| `gruvbox` | Retro warm earth tones |
-| `hackerman` | Matrix-inspired green |
-| `kanagawa` | Japanese-inspired muted colors |
-| `matte-black` | High contrast minimal |
-| `nord` | Arctic-inspired cool palette |
-| `osaka-jade` | Cyan and jade aesthetic |
-| `pop-default` | Pop!_OS orange and teal |
-| `ristretto` | Coffee-inspired warm theme |
-| `rose-pine` | Soft rosé pastels |
-| `tokyo-night` | Deep blues with vibrant accents |
-
-## Shell Utilities
-
-Cosmikase adds a handful of convenience functions/aliases via:
-
-```bash
-~/.config/shell/aliases/cosmikase_aliases.sh
-```
-
-Highlights:
-- `compress <path>`: create `<path>.tar.gz`
-- `decompress <archive.tar.gz>`: extract a tar.gz
-- `webm2mp4 <input.webm>`: convert WebM recordings to MP4 (requires `ffmpeg`)
-- `iso2sd <input.iso> </dev/sdX>`: write an ISO to a removable drive (destructive; prompts for confirmation)
-- `dps`, `dlog <container>`, `dexec <container> [cmd]`: Docker helpers
-
-## Configuration
-
-Edit `cosmikase.yaml` to customize your installation:
-
-```yaml
-defaults:
-  install: true
-  ghostty: true
-  theme: nord
-
-apt:
-  core:
-    - name: fzf
-      install: true
-    - name: steam-installer
-      install: false  # Opt-out
-
-flatpak:
-  utility:
-    - id: md.obsidian.Obsidian
-      install: true
-```
-
-## Development
-
-```bash
-# Install dev dependencies
-make setup
-
-# Run linters
-make lint
-
-# Format code
-make fmt
-
-# Run tests
-make test
-
-# Dry-run Ansible
-make dry-run
-
-# Interactive menu
-make menu
-
-# Build Exa plugin
-make exa-build
-
-# Install Exa plugin
-make exa-install
-
-# Clean Exa build
-make exa-clean
-```
-
-## Interactive Menu (gum)
-
-If `gum` is installed, you can use a single entrypoint to discover common actions:
-
-```bash
-cosmikase
-```
-
-Menu options include:
-- Theme selection (launches `theme-tui` when available)
-- Optional software installation (from `cosmikase.yaml`, installs items marked `install: false`)
-- Docker development databases (PostgreSQL/MySQL/Redis/MongoDB)
-- System update (`cosmikase-update`)
-- Power settings (`cosmikase-power-helper`)
-- Cursor extensions (`cosmikase-cursor-extensions`)
-
-### Safety / Undo
-- Optional software installs can be removed with `sudo apt remove <pkg>` or `flatpak uninstall <app-id>`.
-- Databases are created as Docker containers named `cosmikase-*`. Remove them with:
-
-```bash
-docker rm -f cosmikase-postgres cosmikase-mysql cosmikase-redis cosmikase-mongodb
-```
-
-## Exa Launcher Plugin
-
-A Pop!_OS launcher plugin for AI-powered web search via [Exa.ai](https://exa.ai/).
-
-### Installation
-
-```bash
-# Build and install (requires Rust)
-make exa-install
-```
-
-### Configuration
-
-Set your Exa API key:
-
-```bash
-# Option 1: Environment variable
-export EXA_API_KEY="your-api-key"
-
-# Option 2: Config file (~/.config/exa-launcher/config.toml)
-api_key = "your-api-key"
-num_results = 8
-```
-
-### Usage
-
-1. Open Pop Launcher with `Super` key
-2. Type `exa ` followed by your search query
-3. Press Enter to open a result in your browser
-
-See [plugins/exa-launcher/README.md](plugins/exa-launcher/README.md) for details.
-
-## Secrets Management with Bitwarden
-
-API keys and secrets are managed via [chezmoi](https://chezmoi.io/) + [Bitwarden CLI](https://bitwarden.com/help/cli/), keeping sensitive data out of version control.
-
-### Setup
-
-1. **Store API keys in Bitwarden** as Login items (key in password field) or use custom fields
-2. **Login and unlock Bitwarden CLI:**
-   ```bash
-   bw login
-   export BW_SESSION="$(bw unlock --raw)"
-   ```
-
-3. **Edit the secrets template** to reference your Bitwarden items:
-   ```bash
-   chezmoi edit ~/.config/shell/secrets.sh
-   ```
-   
-   Example template content:
-   ```bash
-   export EXA_API_KEY="{{ (bitwarden "item" "EXA API Key").login.password }}"
-   export ANTHROPIC_API_KEY="{{ (bitwarden "item" "Anthropic API").login.password }}"
-   ```
-
-4. **Apply chezmoi** to generate the secrets file:
-   ```bash
-   chezmoi apply
-   ```
-
-### How It Works
-
-- `secrets.sh.tmpl` is a chezmoi template that fetches secrets from Bitwarden at apply time
-- The generated `~/.config/shell/secrets.sh` is sourced by your shell config
-- Secrets are stored locally after `chezmoi apply`, not synced to git
-
-### Re-syncing Secrets
-
-After rotating keys in Bitwarden:
-```bash
-export BW_SESSION="$(bw unlock --raw)"
-chezmoi apply
-```
-
-## Directory Structure
-
-```
-├── ansible/                 # Ansible playbook and roles
-│   ├── playbook.yml        # Main entry point
-│   └── roles/              # Modular installation roles
-│       ├── packages/       # apt + flatpak
-│       ├── runtimes/       # rust, bun, uv, nvm
-│       ├── ghostty/        # build from source
-│       ├── tools/          # AI tools, security
-│       └── dotfiles/       # chezmoi apply
-├── chezmoi/                # Dotfile source for chezmoi
-│   ├── dot_config/         # ~/.config files (with .tmpl templates)
-│   └── run_after_*.sh.tmpl # Post-apply scripts
-├── bin/                    # Helper scripts
-├── docs/                   # Documentation
-├── plugins/                # Pop Launcher plugins
-│   └── exa-launcher/       # Exa.ai search plugin
-├── themes/                 # Theme definitions (15+ themes)
-├── src/cosmikase/          # Python utilities (theme-tui)
-└── cosmikase.yaml           # Main configuration
-```
-
-## Documentation
-
-### Getting Started
-- [CLI Reference](docs/cli-reference.md) - Complete command documentation
-- [Configuration Reference](docs/configuration-reference.md) - Full `cosmikase.yaml` schema
-- [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and solutions
-
-### Guides
-- [Architecture Guide](docs/architecture.md) - System design and component interactions
-- [Development Guide](docs/development.md) - Contributing and development setup
-- [Editor Theming Guide](docs/editor-theming.md) - Cursor and Antigravity theming
-- [COSMIC Theming Guide](docs/cosmic-theming.md) - Desktop environment theming
-- [Zellij Guide](docs/zellij.md) - Terminal multiplexer configuration
-
-### Manual Configuration
-- [YubiKey Setup](docs/yubikey-setup.md) - PAM and SSH integration
-- [Browser Sandboxing](docs/firejail-browsers.md) - Firejail configuration
-- [Backup Strategy](docs/backup-strategy.md) - rsync and Timeshift setup
-- [Interactive Menu](docs/cosmikase-menu.md) - Optional software and databases
-
-### Theme System
-- [Theme Documentation](themes/README.md) - Theme structure and usage
-- [Wallpapers](themes/WALLPAPERS.md) - Wallpaper sources and management
-
-## HP ZBook Ultra G1a Notes
-
-Pop!_OS uses its own kernel. If webcam/suspend issues occur:
-- Consider Ubuntu 24.04 OEM partition for `linux-oem-24.04b`
-- Optional kernel params: `amd_iommu=off pcie_aspm=off`
+Details in [docs/pop-launcher-plugins.md](docs/pop-launcher-plugins.md).
 
 ## Testing
 
 ```bash
-# Container smoke test (Ubuntu 24)
-./tests/container-smoke.sh
-
-# Full test in Pop!_OS VM
-make install
+make lint            # shellcheck bin/* install.sh + ruff on the python files
+make test            # pytest suite (cosmikase-chezmoi + surviving bash scripts)
+./tests/container-smoke.sh   # build an Ubuntu 24.04 image and run install.sh --ci
 ```
+
+The container smoke test answers "can this build a machine?" without touching your system:
+it runs `install.sh` in CI mode (`COSMIKASE_CI=1` skips flatpak/GUI-only steps) and asserts
+chezmoi applied, apt core packages installed, and preflight exits cleanly (WARN, not crash,
+with no COSMIC/webcam present).
+
+For full-desktop manual verification, run a Pop!_OS 24 COSMIC ISO in a VM with
+[quickemu](https://github.com/quickemu-project/quickemu): snapshot before `./install.sh`, run
+it, then verify preflight, a theme switch, and the COSMIC shortcuts.
+
+## Documentation
+
+- [Design](docs/design.md) — why the repo is shaped the way it is.
+- [CLI Reference](docs/cli-reference.md) — every surviving command.
+- [Configuration Reference](docs/configuration-reference.md) — the `cosmikase.yaml` schema.
+- [Keybindings](docs/keybindings.md) · [Troubleshooting](docs/troubleshooting.md)
+- [Pop Launcher Plugins](docs/pop-launcher-plugins.md) · [Private Tools](docs/private-tools.md)
+
+**Researched guides:** [COSMIC Theming](docs/cosmic-theming.md) ·
+[Editor Theming](docs/editor-theming.md) · [Zellij](docs/zellij.md) ·
+[YubiKey Setup](docs/yubikey-setup.md) · [Browser Sandboxing](docs/firejail-browsers.md) ·
+[Backup Strategy](docs/backup-strategy.md)
 
 ## Uninstall
 
 ```bash
-# Remove dotfile symlinks
-chezmoi purge
-
-# Remove shell integration
-# Edit ~/.bashrc and remove the COSMIKASE MANAGED BLOCK
+chezmoi purge          # remove chezmoi-managed dotfiles
+rm -rf ~/.local/share/cosmikase   # themes, wallpapers, helper data
 ```
+
+Packages are not removed automatically; remove any you no longer want with `apt`/`flatpak`.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

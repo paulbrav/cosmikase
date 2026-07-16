@@ -1,7 +1,9 @@
 #!/bin/bash
-# Run after chezmoi apply to set up theme files and reload applications
-# This script delegates to helper scripts for per-app theme updates
-# Note: Helper scripts are installed to ~/.local/bin by Ansible
+# Run after chezmoi apply to install per-app theme assets and reload apps.
+# The active theme comes from chezmoi data ({{ .theme }}) — the single source of
+# truth for the default is chezmoi/.chezmoi.toml.tmpl, never this hook.
+# Helper scripts (cosmikase-theme-*, cosmikase-wallpapers) are installed to
+# ~/.local/bin; this hook degrades gracefully when they are absent.
 
 set -euo pipefail
 
@@ -40,22 +42,22 @@ if [[ -f "$THEME_PATH/opencode.json" ]]; then
     echo "  - Copied opencode theme"
 fi
 
-# Copy neovim theme
-if [[ -f "$THEME_PATH/neovim.lua" ]] || [[ -f "$THEME_PATH/nvim.lua" ]]; then
+# Copy neovim theme (standardized filename: neovim.lua)
+if [[ -f "$THEME_PATH/neovim.lua" ]]; then
     mkdir -p ~/.config/nvim/lua/cosmikase
     rm -f ~/.config/nvim/lua/cosmikase/theme.lua
-    if [[ -f "$THEME_PATH/neovim.lua" ]]; then
-        cp "$THEME_PATH/neovim.lua" ~/.config/nvim/lua/cosmikase/theme.lua
-    elif [[ -f "$THEME_PATH/nvim.lua" ]]; then
-        cp "$THEME_PATH/nvim.lua" ~/.config/nvim/lua/cosmikase/theme.lua
-    fi
+    cp "$THEME_PATH/neovim.lua" ~/.config/nvim/lua/cosmikase/theme.lua
     echo "  - Copied neovim theme"
 fi
 
-# Delegate to helper scripts installed by Ansible
-# These handle live app updates (COSMIC, terminals, etc.)
+# Fetch wallpapers whose source left git (offline-safe, sha256-verified, idempotent).
+if [[ -x "$LOCAL_BIN/cosmikase-wallpapers" ]]; then
+    "$LOCAL_BIN/cosmikase-wallpapers" fetch "$THEME" >/dev/null 2>&1 || true
+elif command -v cosmikase-wallpapers >/dev/null 2>&1; then
+    cosmikase-wallpapers fetch "$THEME" >/dev/null 2>&1 || true
+fi
 
-# Apply COSMIC theme (wallpaper, colors, terminal, dark/light mode)
+# Apply COSMIC theme (wallpaper, colors, terminal color scheme, dark/light mode)
 if [[ -x "$LOCAL_BIN/cosmikase-theme-cosmic" ]]; then
     echo "  - Applying COSMIC theme..."
     THEMES_DIR="$THEMES_DIR" "$LOCAL_BIN/cosmikase-theme-cosmic" "$THEME" --quiet || true
@@ -66,7 +68,7 @@ else
     echo "  - Skipping COSMIC theme (helper not installed)"
 fi
 
-# Reload terminal emulators
+# Reload terminal emulators (ghostty + cosmic-term)
 if [[ -x "$LOCAL_BIN/cosmikase-theme-terminal" ]]; then
     echo "  - Reloading terminals..."
     "$LOCAL_BIN/cosmikase-theme-terminal" --quiet || true

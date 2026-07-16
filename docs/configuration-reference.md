@@ -1,711 +1,191 @@
 # Configuration Reference
 
-Complete reference for the `cosmikase.yaml` configuration file schema.
+`cosmikase.yaml` is the manifest — the single declarative list of what gets installed. It is
+read at apply time by chezmoi's `run_onchange_` scripts (plain `python3` + `yaml`), so those
+scripts rerun whenever the manifest changes.
 
-## Table of Contents
+**Guiding rule:** the manifest carries **only keys that code reads**. There are no decorative
+`method`/`url`/`args`/`check` fields, no version pins that contradict the installer, and no
+`default` that nothing consumes. If a field is here, a script acts on it. This file describes
+the shape; `cosmikase.yaml` in the repo root is the authoritative, current content.
 
-- [Overview](#overview)
-- [Top-Level Sections](#top-level-sections)
-  - [defaults](#defaults)
-  - [apt](#apt)
-  - [flatpak](#flatpak)
-  - [fonts](#fonts)
-  - [installers](#installers)
-  - [npm](#npm)
-  - [scripts](#scripts)
-  - [uv_tools](#uv_tools)
-  - [themes](#themes)
-  - [hp_zbook_ultra](#hp_zbook_ultra)
-- [Item Schema](#item-schema)
-- [Validation Rules](#validation-rules)
-- [Examples](#examples)
+## Top-level structure
+
+```yaml
+apt:            # apt packages, grouped
+  core:  [...]
+  gui:   [...]
+  system: [...]
+flatpak: [...]        # flatpak application IDs
+runtimes: {...}       # language runtimes + their version pins
+cargo_tools: [...]    # installed via `cargo install`
+go_tools:    [...]    # installed via `go install`
+uv_tools:    [...]    # installed via `uv tool install`
+npm_globals: [...]    # installed via `npm -g`
+ai_tools:    [...]    # AI CLIs (claude, codex, grok, …)
+features: {...}       # boolean feature toggles
+hp_zbook_ultra: {...} # hardware notes + warnings
+theme: {}             # theme-related settings read by scripts
+```
+
+The default theme is **not** set here — it lives in exactly one place,
+`chezmoi/.chezmoi.toml.tmpl` (a chezmoi prompt with the `nord` default).
 
 ---
 
-## Overview
+## apt
 
-The `cosmikase.yaml` file controls what gets installed and configured by the Ansible playbook. It uses a simple YAML structure with sections for different package types and installation methods.
+APT packages, split into logical groups. Each item has a `name` and an optional `install`
+flag (default: enabled). Set `install: false` to opt a package out.
 
-**File Location:**
-- Default: `cosmikase.yaml` in repository root
-- Can be overridden with `--config` flag or `COSMIKASE_CONFIG` environment variable
-
-**Basic Structure:**
-```yaml
-defaults:
-  install: true
-  theme: nord
-
-apt:
-  core:
-    - name: package-name
-      install: true
-
-flatpak:
-  utility:
-    - id: app.id
-      install: true
-```
-
----
-
-## Top-Level Sections
-
-### defaults
-
-Global default settings applied across the configuration.
-
-**Schema:**
-```yaml
-defaults:
-  install: boolean          # Default install flag (default: true)
-  ghostty: boolean         # Build Ghostty from source (default: true)
-  yubikey_setup: boolean   # Enable YubiKey setup (default: false)
-  theme: string           # Default theme name (default: nord)
-  run_fw_update: boolean  # Run firmware updates (default: true)
-  run_recovery_upgrade: boolean  # Run recovery upgrade (default: false)
-```
-
-**Fields:**
-- `install`: Default install flag (note: items without `install` are currently treated as enabled; use `install: false` on each item to make it optional)
-- `ghostty`: Whether to build Ghostty terminal from source (requires Zig 0.13+)
-- `yubikey_setup`: Enable YubiKey PAM/SSH setup (see [yubikey-setup.md](yubikey-setup.md))
-- `theme`: Default theme to apply (must match a theme in `themes/` directory)
-- `run_fw_update`: Run `fwupdmgr` to check for firmware updates
-- `run_recovery_upgrade`: Reserved for recovery upgrade workflows (not executed by the current playbook)
-
-**Example:**
-```yaml
-defaults:
-  install: true
-  ghostty: true
-  theme: tokyo-night
-  yubikey_setup: false
-```
-
----
-
-### apt
-
-APT package installation configuration. Organized into groups for logical organization.
-
-**Schema:**
-```yaml
-apt:
-  <group-name>:
-    - name: string          # Package name (required)
-      desc: string          # Description (optional)
-      alias: string         # Alternative command name (optional)
-      install: boolean     # Install this package (default: true)
-```
-
-**Groups:**
-- `core`: Essential CLI tools (fzf, zoxide, ripgrep, etc.)
-- `yubikey`: YubiKey-related packages (yubikey-manager, libpam-u2f, etc.)
-- `gui`: GUI applications (xournalpp, fonts)
-- `terminal`: Terminal emulators and related tools (ghostty, kitty, alacritty, docker, etc.)
-
-**Special Fields:**
-- `alias`: Use when package name differs from command name (e.g., `fd-find` → `fdfind`)
-- `source`: Special value `"source"` indicates build from source (used for Ghostty)
-- `note`: Additional notes about the package
-
-**Example:**
 ```yaml
 apt:
   core:
     - name: fzf
-      desc: General-purpose command-line fuzzy finder
-      install: true
+    - name: ripgrep
     - name: fd-find
-      desc: Simple, fast alternative to find
-      alias: fdfind
-      install: true
-  terminal:
-    - name: ghostty
-      desc: Fast terminal emulator
-      source: source
-      note: "Compiling from source (requires Zig 0.13+)"
-      install: true
+      alias: fdfind        # optional: command name when it differs from the package
+  gui:
+    - name: xournalpp
+  system:
+    - name: v4l-utils      # webcam tooling
+    - name: ydotool        # input automation
+    - name: docker.io
+      install: false       # opt-out example
 ```
 
-**Querying:**
-```bash
-# List enabled packages in a group
-cosmikase-config list apt core
+- `name` (required) — the apt package name.
+- `install` (optional, default true) — set `false` to skip.
+- `alias` (optional) — command name when it differs (e.g. `fd-find` → `fdfind`).
 
-# List only names
-cosmikase-config list apt core --names-only
-
-# List disabled packages
-cosmikase-config list apt core --disabled
-```
+The package script installs each enabled apt group, checking with `dpkg -s` before acting.
 
 ---
 
-### flatpak
+## flatpak
 
-Flatpak application installation configuration.
+A flat list of Flatpak application IDs (reverse-DNS notation). The package script installs
+`flatpak` and adds the Flathub remote first if any app is enabled.
 
-**Schema:**
 ```yaml
 flatpak:
-  <group-name>:
-    - id: string           # Flatpak application ID (required)
-      desc: string         # Description (optional)
-      install: boolean     # Install this app (default: true)
+  - md.obsidian.Obsidian
+  - org.signal.Signal
+  - com.system76.KeyboardConfigurator
 ```
 
-**Groups:**
-- `utility`: Utility applications (Obsidian, LocalSend, Flatseal, etc.)
-- `productivity`: Productivity tools (OnlyOffice, Standard Notes, etc.)
-- `communication`: Communication apps (Discord, Signal, Telegram, etc.)
-
-**Application IDs:**
-Flatpak IDs use reverse DNS notation:
-- `md.obsidian.Obsidian`
-- `com.system76.KeyboardConfigurator`
-- `org.signal.Signal`
-
-**Example:**
-```yaml
-flatpak:
-  utility:
-    - id: md.obsidian.Obsidian
-      desc: A knowledge base that works on top of a local folder
-      install: true
-    - id: com.spotify.Client
-      desc: Music streaming service
-      install: false  # Optional - can install via cosmikase-install
-```
-
-**Querying:**
-```bash
-# List enabled Flatpak apps
-cosmikase-config list flatpak utility
-
-# List as JSON
-cosmikase-config list flatpak utility --json
-```
+(Skipped entirely when `COSMIKASE_CI=1`.)
 
 ---
 
-### fonts
+## runtimes
 
-Font installation configuration.
+Language runtimes with their pinned versions. The runtimes script installs each via its
+official installer, guarded by `command -v`.
 
-**Schema:**
 ```yaml
-fonts:
-  <group-name>:
-    - name: string         # Font name (required)
-      desc: string         # Description (optional)
-      url: string          # Download URL (required)
-      install: boolean     # Install this font (default: true)
+runtimes:
+  rust:  { via: rustup }
+  node:  { via: nvm, version: "lts" }
+  go:    { version: "1.24.4" }
+  # bun, uv, julia (juliaup), zig, …
 ```
 
-**Groups:**
-- `nerd`: Nerd Fonts (icon fonts for terminals)
-
-**Example:**
-```yaml
-fonts:
-  nerd:
-    - name: JetBrainsMono Nerd Font
-      desc: Developer font with icons
-      url: https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
-      install: true
-```
+Version pins live **here**, next to the installer that reads them — not scattered across the
+docs.
 
 ---
 
-### installers
+## Tool lists (cargo_tools, go_tools, uv_tools, npm_globals, ai_tools)
 
-Custom installer configuration for runtimes and tools that don't use standard package managers.
-
-**Schema:**
-```yaml
-installers:
-  <group-name>:
-    - name: string         # Tool name (required)
-      desc: string         # Description (optional)
-      method: string       # Installation method (required)
-      check: string        # Command to check if installed (required)
-      install: boolean     # Install this tool (default: true)
-      # Method-specific fields (see below)
-```
-
-**Groups:**
-- `runtimes`: Programming language runtimes (Rust, Bun, Node.js, Julia, etc.)
-- `ai_tools`: AI coding assistants (Cursor, Antigravity, Codex, etc.)
-- `security`: Security tools (Brave browser, Dangerzone, etc.)
-
-**Installation Methods:**
-
-#### `script`
-Run an installation script from a URL.
+Each is a list of items installed by the tools script, one ecosystem each. Every installer is
+guarded (`command -v`) so re-runs are idempotent.
 
 ```yaml
-- name: starship
-  method: script
-  url: https://starship.rs/install.sh
-  args: ""  # Optional arguments to pass to script
-  check: starship
-  install: true
-```
-
-#### `custom_*`
-Custom installation handlers defined in Ansible roles.
-
-```yaml
-- name: antigravity
-  method: custom_antigravity
-  check: antigravity
-  install: true
-
-- name: brave-browser
-  method: custom_brave
-  check: brave-browser
-  install: true
-```
-
-#### `deb`
-Download and install a `.deb` package.
-
-```yaml
-- name: cursor
-  method: deb
-  deb_url: https://api2.cursor.sh/updates/download/golden/linux-x64-deb/cursor/latest
-  check: cursor
-  install: true
-```
-
-#### `npm`
-Install via npm (global).
-
-```yaml
-- name: codex
-  method: npm
-  npm_package: "@openai/codex"
-  check: codex
-  install: true
-```
-
-#### `bun`
-Install via Bun (global).
-
-```yaml
-- name: opencode
-  method: bun
-  bun_package: opencode-ai
-  check: opencode
-  install: true
-```
-
-#### `manual`
-Manual installation (no automation).
-
-```yaml
-- name: amp
-  method: manual
-  note: "Check https://ampcode.com for install instructions"
-  install: false
-```
-
-**Example:**
-```yaml
-installers:
-  runtimes:
-    - name: rust
-      desc: Systems programming language
-      method: script
-      url: https://sh.rustup.rs
-      args: -y
-      check: rustc
-      install: true
-  ai_tools:
-    - name: cursor
-      desc: The AI Code Editor
-      method: deb
-      deb_url: "https://api2.cursor.sh/updates/download/golden/linux-x64-deb/cursor/latest"
-      check: cursor
-      install: true
-```
-
----
-
-### npm
-
-Global NPM package installation.
-
-**Schema:**
-```yaml
-npm:
-  - name: string          # Package name (required, can include scope like @scope/pkg)
-    desc: string          # Description (optional)
-    version: string       # Version constraint (default: "latest")
-    install: boolean     # Install this package (default: true)
-```
-
-**Example:**
-```yaml
-npm:
-  - name: "@openai/codex"
-    desc: OpenAI Codex CLI
-    version: "latest"
-    install: true
-  - name: "@bitwarden/cli"
-    desc: Bitwarden CLI for secrets management
-    version: "latest"
-    install: true
-```
-
-**Querying:**
-```bash
-# List NPM packages
-cosmikase-config list npm
-
-# Get specific value
-cosmikase-config get npm
-```
-
----
-
-### scripts
-
-Custom shell scripts to run during installation.
-
-**Schema:**
-```yaml
-scripts: []  # Currently unused, reserved for future use
-```
-
-**Note:** This section is currently empty but reserved for future script execution functionality.
-
----
-
-### uv_tools
-
-Python tools installed via `uv` (Python package manager).
-
-**Schema:**
-```yaml
+cargo_tools:
+  - cargo-sweep
+go_tools:
+  - go.senan.xyz/cliphist@latest
 uv_tools:
-  - name: string         # Package name (required)
-    desc: string         # Description (optional)
-    install: boolean     # Install this tool (default: true)
+  - ruff
+  - yt-dlp
+  - marimo
+npm_globals:
+  - "@bitwarden/cli"
+  - "@mermaid-js/mermaid-cli"
+  - "@earendil-works/pi-coding-agent"
+ai_tools:
+  - name: claude        # native installer
+  - name: codex         # via npm (the canonical entry — no duplicate)
+  - name: grok
 ```
 
-**Example:**
+Items may be plain strings or `{ name: ..., install: ... }` where a per-item toggle is useful.
+
+---
+
+## features
+
+Boolean toggles read by the scripts to enable/disable optional behavior.
+
 ```yaml
-uv_tools:
-  - name: ruff
-    desc: An extremely fast Python linter and formatter
-    install: true
-  - name: mypy
-    desc: Optional static typing for Python
-    install: false
-```
-
-**Querying:**
-```bash
-# List uv tools
-cosmikase-config list uv_tools
+features:
+  yubikey_setup: false
+  run_fw_update: true
 ```
 
 ---
 
-### themes
+## hp_zbook_ultra
 
-Theme system configuration.
+Hardware-specific notes and warnings for the HP ZBook Ultra G1a. Consumed by the scripts that
+emit hardware guidance and by `cosmikase-preflight`.
 
-**Schema:**
-```yaml
-themes:
-  default: string        # Default theme name
-  available:            # List of available theme names
-    - string
-  paths:
-    base: string         # Base path for themes (supports ~ expansion)
-```
-
-**Example:**
-```yaml
-themes:
-  default: osaka-jade
-  available:
-    - catppuccin
-    - catppuccin-latte
-    - nord
-    - tokyo-night
-    # ... more themes
-  paths:
-    base: ~/.local/share/cosmikase/themes
-```
-
-**Querying:**
-```bash
-# Get default theme
-cosmikase-config get themes.default
-
-# Get themes base path
-cosmikase-config get themes.paths.base
-```
-
-**See Also:**
-- [Theme System Documentation](../themes/README.md)
-- [Editor Theming Guide](editor-theming.md)
-
----
-
-### hp_zbook_ultra
-
-HP ZBook Ultra G1a specific configuration and notes.
-
-**Schema:**
 ```yaml
 hp_zbook_ultra:
-  emit_notes: boolean    # Show hardware-specific notes (default: true)
-  oem_kernel: string    # OEM kernel version to use
-  warn_on_mix: boolean  # Warn if mixing Pop!_OS and Ubuntu kernels
-  notes: string         # Multi-line notes about hardware compatibility
-```
-
-**Example:**
-```yaml
-hp_zbook_ultra:
-  emit_notes: true
-  oem_kernel: linux-oem-24.04c
-  warn_on_mix: true
+  warn_on_mix: true          # warn if mixing Pop!_OS and Ubuntu OEM kernels
   notes: |
-    Pop!_OS uses its own kernel. HP ZBook Ultra G1a hardware status:
-    - Fingerprint: Works with fprintd after firmware update
-    - Webcam: Requires AMD ISP4 driver
-    - WiFi: May have stability issues
+    Fingerprint: works with fprintd + Synaptics reader after firmware update.
+    Webcam: sensor OV05C10 behind AMD ISP4, driver `amd_capture`, firmware
+      `/lib/firmware/amdgpu/isp_4_1_1.bin`. Merged in mainline Linux 7.2 (no
+      libcamera needed). Pop 24.04 ships 6.17.9 -> use the OEM kernel, a DKMS
+      backport, or a >= 7.2 kernel until 7.2 lands.
 ```
-
-**Note:** This section is only relevant for HP ZBook Ultra G1a hardware. It provides hardware-specific guidance and kernel recommendations.
 
 ---
 
-## Item Schema
+## theme
 
-Most items in the configuration follow a common schema:
+Theme-related settings that scripts read (the themes directory, etc.). The default theme name
+is deliberately **not** here — see `chezmoi/.chezmoi.toml.tmpl`.
 
-### Required Fields
-
-- `name` or `id`: Identifier for the item
-  - APT packages use `name`
-  - Flatpak apps use `id`
-  - NPM packages use `name` (can include scope)
-
-### Optional Fields
-
-- `install`: Boolean flag (defaults to `true`)
-  - Set to `false` to mark as optional (can install via `cosmikase-install`)
-  - `defaults.install` is currently informational only
-- `desc`: Human-readable description
-- `version`: Version constraint (NPM packages)
-- `alias`: Alternative command name (APT packages)
-- `source`: Special source indicator (e.g., `"source"` for Ghostty)
-- `note`: Additional notes or warnings
-- `url`: Download URL (fonts, installers)
-- `method`: Installation method (installers)
-- `check`: Command to verify installation (installers)
-- `args`: Arguments to pass to installer script (installers)
-
-### Default Behavior
-
-- If `install` is not specified, current tooling treats the item as enabled.
-- `defaults.install` is currently informational and not enforced by Ansible or helper scripts.
-- To make something optional, set `install: false` explicitly.
+```yaml
+theme:
+  dir: ~/.local/share/cosmikase/themes
+```
 
 ---
 
-## Validation Rules
-
-### General Rules
-
-1. **YAML Syntax**: File must be valid YAML
-2. **Section Names**: Must match expected section names (case-sensitive)
-3. **Group Names**: Must match expected group names within sections
-4. **Required Fields**: `name` or `id` is required for all items
-5. **Boolean Values**: `install` must be `true` or `false` (not strings)
-
-### Section-Specific Rules
-
-#### apt
-- `name` is required
-- `alias` is optional (used when package name ≠ command name)
-- `source: "source"` triggers source build (requires additional setup)
-
-#### flatpak
-- `id` is required (must be valid Flatpak application ID)
-- Must use reverse DNS notation (e.g., `com.example.App`)
-
-#### installers
-- `method` must be one of: `script`, `custom_*`, `deb`, `npm`, `bun`, `manual`
-- `check` command must be provided to verify installation
-- Method-specific fields must be provided:
-  - `script`: `url` (and optionally `args`)
-  - `deb`: `deb_url`
-  - `npm`: `npm_package`
-  - `bun`: `bun_package`
-
-#### npm
-- `name` can include scope (e.g., `@scope/package`)
-- `version` defaults to `"latest"` if not specified
-
----
-
-## Examples
-
-### Minimal Configuration
-
-```yaml
-defaults:
-  install: true
-  theme: nord
-
-apt:
-  core:
-    - name: git
-      install: true
-```
-
-### Disabling Default Installation
-
-```yaml
-defaults:
-  install: false  # Everything defaults to disabled
-
-apt:
-  core:
-    - name: git
-      install: true  # Explicitly enable
-    - name: vim
-      # install: false (implicit)
-```
-
-### Optional Software
-
-```yaml
-flatpak:
-  utility:
-    - id: com.spotify.Client
-      desc: Music streaming
-      install: false  # Available via cosmikase-install
-```
-
-### Custom Installer
-
-```yaml
-installers:
-  runtimes:
-    - name: rust
-      method: script
-      url: https://sh.rustup.rs
-      args: -y
-      check: rustc
-      install: true
-```
-
-### Complete Example
-
-See [cosmikase.yaml](../cosmikase.yaml) in the repository root for a complete example with all sections populated.
-
----
-
-## Querying Configuration
-
-Use `cosmikase-config` to query the configuration:
+## Validating the manifest
 
 ```bash
-# Get a value
-cosmikase-config get defaults.theme
+# YAML is well-formed
+python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
 
-# List items in a section/group
-cosmikase-config list apt core
-
-# List only names
-cosmikase-config list apt core --names-only
-
-# List disabled items
-cosmikase-config list flatpak utility --disabled
-
-# Output as JSON
-cosmikase-config list npm --json
+# Preview the whole apply (packages included) without changing anything
+./install.sh --dry-run
 ```
-
-**See Also:**
-- [CLI Reference](cli-reference.md) - Complete `cosmikase-config` documentation
-
----
-
-## Configuration File Location
-
-The tools do not auto-discover configs outside the current directory. Use explicit paths or env vars:
-
-- `cosmikase-config` / `cosmikase-validate-config`: `--config` (default: `./cosmikase.yaml`).
-- `cosmikase-install`: `--config`, or `COSMIKASE_CONFIG`, otherwise `./cosmikase.yaml`.
-- `make install`: pass `CONFIG_FILE=/path/to/config.yaml` (Makefile resolves it).
-
-**Examples:**
-```bash
-# Use default location
-make install
-
-# Use custom config
-make install CONFIG_FILE=/path/to/config.yaml
-
-# Using environment variable
-export COSMIKASE_CONFIG=/path/to/config.yaml
-make install
-```
-
----
 
 ## Best Practices
 
-1. **Version Control**: Keep `cosmikase.yaml` in version control
-2. **Comments**: Use YAML comments (`#`) to document choices
-3. **Grouping**: Keep related packages in the same group
-4. **Descriptions**: Always include `desc` fields for clarity
-5. **Optional Items**: Mark truly optional items as `install: false`
-6. **Testing**: Use `make dry-run` to preview changes before applying
+1. Keep `cosmikase.yaml` in version control.
+2. Comment your choices with `#`.
+3. Keep related packages in the same apt group.
+4. Mark truly optional apt packages `install: false`.
+5. Add version pins next to the runtime they configure, not in prose.
 
----
+## See Also
 
-## Troubleshooting
-
-### Configuration Not Found
-
-```bash
-# Check if file exists
-ls -la cosmikase.yaml
-
-# Verify path
-cosmikase-config --config /path/to/config.yaml get defaults.theme
-```
-
-### Invalid YAML
-
-```bash
-# Validate YAML syntax
-python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
-```
-
-### Query Errors
-
-```bash
-# List available sections
-cosmikase-config list apt  # Will show error with available sections
-
-# List available groups
-cosmikase-config list apt core  # Will show error with available groups if invalid
-```
-
-**See Also:**
+- [CLI Reference](cli-reference.md) — the commands that consume this file.
+- [Design](design.md) — why the manifest is shaped this way.
 - [Troubleshooting Guide](troubleshooting.md)
-- [CLI Reference](cli-reference.md)
-

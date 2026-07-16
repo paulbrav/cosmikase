@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# run_before_05-install-cosmikase.sh — link the repo's bin scripts and themes
+# into place so the rest of chezmoi apply (and the interactive tools) can find
+# them. Runs on every apply (plain run_ script): symlinking is idempotent and
+# cheap, and this way newly added bin scripts are picked up automatically.
+#
+# Symlinks (not copies) point back at the repo so edits are live. Runs in CI too
+# (no network, no packages) so the container test can find bin/cosmikase-preflight.
+set -euo pipefail
+
+REPO="{{ .chezmoi.sourceDir }}/.."
+BIN_SRC="$REPO/bin"
+THEME_SRC="$REPO/themes"
+LOCAL_BIN="$HOME/.local/bin"
+SHARE="$HOME/.local/share/cosmikase"
+
+mkdir -p "$LOCAL_BIN" "$SHARE"
+
+# Link all cosmikase* scripts (skip the sourced-only *.sh lib target name clash).
+if [ -d "$BIN_SRC" ]; then
+    for src in "$BIN_SRC"/cosmikase*; do
+        [ -e "$src" ] || continue
+        name="$(basename "$src")"
+        dest="$LOCAL_BIN/$name"
+        if [ "$(readlink -f "$dest" 2>/dev/null)" != "$(readlink -f "$src")" ]; then
+            ln -sfn "$src" "$dest"
+        fi
+    done
+fi
+
+# Link the theme catalogue to the location the theme hook + manifest expect.
+if [ -d "$THEME_SRC" ]; then
+    dest="$SHARE/themes"
+    if [ "$(readlink -f "$dest" 2>/dev/null)" != "$(readlink -f "$THEME_SRC")" ]; then
+        rm -rf "$dest" 2>/dev/null || true
+        ln -sfn "$THEME_SRC" "$dest"
+    fi
+fi

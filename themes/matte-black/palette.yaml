@@ -1,0 +1,13 @@
+# Colour palette for Matte Black — declared source of truth for generated
+# theme configs. Extracted from cursor.json. Regenerate ghostty.conf and
+# cosmic-term.ron with:  themes/render.py --theme matte-black
+name: Matte Black
+variant: dark
+colors:
+  background: "#121212"
+  foreground: "#bebebe"
+  accent: "#ffc107"
+  sidebar: "#0a0a0a"
+  terminal: "#121212"
+  error: "#d35f5f"
+  warning: "#ffc107"

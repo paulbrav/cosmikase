@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# run_onchange_after_50-systemd-user.sh — reload the systemd --user manager and
+# enable the cosmikase-managed user timers. chezmoi writes the unit files (under
+# ~/.config/systemd/user, guarded by lookPath so they only appear when the tool
+# is installed) but does not enable them; this closes that gap. Idempotent.
+#
+# Reruns only when the set of installed tools changes — their presence is baked
+# into the hash below, so a normal no-op apply skips this script:
+#   agent-balance present: {{ if lookPath "agent-balance" }}yes{{ else }}no{{ end }}
+#   cargo-sweep present:   {{ if lookPath "cargo-sweep" }}yes{{ else }}no{{ end }}
+set -euo pipefail
+
+# Headless containers / CI have no systemd user bus — nothing to enable.
+if [ "${COSMIKASE_CI:-0}" = "1" ]; then
+    echo "==> CI mode: skipping systemd --user setup"
+    exit 0
+fi
+command -v systemctl >/dev/null 2>&1 || exit 0
+[ -n "${XDG_RUNTIME_DIR:-}" ] || exit 0
+systemctl --user daemon-reload 2>/dev/null || exit 0
+
+for unit in cargo-sweep.timer agent-balance.timer; do
+    if [ -f "$HOME/.config/systemd/user/$unit" ]; then
+        echo "==> enabling $unit"
+        systemctl --user enable --now "$unit" 2>/dev/null || true
+    fi
+done

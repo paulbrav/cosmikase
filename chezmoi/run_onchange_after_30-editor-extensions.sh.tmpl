@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# run_onchange_after_30-editor-extensions.sh — install Cursor/VS Code extensions
+# from the applied ~/.config/Cursor/extensions.txt. Delegates to the existing
+# bin/cosmikase-cursor-extensions (no reimplementation). Runs after the file
+# phase so the extensions list is already in place.
+#
+# Reruns when the extensions list changes (guarded so it never errors if the
+# list is ever removed):
+#   extensions-sha256: {{ if stat (joinPath .chezmoi.sourceDir "dot_config" "Cursor" "extensions.txt") }}{{ include "dot_config/Cursor/extensions.txt" | sha256sum }}{{ else }}none{{ end }}
+#
+# CI mode (COSMIKASE_CI=1): skipped (no editor, no GUI).
+set -euo pipefail
+
+CI="${COSMIKASE_CI:-0}"
+if [ "$CI" = "1" ]; then
+    echo "==> CI mode: skipping editor extensions"
+    exit 0
+fi
+
+HELPER="$HOME/.local/bin/cosmikase-cursor-extensions"
+[ -x "$HELPER" ] || HELPER="$(command -v cosmikase-cursor-extensions 2>/dev/null || true)"
+
+if [ -n "$HELPER" ] && { command -v cursor >/dev/null 2>&1 || command -v code >/dev/null 2>&1; }; then
+    echo "==> installing editor extensions"
+    "$HELPER" install || true
+else
+    echo "  (cursor/code or helper not present; skipping editor extensions)"
+fi

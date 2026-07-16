@@ -1,0 +1,13 @@
+{{- /* The other half of the transclip "pair": the granite_speech ASR backend.
+       Guarded on its OWN command so it is never emitted as a broken no-op — if you
+       expose the granite backend under a different name, rename it on PATH or edit
+       this Exec. See docs/private-tools.md (transclip + granite_speach venv). */ -}}
+{{- if lookPath "transclip-granite" -}}
+[Desktop Entry]
+Type=Application
+Name=transclip granite backend (cosmikase)
+Comment=granite_speech ASR model backend that transclip depends on
+Exec={{ lookPath "transclip-granite" }}
+Terminal=false
+X-GNOME-Autostart-enabled=true
+{{ end -}}
