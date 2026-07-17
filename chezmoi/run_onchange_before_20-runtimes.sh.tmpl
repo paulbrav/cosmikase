@@ -4,14 +4,14 @@
 # Every installer is guarded by a command/path check so re-runs are no-ops.
 # x86_64 only (the reference hardware is AMD x86_64).
 #
-# manifest-sha256: {{ include (joinPath .chezmoi.sourceDir ".." "cosmikase.yaml") | sha256sum }}
+# manifest-sha256: {{ include (joinPath .repo_dir "cosmikase.yaml") | sha256sum }}
 #
 # CI mode (COSMIKASE_CI=1): skipped entirely — runtimes are heavy and unneeded
 # for the container smoke test.
 set -euo pipefail
 
-MANIFEST="{{ .chezmoi.sourceDir }}/../cosmikase.yaml"
-MANIFEST_READER="{{ .chezmoi.sourceDir }}/../bin/cosmikase-manifest"
+MANIFEST="{{ .repo_dir }}/cosmikase.yaml"
+MANIFEST_READER="{{ .repo_dir }}/bin/cosmikase-manifest"
 CI="${COSMIKASE_CI:-0}"
 [ -f "$MANIFEST" ] || { echo "manifest not found: $MANIFEST" >&2; exit 1; }
 

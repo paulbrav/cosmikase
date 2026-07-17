@@ -64,18 +64,19 @@ else
     fatal "no apt core packages found (expected one of: ${core_candidates[*]})"
 fi
 
-# 5. Theme layer actually applied (not a silent no-op). run_after_10-setup-theme
-#    copies the active theme's btop.theme to ~/.config/btop/themes/<theme>.theme.
-#    If .themes_dir ever regresses to an unexpandable literal (e.g. "~/..."), the
-#    hook exits early and this file is absent — so its presence proves the hook
-#    resolved an absolute themes dir and did real work. The CI default theme is
-#    "nord" (COSMIKASE_CI skips the prompt), so nord.theme is expected.
+# 5. Theme layer actually applied (not a silent no-op). The
+#    run_onchange_after_10-setup-theme hook copies the active theme's btop.theme
+#    to ~/.config/btop/themes/<theme>.theme. The hook bakes an absolute,
+#    homeDir-based THEMES_DIR at render time; if that dir is missing the hook
+#    exits early and this file is absent — so its presence proves the hook found
+#    the themes dir and did real work. The CI default theme is "nord"
+#    (COSMIKASE_CI skips the prompt), so nord.theme is expected.
 btop_theme_dir="$HOME/.config/btop/themes"
 if compgen -G "$btop_theme_dir/*.theme" >/dev/null 2>&1; then
     applied_theme="$(basename "$(compgen -G "$btop_theme_dir/*.theme" | head -1)")"
     pass "theme hook applied a btop theme ($applied_theme in $btop_theme_dir)"
 else
-    fatal "no btop theme applied (expected $btop_theme_dir/nord.theme) — theme hook silently no-op'd (themes_dir unresolved?)"
+    fatal "no btop theme applied (expected $btop_theme_dir/nord.theme) — theme hook silently no-op'd (themes dir missing?)"
 fi
 
 # 6. bin/cosmikase-preflight runs and exits nonzero-but-cleanly.

@@ -108,7 +108,7 @@ if ! command -v uv >/dev/null 2>&1; then
     echo "  Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
     exit 1
 fi
-if ! "$SCRIPT_DIR/cosmikase-chezmoi" "$THEME" "$THEMES_DIR"; then
+if ! "$SCRIPT_DIR/cosmikase-chezmoi" "$THEME"; then
     echo "Error: Failed to update chezmoi configuration" >&2
     exit 1
 fi

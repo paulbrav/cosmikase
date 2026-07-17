@@ -13,7 +13,9 @@ Makefile            Dev conveniences (help, setup, install, apply, preflight, th
                     lint, test, plugins, plugins-install, clean).
 bin/                Runtime bash scripts (cosmikase menu, theme trio, update, databases,
                     power-helper, preflight, dropterm, wallpapers) + cosmikase-lib.sh
-                    (sourced) + cosmikase-chezmoi (a PEP 723 `uv run --script` helper).
+                    (sourced) + two extensionless Python scripts: cosmikase-chezmoi
+                    (a PEP 723 `uv run --script` helper) and cosmikase-manifest
+                    (the single canonical manifest reader).
 chezmoi/            chezmoi source dir. Dotfiles as dot_* files/templates, COSMIC UX under
                     dot_config/cosmic/, and run_onchange_/run_after_ scripts that read the
                     manifest and install packages. `.chezmoi.toml.tmpl` is the single source
@@ -50,8 +52,9 @@ The chezmoi source directory is `chezmoi/`. Locally you can point chezmoi at it 
   scripts are idempotent and safe to re-run.
 - Reuse helpers from `bin/cosmikase-lib.sh` (`log`, `notify`, `require_theme`, `find_helper`,
   history helpers) instead of reimplementing them.
-- **Python** is limited to one PEP 723 single-file `uv` script (`bin/cosmikase-chezmoi`);
-  keep it lint-clean under `ruff`. Do not reintroduce an installable Python package.
+- **Python** is limited to two extensionless single-file scripts: `bin/cosmikase-chezmoi`
+  (a PEP 723 `uv` script) and `bin/cosmikase-manifest` (the manifest reader); keep both
+  lint-clean under `ruff`. Do not reintroduce an installable Python package.
 - `snake_case` for functions and variables; `UPPER_SNAKE_CASE` for constants and env vars.
 
 ## Security & Secrets

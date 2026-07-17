@@ -11,14 +11,16 @@ source "$SCRIPT_DIR/cosmikase-lib.sh"
 THEMES_DIR="$(find_themes_dir)"
 
 # Single per-editor descriptor table (item 2.6): display|cmd|configdir|pgrep.
-# The apply loop uses display/cmd/configdir; the running-editor loop uses
-# display/pgrep. VS Code's pgrep pattern is anchored to the bare process name
-# ^code$ so it does not match the many command lines that merely contain "code";
-# the others match either case. (The old WM_CLASS column drove the xdotool
+# The apply loop uses display/cmd/configdir; the running-editor loop matches the
+# pgrep pattern against the full command line (pgrep -f). VS Code's pattern is
+# [/]code[[:space:]] — the executable path segment "/code" followed by whitespace
+# (e.g. /usr/share/code/code --type=…) — so it matches a real running VS Code
+# without matching command lines that merely contain the substring "code"; the
+# others match either case. (The old WM_CLASS column drove the xdotool
 # auto-reload branch, which item 2.8 deleted, so it is gone with it.)
 EDITORS=(
     "Cursor|cursor|$HOME/.config/Cursor|[Cc]ursor"
-    "VS Code|code|$HOME/.config/Code|^code$"
+    "VS Code|code|$HOME/.config/Code|[/]code[[:space:]]"
     "Antigravity|antigravity|$HOME/.config/Antigravity|[Aa]ntigravity"
 )
 
@@ -143,7 +145,9 @@ update_settings() {
     fi
 
     # Merge the theme into the existing settings using jq or python. Both paths
-    # produce identical output so the no-jq fallback cannot drift.
+    # write the same settings keys and values; only the serialization differs
+    # (jq emits 2-space indentation, the python fallback 4-space), so the no-jq
+    # fallback cannot drift in meaning.
     if command -v jq >/dev/null 2>&1; then
         local tmp_file
         tmp_file=$(mktemp)

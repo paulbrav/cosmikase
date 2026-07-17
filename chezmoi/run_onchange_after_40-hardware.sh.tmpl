@@ -3,14 +3,14 @@
 # Carries over the udev/power/PAM steps from the old install automation.
 #
 # Reruns when the power helper or the udev rule change:
-#   power-helper-sha256: {{ include (joinPath .chezmoi.sourceDir ".." "bin" "cosmikase-power-helper") | sha256sum }}
-#   udev-rule-sha256:    {{ include (joinPath .chezmoi.sourceDir ".." "cosmikase" "udev" "99-cosmikase-power.rules") | sha256sum }}
+#   power-helper-sha256: {{ include (joinPath .repo_dir "bin" "cosmikase-power-helper") | sha256sum }}
+#   udev-rule-sha256:    {{ include (joinPath .repo_dir "cosmikase" "udev" "99-cosmikase-power.rules") | sha256sum }}
 #
 # Only acts on real hardware: gated on `system76-power` (present on Pop!_OS /
 # System76 machines) and skipped in CI. Best-effort throughout.
 set -euo pipefail
 
-REPO="{{ .chezmoi.sourceDir }}/.."
+REPO="{{ .repo_dir }}"
 CI="${COSMIKASE_CI:-0}"
 
 if [ "$CI" = "1" ]; then

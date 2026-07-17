@@ -104,17 +104,21 @@ reference hardware today.
 
 ### cosmikase-theme
 
-Switch the active theme: updates chezmoi's config, re-applies dotfiles, and nudges running
-apps (Cursor, COSMIC, terminals) to reload.
+Switch the active theme. chezmoi is the single orchestrator: this command validates the
+theme, records history, rewrites `[data].theme` (via `cosmikase-chezmoi`), and runs
+`chezmoi apply --force`. The live application — COSMIC, terminals, editors, and per-app
+assets — is done once by the `run_onchange_after_10-setup-theme` hook, which fires because
+the theme changed. Re-selecting the theme that is already active re-runs the helper scripts
+directly, since `run_onchange` will not refire.
 
 ```bash
 cosmikase-theme <theme-name>
 cosmikase-theme --rollback
 ```
 
-**Common flags:** `--rollback` (previous theme from history), `--no-cursor`, `--no-cosmic`,
-`--no-terminals`, `--no-chezmoi`, `--quiet`. Theme history lives at
-`~/.config/cosmikase/theme-history`.
+**Common flags:** `--rollback` (previous theme from history), `--quiet` / `-q` (suppress
+helper output). Theme history lives at `~/.config/cosmikase/theme-history`. The per-app
+helpers (`cosmikase-theme-cosmic`, `-cursor`, `-terminal`) remain directly callable.
 
 See [themes/README.md](../themes/README.md) and [editor-theming.md](editor-theming.md).
 
@@ -122,7 +126,9 @@ See [themes/README.md](../themes/README.md) and [editor-theming.md](editor-themi
 
 ### cosmikase-wallpapers
 
-Fetch and verify theme wallpapers (not stored in git) into
+Fetch and verify the wallpapers whose upstream source left git. Most wallpapers ship in-tree
+under `themes/<name>/backgrounds/` (git owns their integrity); this command handles only the
+fetchable ones listed in `themes/wallpapers.yaml`, downloading and sha256-verifying them into
 `~/.local/share/cosmikase/backgrounds/<theme>/`.
 
 ```bash

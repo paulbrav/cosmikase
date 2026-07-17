@@ -1,15 +1,16 @@
 # Ruff configuration for cosmikase.
 #
-# There is no installable Python package any more — only one standalone
-# PEP 723 script (bin/cosmikase-chezmoi). This file is the sole home for
-# lint/format config now that pyproject.toml is gone.
+# There is no installable Python package any more — only two standalone,
+# extensionless Python scripts: bin/cosmikase-chezmoi (a PEP 723 `uv run`
+# script) and bin/cosmikase-manifest (the plain python3 manifest reader). This
+# file is the sole home for lint/format config now that pyproject.toml is gone.
 
 line-length = 100
 target-version = "py310"
 
-# cosmikase-chezmoi has no .py extension, so ruff would skip it during a
-# directory scan (`ruff check .`, pre-commit). Include it explicitly.
-extend-include = ["bin/cosmikase-chezmoi"]
+# Neither script has a .py extension, so ruff would skip them during a directory
+# scan (`ruff check .`, pre-commit). Include them explicitly.
+extend-include = ["bin/cosmikase-chezmoi", "bin/cosmikase-manifest"]
 
 [lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

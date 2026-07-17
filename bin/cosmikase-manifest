@@ -19,9 +19,10 @@ Verbs (a dotted <path> like "apt.core" or "runtimes.nvm.version" walks maps):
                                   verbatim.
   get <path> [default]            the scalar at <path>, or [default] ("") if any
                                   path segment is missing.
-  enabled <path>                  "1" if the entry at <path> has a truthy
+  enabled <path>                  "1" if the DECLARED entry at <path> has a truthy
                                   `install` (default true, matching the manifest
-                                  contract), else "0".
+                                  contract), else "0". A wholly-missing entry is
+                                  "0": not in the manifest means not managed.
   records <path> [--key K] <f>... flatten the map-of-lists at <path> into one
                                   line per record: the map key, then <f>...,
                                   joined by the separator. --key limits output to
@@ -71,10 +72,13 @@ def cmd_get(data, args):
 
 def cmd_enabled(data, args):
     entry = resolve(data, args.path)
-    if isinstance(entry, dict):
+    if entry is None:
+        # A wholly-missing entry is not managed: "not in the manifest" means "not
+        # installed". The install-default-true rule applies only to a declared
+        # entry that merely omits `install`.
+        enabled = False
+    elif isinstance(entry, dict):
         enabled = entry.get("install", True)
-    elif entry is None:
-        enabled = True
     else:
         enabled = entry
     print("1" if enabled else "0")

@@ -30,6 +30,11 @@ binary into `~/.local/bin`, and runs `chezmoi init --source ./chezmoi --apply`. 
 `run_onchange_` scripts read `cosmikase.yaml` and install apt/flatpak packages, language
 runtimes, and CLI tools — each step guarded so re-runs are idempotent.
 
+**Updating an already-installed machine:** after pulling new commits, re-run `./install.sh`
+(or `chezmoi init --apply --source ./chezmoi`) rather than a bare `chezmoi apply`. The chezmoi
+config template can gain new `[data]` keys between releases, and only `init` re-renders it — a
+plain `chezmoi apply` against an out-of-date config can fail with `map has no entry for key …`.
+
 ## Hardware Gate — HP ZBook Ultra G1a
 
 This machine is the reference target. `bin/cosmikase-preflight` prints a PASS/FAIL/WARN table
@@ -79,10 +84,11 @@ Each theme is a directory of **curated per-app config files** — `cursor.json`,
 `cosmic-term.ron`, `ghostty.conf`, `btop.theme`, `neovim.lua`, and so on. The theme scripts
 copy these files into place directly; there is no intermediate palette layer to keep in sync.
 
-Wallpapers are **not committed to git**. `themes/wallpapers.yaml` records each file's source
-URL and sha256; `bin/cosmikase-wallpapers fetch [theme]` downloads and verifies them into
-`~/.local/share/cosmikase/backgrounds/`. The default theme is **nord**, defined in exactly one
-place: `chezmoi/.chezmoi.toml.tmpl`.
+Most wallpapers **ship in-tree** under `themes/<name>/backgrounds/`, where git owns their
+integrity. Only wallpapers whose upstream source left git are listed in `themes/wallpapers.yaml`
+(source URL + sha256); `bin/cosmikase-wallpapers fetch [theme]` downloads and sha256-verifies
+those into `~/.local/share/cosmikase/backgrounds/`. The default theme is **nord**, defined in
+exactly one place: `chezmoi/.chezmoi.toml.tmpl`.
 
 ```bash
 cosmikase-theme tokyo-night   # switch theme (updates chezmoi + running apps)

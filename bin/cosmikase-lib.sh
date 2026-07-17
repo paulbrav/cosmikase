@@ -83,6 +83,25 @@ run_helper() {
     fi
 }
 
+# Run an OPTIONAL cosmikase helper best-effort (item 6.2): resolve it with
+# find_helper, run it (never failing the caller) if present, or print a single
+# consistent skip line and continue if it is not installed. This is the sibling
+# of run_helper for callers — chiefly the theme run_onchange hook — that must
+# degrade rather than abort when a helper is absent. if/else, not `find_helper
+# && run || echo skip`, so a helper that ran and exited non-zero is not
+# misreported as skipped.
+run_optional() {
+    local name="$1"
+    shift
+    local helper_path
+    helper_path="$(find_helper "$name")"
+    if [[ -n "$helper_path" ]]; then
+        "$helper_path" "$@" || true
+    else
+        echo "  - Skipping $name (helper not installed)"
+    fi
+}
+
 # Logging function (respects QUIET variable)
 log() {
     if [[ "${QUIET:-false}" != "true" ]]; then

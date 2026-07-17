@@ -1,8 +1,8 @@
 # Pre-commit hooks for cosmikase.
 #
-# After the Python-package removal there is exactly one Python file
-# (bin/cosmikase-chezmoi) and a set of bash scripts. No
-# mypy/pytest of deleted modules, no ansible-lint (Ansible is gone).
+# After the Python-package removal there are two extensionless Python scripts
+# (bin/cosmikase-chezmoi and bin/cosmikase-manifest) and a set of bash scripts.
+# No mypy/pytest of deleted modules, no ansible-lint (Ansible is gone).
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -15,7 +15,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
-      # cosmikase-chezmoi has no .py extension, so match it by path and
+      # The Python scripts have no .py extension, so match them by path and
       # bypass pre-commit's python type detection with types: [file]. The
       # regex also names tests/test_chezmoi.py explicitly: the files: filter
       # overrides ruff-pre-commit's default python discovery, so the test file
@@ -23,10 +23,10 @@ repos:
       - id: ruff
         args: [--fix]
         types: [file]
-        files: ^(bin/cosmikase-chezmoi|tests/test_chezmoi\.py)$
+        files: ^(bin/cosmikase-chezmoi|bin/cosmikase-manifest|tests/test_chezmoi\.py)$
       - id: ruff-format
         types: [file]
-        files: ^(bin/cosmikase-chezmoi|tests/test_chezmoi\.py)$
+        files: ^(bin/cosmikase-chezmoi|bin/cosmikase-manifest|tests/test_chezmoi\.py)$
 
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0

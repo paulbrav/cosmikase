@@ -16,7 +16,9 @@ set -euo pipefail
 THEME="{{ .theme }}"
 THEMES_DIR="{{ .chezmoi.homeDir }}/.local/share/cosmikase/themes"
 THEME_PATH="$THEMES_DIR/$THEME"
-LOCAL_BIN="$HOME/.local/bin"
+# The per-app helpers resolve their themes dir from this env (find_themes_dir
+# honours $THEMES_DIR), so export it once for every helper this hook runs.
+export THEMES_DIR
 
 echo "Setting up theme: $THEME"
 
@@ -56,45 +58,38 @@ if [[ -f "$THEME_PATH/neovim.lua" ]]; then
     echo "  - Copied neovim theme"
 fi
 
-# Fetch wallpapers whose source left git (offline-safe, sha256-verified, idempotent).
-if [[ -x "$LOCAL_BIN/cosmikase-wallpapers" ]]; then
-    "$LOCAL_BIN/cosmikase-wallpapers" fetch "$THEME" >/dev/null 2>&1 || true
-elif command -v cosmikase-wallpapers >/dev/null 2>&1; then
-    cosmikase-wallpapers fetch "$THEME" >/dev/null 2>&1 || true
+# The live application (wallpapers, COSMIC, editors, terminals) runs through the
+# per-app helpers. Resolve and run them via the shared library's find_helper /
+# run_optional (item 6.2) instead of hand-rolling a resolve-or-skip triple per
+# helper. cosmikase-lib.sh is symlinked into ~/.local/bin during the file phase,
+# before this run_after hook; if that symlink is somehow missing the machine is
+# already broken, so skip live application rather than error under set -u.
+LIB="$HOME/.local/bin/cosmikase-lib.sh"
+if [[ ! -r "$LIB" ]]; then
+    echo "  - Skipping live theme application (cosmikase-lib.sh not found)"
+    echo "Theme '$THEME' applied successfully!"
+    exit 0
+fi
+# shellcheck source=bin/cosmikase-lib.sh
+. "$LIB"
+
+# Fetch wallpapers whose source left git (offline-safe, sha256-verified, idempotent, silent).
+wallpapers="$(find_helper cosmikase-wallpapers)"
+if [[ -n "$wallpapers" ]]; then
+    "$wallpapers" fetch "$THEME" >/dev/null 2>&1 || true
 fi
 
-# Apply COSMIC theme (wallpaper, colors, terminal color scheme, dark/light mode)
-if [[ -x "$LOCAL_BIN/cosmikase-theme-cosmic" ]]; then
-    echo "  - Applying COSMIC theme..."
-    THEMES_DIR="$THEMES_DIR" "$LOCAL_BIN/cosmikase-theme-cosmic" "$THEME" --quiet || true
-elif command -v cosmikase-theme-cosmic >/dev/null 2>&1; then
-    echo "  - Applying COSMIC theme..."
-    THEMES_DIR="$THEMES_DIR" cosmikase-theme-cosmic "$THEME" --quiet || true
-else
-    echo "  - Skipping COSMIC theme (helper not installed)"
-fi
+# Apply COSMIC theme (wallpaper, colors, terminal color scheme, dark/light mode).
+echo "  - Applying COSMIC theme..."
+run_optional cosmikase-theme-cosmic "$THEME" --quiet
 
 # Apply editor theme (Cursor / VS Code / Antigravity). The helper is the single
 # writer of editor settings.json now that the render-time template is gone.
-if [[ -x "$LOCAL_BIN/cosmikase-theme-cursor" ]]; then
-    echo "  - Applying editor theme..."
-    THEMES_DIR="$THEMES_DIR" "$LOCAL_BIN/cosmikase-theme-cursor" "$THEME" --quiet || true
-elif command -v cosmikase-theme-cursor >/dev/null 2>&1; then
-    echo "  - Applying editor theme..."
-    THEMES_DIR="$THEMES_DIR" cosmikase-theme-cursor "$THEME" --quiet || true
-else
-    echo "  - Skipping editor theme (helper not installed)"
-fi
+echo "  - Applying editor theme..."
+run_optional cosmikase-theme-cursor "$THEME" --quiet
 
-# Reload terminal emulators (ghostty + cosmic-term)
-if [[ -x "$LOCAL_BIN/cosmikase-theme-terminal" ]]; then
-    echo "  - Reloading terminals..."
-    "$LOCAL_BIN/cosmikase-theme-terminal" --quiet || true
-elif command -v cosmikase-theme-terminal >/dev/null 2>&1; then
-    echo "  - Reloading terminals..."
-    cosmikase-theme-terminal --quiet || true
-else
-    echo "  - Skipping terminal reload (helper not installed)"
-fi
+# Reload terminal emulators (ghostty + cosmic-term).
+echo "  - Reloading terminals..."
+run_optional cosmikase-theme-terminal --quiet
 
 echo "Theme '$THEME' applied successfully!"

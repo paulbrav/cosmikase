@@ -4,17 +4,17 @@
 # This is a chezmoi run_onchange script: it re-runs whenever cosmikase.yaml
 # changes (the hash below is part of the rendered content). The manifest is read
 # through the one canonical reader bin/cosmikase-manifest (python3 + PyYAML). The
-# manifest lives one level above the chezmoi source dir; chezmoi resolves
-# .chezmoi.sourceDir to an absolute path at apply.
+# manifest lives at the repo root, reached via the .repo_dir [data] key (the
+# parent of the chezmoi source dir), resolved to an absolute path at apply.
 #
-# manifest-sha256: {{ include (joinPath .chezmoi.sourceDir ".." "cosmikase.yaml") | sha256sum }}
+# manifest-sha256: {{ include (joinPath .repo_dir "cosmikase.yaml") | sha256sum }}
 #
 # CI mode (COSMIKASE_CI=1): install ONLY apt.core, then stop — no gui/system,
 # no flatpak, no fonts, no ghostty PPA. Keeps the container smoke test fast.
 set -euo pipefail
 
-MANIFEST="{{ .chezmoi.sourceDir }}/../cosmikase.yaml"
-MANIFEST_READER="{{ .chezmoi.sourceDir }}/../bin/cosmikase-manifest"
+MANIFEST="{{ .repo_dir }}/cosmikase.yaml"
+MANIFEST_READER="{{ .repo_dir }}/bin/cosmikase-manifest"
 CI="${COSMIKASE_CI:-0}"
 
 [ -f "$MANIFEST" ] || { echo "manifest not found: $MANIFEST" >&2; exit 1; }

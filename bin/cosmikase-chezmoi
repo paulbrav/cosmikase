@@ -9,7 +9,7 @@ This is the single-file, dependency-light successor to the deleted
 ``cosmikase.chezmoi`` Python module. It preserves the exact CLI contract that
 ``bin/cosmikase-theme`` relies on:
 
-    cosmikase-chezmoi <theme> <themes_dir>
+    cosmikase-chezmoi <theme>
 
 It writes ``~/.config/chezmoi/chezmoi.toml`` atomically (temp file + rename),
 preserving any pre-existing keys and comments (via tomlkit), and exits 0 on
@@ -39,12 +39,11 @@ _DEFAULTS: dict[str, object] = {
 }
 
 
-def update_chezmoi_data(theme: str, themes_dir: str) -> bool:
+def update_chezmoi_data(theme: str) -> bool:
     """Update chezmoi.toml's ``[data]`` section with the selected theme.
 
     Args:
         theme: Theme name to set.
-        themes_dir: Directory containing themes.
 
     Returns:
         True on success, False on any handled error (the existing file is left
@@ -80,9 +79,9 @@ def update_chezmoi_data(theme: str, themes_dir: str) -> bool:
         doc["data"] = tomlkit.table()
     data = doc["data"]
 
-    # Always set the theme and themes_dir.
+    # Always set the theme. (themes_dir is a machine constant, not template data:
+    # nothing renders it, so it is intentionally not written here.)
     data["theme"] = theme
-    data["themes_dir"] = themes_dir
 
     # Fill in defaults only where the user has not set a value.
     for key, val in _DEFAULTS.items():
@@ -103,18 +102,17 @@ def update_chezmoi_data(theme: str, themes_dir: str) -> bool:
 
 
 def _main() -> None:
-    """CLI entry point: ``cosmikase-chezmoi <theme> <themes_dir>``."""
+    """CLI entry point: ``cosmikase-chezmoi <theme>``."""
     import argparse
     import sys
 
     parser = argparse.ArgumentParser(
-        description="Update chezmoi's [data] section (theme + themes_dir) atomically.",
+        description="Update chezmoi's [data] section (theme) atomically.",
     )
     parser.add_argument("theme", help="Theme name to write to chezmoi data")
-    parser.add_argument("themes_dir", help="Absolute path to the themes directory")
 
     args = parser.parse_args()
-    sys.exit(0 if update_chezmoi_data(args.theme, args.themes_dir) else 1)
+    sys.exit(0 if update_chezmoi_data(args.theme) else 1)
 
 
 if __name__ == "__main__":

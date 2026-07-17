@@ -98,7 +98,7 @@ apt:
   # System / hardware — skipped in CI
   system:
     - { name: docker.io }
-    # HP ZBook Ultra webcam verification + dictation injection (see hp_zbook_ultra)
+    # HP ZBook Ultra webcam verification + dictation injection (see docs/troubleshooting.md)
     - { name: v4l-utils }
     - { name: ydotool }
     # Gaming (opt-in)
