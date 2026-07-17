@@ -4,8 +4,6 @@
 CHEZMOI_SOURCE := $(CURDIR)/chezmoi
 PLUGINS := exa bw ssh man clip
 PLUGIN_ROOT := $(HOME)/.local/share/pop-launcher/plugins
-# Shell scripts to lint: install.sh plus every bin/ file with a sh/bash shebang.
-SHELL_SCRIPTS := install.sh $(shell for f in bin/*; do head -1 "$$f" 2>/dev/null | grep -qE 'sh$$' && printf '%s ' "$$f"; done)
 
 .PHONY: help setup install apply preflight theme lint test plugins plugins-install clean
 
@@ -41,9 +39,9 @@ theme:
 	./bin/cosmikase-theme
 
 lint:
-	shellcheck $(SHELL_SCRIPTS)
+	./scripts/lint.sh
 	@if command -v ruff >/dev/null 2>&1; then \
-	  ruff check bin/cosmikase-chezmoi; \
+	  ruff check .; \
 	else echo "ruff not installed; skipping python lint"; fi
 
 test:

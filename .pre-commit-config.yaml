@@ -16,14 +16,17 @@ repos:
     rev: v0.4.4
     hooks:
       # cosmikase-chezmoi has no .py extension, so match it by path and
-      # bypass pre-commit's python type detection with types: [file].
+      # bypass pre-commit's python type detection with types: [file]. The
+      # regex also names tests/test_chezmoi.py explicitly: the files: filter
+      # overrides ruff-pre-commit's default python discovery, so the test file
+      # would otherwise be skipped by this hook.
       - id: ruff
         args: [--fix]
         types: [file]
-        files: ^bin/cosmikase-chezmoi$
+        files: ^(bin/cosmikase-chezmoi|tests/test_chezmoi\.py)$
       - id: ruff-format
         types: [file]
-        files: ^bin/cosmikase-chezmoi$
+        files: ^(bin/cosmikase-chezmoi|tests/test_chezmoi\.py)$
 
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0

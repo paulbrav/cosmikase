@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [master, main]
   workflow_dispatch:
-    inputs:
-      run_smoke:
-        description: "Run container smoke test"
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   shellcheck:
@@ -20,20 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run ShellCheck on install.sh
-        run: shellcheck install.sh
-
-      - name: Run ShellCheck on bin scripts
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: './bin'
-          severity: warning
-
-      - name: Run ShellCheck on test scripts
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: './tests'
-          severity: warning
+      # scripts/lint.sh is the single definition of which scripts get checked
+      # and at what severity, shared with `make lint` (ubuntu-latest ships
+      # shellcheck preinstalled).
+      - name: Run ShellCheck (install.sh, bin/, scripts/, tests/)
+        run: ./scripts/lint.sh
 
   python:
     name: Python Lint
@@ -46,14 +31,14 @@ jobs:
         with:
           version: "latest"
 
-      # The Python package was removed; only one single-file script remains.
-      # ruff config lives in ruff.toml (extend-include picks up the
-      # extensionless bin/cosmikase-chezmoi).
+      # ruff config lives in ruff.toml: extend-include picks up the
+      # extensionless bin/cosmikase-chezmoi and a bare `.` discovers the rest
+      # (tests/*.py). No hardcoded file list — that is what ruff.toml is for.
       - name: Run ruff check
-        run: uvx ruff check bin/cosmikase-chezmoi
+        run: uvx ruff check .
 
       - name: Run ruff format check
-        run: uvx ruff format --check bin/cosmikase-chezmoi
+        run: uvx ruff format --check .
 
   tests:
     name: Pytest
@@ -69,17 +54,6 @@ jobs:
       # No pyproject.toml — run pytest in uv's no-project mode with deps injected.
       - name: Run pytest
         run: uv run --with pytest,tomlkit,pyyaml pytest tests/ -x -q
-
-  container_smoke:
-    name: Container Smoke
-    runs-on: ubuntu-latest
-    needs: tests
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_smoke == 'true' }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run container smoke test
-        run: ENGINE=docker ./tests/container-smoke.sh
 
   yaml:
     name: YAML Lint
