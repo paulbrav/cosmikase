@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# run_onchange_after_30-editor-extensions.sh — install Cursor/VS Code extensions
+# from the applied ~/.config/Cursor/extensions.txt. Delegates to the existing
+# bin/cosmikase-cursor-extensions (no reimplementation). Runs after the file
+# phase so the extensions list is already in place.
+#
+# Reruns when the extensions list changes (guarded so it never errors if the
+# list is ever removed):
+#   extensions-sha256: {{ if stat (joinPath .chezmoi.sourceDir "dot_config" "Cursor" "extensions.txt") }}{{ include "dot_config/Cursor/extensions.txt" | sha256sum }}{{ else }}none{{ end }}
+#
+# CI mode (COSMIKASE_CI=1): skipped (no editor, no GUI).
+set -euo pipefail
+
+CI="${COSMIKASE_CI:-0}"
+if [ "$CI" = "1" ]; then
+    echo "==> CI mode: skipping editor extensions"
+    exit 0
+fi
+
+# Resolve helpers through the shared library's find_helper (item 6.2). It is
+# symlinked into ~/.local/bin during the file phase, before this run_after hook.
+LIB="$HOME/.local/bin/cosmikase-lib.sh"
+# shellcheck source=bin/cosmikase-lib.sh
+[ -r "$LIB" ] && . "$LIB"
+# Fallback if the shared-lib symlink is somehow absent (helpers would be too).
+if ! declare -F find_helper >/dev/null 2>&1; then
+    find_helper() { command -v "$1" 2>/dev/null || true; }
+fi
+
+HELPER="$(find_helper cosmikase-cursor-extensions)"
+
+if [ -n "$HELPER" ] && { command -v cursor >/dev/null 2>&1 || command -v code >/dev/null 2>&1; }; then
+    echo "==> installing editor extensions"
+    "$HELPER" install || true
+
+    # Seed the theme's editor colors on this bootstrap too (item 4.1: the helper
+    # owns editor theming). The theme is resolved at runtime from the `current`
+    # symlink so this hook stays keyed on extensions.txt only — a plain theme
+    # switch goes through run_onchange_after_10 and is NOT re-applied here.
+    THEME_HELPER="$(find_helper cosmikase-theme-cursor)"
+    CURRENT_LINK="$(readlink "$HOME/.local/share/cosmikase/current" 2>/dev/null || true)"
+    if [ -n "$THEME_HELPER" ] && [ -n "$CURRENT_LINK" ]; then
+        "$THEME_HELPER" "$(basename "$CURRENT_LINK")" --quiet --no-reload || true
+    fi
+else
+    echo "  (cursor/code or helper not present; skipping editor extensions)"
+fi

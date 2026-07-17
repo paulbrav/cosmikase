@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# cosmikase-wallpapers - fetch/verify theme wallpapers listed in
+# themes/wallpapers.yaml. The manifest lists only wallpapers with a known,
+# byte-verifiable upstream source; those are kept out of git and restored
+# (sha256-verified) into
+#   ${XDG_DATA_HOME:-$HOME/.local/share}/cosmikase/backgrounds/<theme>/
+# Wallpapers without a verifiable source are not listed; they ship in-tree under
+# themes/<name>/backgrounds/ and git owns their integrity.
+#
+# Usage:
+#   cosmikase-wallpapers fetch [theme]     download missing wallpapers (all themes, or one)
+#   cosmikase-wallpapers verify [theme]    check sha256 of fetched wallpapers
+#   cosmikase-wallpapers list [theme]      show each wallpaper and its state
+#
+# Offline-safe: fetch warns and continues if the network is unavailable.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
+
+RUNTIME_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/cosmikase/backgrounds"
+
+# Locate wallpapers.yaml (env override, themes dir, or script-relative repo).
+find_manifest() {
+    if [[ -n "${COSMIKASE_WALLPAPERS_MANIFEST:-}" ]] && [[ -f "$COSMIKASE_WALLPAPERS_MANIFEST" ]]; then
+        echo "$COSMIKASE_WALLPAPERS_MANIFEST"; return 0
+    fi
+    local themes_dir
+    themes_dir="$(find_themes_dir)"
+    if [[ -f "$themes_dir/wallpapers.yaml" ]]; then
+        echo "$themes_dir/wallpapers.yaml"; return 0
+    fi
+    if [[ -f "$SCRIPT_DIR/../themes/wallpapers.yaml" ]]; then
+        (cd "$SCRIPT_DIR/../themes" && echo "$PWD/wallpapers.yaml"); return 0
+    fi
+    return 1
+}
+
+# Emit rows "theme␟filename␟sha256␟url" (␟ = ASCII Unit Separator, 0x1f) for the
+# requested theme (or all) via the one canonical manifest reader. `records`
+# flattens the themes map-of-lists, prefixing each record with its theme key.
+manifest_rows() {
+    local manifest="$1" want_theme="${2:-}"
+    "$SCRIPT_DIR/cosmikase-manifest" -m "$manifest" records --key "$want_theme" themes filename sha256 url
+}
+
+sha_of() { sha256sum "$1" | cut -d' ' -f1; }
+
+cmd_fetch() {
+    local want_theme="${1:-}" manifest failures=0 fetched=0 skipped=0
+    manifest="$(find_manifest)" || { echo "error: wallpapers.yaml not found" >&2; return 1; }
+
+    if ! command -v curl >/dev/null 2>&1; then
+        log "curl not available; cannot fetch wallpapers (offline-safe skip)"
+        return 0
+    fi
+
+    local theme fn sha url dest tmp got
+    while IFS=$'\x1f' read -r theme fn sha url; do
+        dest="$RUNTIME_DIR/$theme/$fn"
+        if [[ -f "$dest" ]] && [[ "$(sha_of "$dest")" == "$sha" ]]; then
+            skipped=$((skipped + 1)); continue
+        fi
+        mkdir -p "$RUNTIME_DIR/$theme"
+        tmp="$(mktemp "$RUNTIME_DIR/$theme/.$fn.XXXXXX")"
+        if curl -fsSL --max-time 120 "$url" -o "$tmp" 2>/dev/null; then
+            got="$(sha_of "$tmp")"
+            if [[ "$got" == "$sha" ]]; then
+                mv -f "$tmp" "$dest"
+                chmod 0644 "$dest"
+                log "  fetched $theme/$fn"
+                fetched=$((fetched + 1))
+            else
+                rm -f "$tmp"
+                echo "  sha256 mismatch for $theme/$fn (got ${got:0:12}, want ${sha:0:12})" >&2
+                failures=$((failures + 1))
+            fi
+        else
+            rm -f "$tmp"
+            log "  could not download $theme/$fn (offline?)"
+        fi
+    done < <(manifest_rows "$manifest" "$want_theme")
+
+    log "wallpapers: $fetched fetched, $skipped already present"
+    [[ "$failures" -eq 0 ]]
+}
+
+cmd_verify() {
+    local want_theme="${1:-}" manifest bad=0 ok=0 missing=0
+    manifest="$(find_manifest)" || { echo "error: wallpapers.yaml not found" >&2; return 1; }
+
+    # Only fetchable wallpapers are checked here; in-tree wallpapers are git's to
+    # verify (git status / git fsck), not this script's.
+    local theme fn sha url path got
+    while IFS=$'\x1f' read -r theme fn sha url; do
+        path="$RUNTIME_DIR/$theme/$fn"
+        if [[ ! -f "$path" ]]; then
+            missing=$((missing + 1)); continue
+        fi
+        got="$(sha_of "$path")"
+        if [[ "$got" == "$sha" ]]; then
+            ok=$((ok + 1))
+        else
+            echo "MISMATCH $theme/$fn (got ${got:0:12}, want ${sha:0:12})" >&2
+            bad=$((bad + 1))
+        fi
+    done < <(manifest_rows "$manifest" "$want_theme")
+
+    echo "verify: $ok ok, $bad bad, $missing not-yet-fetched"
+    [[ "$bad" -eq 0 ]]
+}
+
+cmd_list() {
+    local want_theme="${1:-}" manifest
+    manifest="$(find_manifest)" || { echo "error: wallpapers.yaml not found" >&2; return 1; }
+    local theme fn sha url state
+    while IFS=$'\x1f' read -r theme fn sha url; do
+        if [[ -f "$RUNTIME_DIR/$theme/$fn" ]]; then
+            state="fetched"
+        else
+            state="fetchable"
+        fi
+        printf '%-10s %-14s %s/%s\n' "$state" "$theme" "$theme" "$fn"
+    done < <(manifest_rows "$manifest" "$want_theme")
+}
+
+usage() {
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+main() {
+    local sub="${1:-}"; shift || true
+    case "$sub" in
+        fetch)  cmd_fetch "${1:-}" ;;
+        verify) cmd_verify "${1:-}" ;;
+        list)   cmd_list "${1:-}" ;;
+        -h|--help|help|"") usage ;;
+        *) echo "unknown command: $sub" >&2; usage; return 1 ;;
+    esac
+}
+
+main "$@"

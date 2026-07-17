@@ -1,0 +1,13 @@
+(
+    name: "Clipboard History",
+    description: "Browse and paste from clipboard history via cliphist",
+    bin: (
+        path: "clip-launcher",
+    ),
+    icon: Name("edit-paste"),
+    query: (
+        isolate: true,
+        regex: "^clip ",
+    )
+)
+

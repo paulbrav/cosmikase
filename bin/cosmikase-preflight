@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# cosmikase-preflight — is this machine ready for the cosmikase COSMIC setup?
+#
+# Prints a PASS/WARN/FAIL table for the HP ZBook Ultra G1a hardware gate and the
+# COSMIC desktop. Exits 0 only when every check is PASS. It is safe to run today
+# on non-COSMIC reference hardware — unmet desktop checks report WARN, not crash.
+#
+# Webcam facts: AMD ISP4 camera (OmniVision OV05C10), driver `amd_capture`,
+# firmware /lib/firmware/amdgpu/isp_4_1_1.bin; merged in mainline Linux 7.2.
+# Pop!_OS 24.04 ships 6.17.x, so it needs the OEM kernel, a DKMS backport, or
+# a kernel >= 7.2.
+set -uo pipefail
+
+PASS_N=0; WARN_N=0; FAIL_N=0
+ROWS=()
+
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+    C_PASS=$'\033[32m'; C_WARN=$'\033[33m'; C_FAIL=$'\033[31m'; C_OFF=$'\033[0m'
+else
+    C_PASS=""; C_WARN=""; C_FAIL=""; C_OFF=""
+fi
+
+record() { # $1 status(PASS|WARN|FAIL)  $2 label  $3 detail
+    case "$1" in
+        PASS) PASS_N=$((PASS_N+1)) ;;
+        WARN) WARN_N=$((WARN_N+1)) ;;
+        FAIL) FAIL_N=$((FAIL_N+1)) ;;
+    esac
+    ROWS+=("$1"$'\t'"$2"$'\t'"$3")
+}
+
+# ── COSMIC session ───────────────────────────────────────────────────────────
+if printf '%s' "${XDG_CURRENT_DESKTOP:-}" | grep -qi cosmic || pgrep -x cosmic-comp >/dev/null 2>&1; then
+    record PASS "COSMIC session" "COSMIC desktop detected"
+elif command -v cosmic-session >/dev/null 2>&1; then
+    record WARN "COSMIC session" "COSMIC installed but not the active session"
+else
+    record WARN "COSMIC session" "not running COSMIC (fine on reference hardware)"
+fi
+
+# ── Kernel >= 7.2 OR amd_capture module ──────────────────────────────────────
+kver="$(uname -r)"; kmaj="${kver%%.*}"; krest="${kver#*.}"; kmin="${krest%%.*}"
+kernel_ok=1
+case "$kmaj" in ''|*[!0-9]*) kernel_ok=0 ;; esac
+case "$kmin" in ''|*[!0-9]*) kmin=0 ;; esac
+if [ "$kernel_ok" = 1 ] && { [ "$kmaj" -gt 7 ] || { [ "$kmaj" -eq 7 ] && [ "$kmin" -ge 2 ]; }; }; then
+    record PASS "Webcam driver" "kernel $kver >= 7.2 (amd_capture in mainline)"
+elif modinfo amd_capture >/dev/null 2>&1; then
+    record PASS "Webcam driver" "amd_capture module available (kernel $kver)"
+else
+    record FAIL "Webcam driver" "kernel $kver < 7.2 and no amd_capture module (need OEM kernel/DKMS)"
+fi
+
+# ── ISP firmware ─────────────────────────────────────────────────────────────
+if compgen -G "/lib/firmware/amdgpu/isp_4_1_1.bin*" >/dev/null 2>&1; then
+    record PASS "Webcam firmware" "isp_4_1_1.bin present"
+else
+    record FAIL "Webcam firmware" "/lib/firmware/amdgpu/isp_4_1_1.bin missing"
+fi
+
+# ── V4L2 node (nice-to-have) ─────────────────────────────────────────────────
+if compgen -G "/dev/video*" >/dev/null 2>&1; then
+    record PASS "V4L2 node" "$(find /dev -maxdepth 1 -name 'video*' 2>/dev/null | sort | tr '\n' ' ')"
+else
+    record WARN "V4L2 node" "no /dev/video* (camera not bound yet)"
+fi
+
+# ── Fingerprint (Synaptics + fprintd) ────────────────────────────────────────
+has_fprintd=0
+command -v fprintd-enroll >/dev/null 2>&1 && has_fprintd=1
+synaptics=0
+if command -v lsusb >/dev/null 2>&1 && lsusb 2>/dev/null | grep -qiE "synaptics|06cb:"; then synaptics=1; fi
+if [ "$has_fprintd" = 1 ] && [ "$synaptics" = 1 ]; then
+    record PASS "Fingerprint" "fprintd + Synaptics sensor present"
+elif [ "$has_fprintd" = 1 ]; then
+    record WARN "Fingerprint" "fprintd present; Synaptics sensor not detected"
+else
+    record WARN "Fingerprint" "fprintd not installed"
+fi
+
+# ── Power udev rule ──────────────────────────────────────────────────────────
+if [ -f /etc/udev/rules.d/99-cosmikase-power.rules ] && [ -x /usr/local/bin/cosmikase-power-helper ]; then
+    record PASS "Power automation" "udev rule + helper installed"
+else
+    record WARN "Power automation" "udev rule/helper not installed (run install.sh)"
+fi
+
+# ── Flathub reachable ────────────────────────────────────────────────────────
+if command -v curl >/dev/null 2>&1 && curl -sf --max-time 6 -o /dev/null https://flathub.org/ 2>/dev/null; then
+    record PASS "Flathub" "reachable"
+else
+    record WARN "Flathub" "not reachable (offline or blocked)"
+fi
+
+# ── Disk space (>= 10 GiB free on \$HOME) ─────────────────────────────────────
+avail_g="$(df -BG --output=avail "$HOME" 2>/dev/null | tail -1 | tr -dc '0-9')"
+if [ -n "$avail_g" ] && [ "$avail_g" -ge 10 ]; then
+    record PASS "Disk space" "${avail_g}G free on \$HOME"
+elif [ -n "$avail_g" ]; then
+    record WARN "Disk space" "only ${avail_g}G free on \$HOME (10G+ recommended)"
+else
+    record WARN "Disk space" "could not determine free space"
+fi
+
+# ── Render table ─────────────────────────────────────────────────────────────
+echo
+printf '  %-8s %-18s %s\n' "STATUS" "CHECK" "DETAIL"
+printf '  %-8s %-18s %s\n' "------" "-----" "------"
+for row in "${ROWS[@]}"; do
+    IFS=$'\t' read -r st label detail <<<"$row"
+    case "$st" in
+        PASS) col="$C_PASS" ;;
+        WARN) col="$C_WARN" ;;
+        FAIL) col="$C_FAIL" ;;
+        *)    col="" ;;
+    esac
+    printf '  %b%-8s%b %-18s %s\n' "$col" "$st" "$C_OFF" "$label" "$detail"
+done
+echo
+echo "  Summary: ${PASS_N} pass, ${WARN_N} warn, ${FAIL_N} fail"
+
+if [ "$PASS_N" -gt 0 ] && [ "$WARN_N" -eq 0 ] && [ "$FAIL_N" -eq 0 ]; then
+    echo "  All checks passed — ready for cosmikase."
+    exit 0
+fi
+exit 1

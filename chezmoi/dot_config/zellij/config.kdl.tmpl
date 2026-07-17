@@ -1,7 +1,10 @@
 // Zellij configuration template for Cosmikase
 // Managed by chezmoi
-
-theme "{{ .theme }}"
+//
+// No `theme` line: only a few cosmikase theme names match a zellij built-in
+// theme, so the rest silently fell back to zellij's default. Rather than ship a
+// per-theme mapping, zellij uses its built-in default theme for every cosmikase
+// theme — remove this note and add `theme "<name>"` if you want a specific one.
 
 // Use a compact layout by default
 default_layout "compact"

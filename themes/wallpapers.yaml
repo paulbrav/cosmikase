@@ -1,0 +1,76 @@
+# Wallpaper fetch manifest for cosmikase themes.
+#
+# Lists ONLY the wallpapers with a known, byte-verifiable upstream source. Those
+# files are kept out of git to keep the repo small; bin/cosmikase-wallpapers
+# re-fetches them (sha256-verified) into
+#   ${XDG_DATA_HOME:-~/.local/share}/cosmikase/backgrounds/<theme>/
+#
+# Wallpapers without a verifiable upstream source are NOT listed here — they ship
+# in-tree under themes/<name>/backgrounds/, where git already owns their integrity.
+# Attribution and provenance live in themes/README.md.
+#
+# Each record: filename + url + sha256.
+themes:
+  kanagawa:
+    - filename: 1-kanagawa.jpg
+      url: https://raw.githubusercontent.com/basecamp/omarchy/master/themes/kanagawa/backgrounds/1-kanagawa.jpg
+      sha256: 9b817d717688539f0db87603b661992839c3cbb5d4918a02a4efc05c9f88b27d
+  matte-black:
+    - filename: 0-ship-at-sea.jpg
+      url: https://raw.githubusercontent.com/basecamp/omarchy/master/themes/matte-black/backgrounds/0-ship-at-sea.jpg
+      sha256: 55fa691adfd3fb8a9102b826a28d8de679938f04879799da499b8ace2fe039ac
+  pop-default:
+    - filename: 1-pop-default.jpg
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-fractal-mountains.png
+      sha256: 8ac25ce58679e32761789e9c8015d64d3e5efb3bb8abb8bf1fe5674b2dcce585
+    - filename: 1-pop-fractal-mountains.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-fractal-mountains.png
+      sha256: 8ac25ce58679e32761789e9c8015d64d3e5efb3bb8abb8bf1fe5674b2dcce585
+    - filename: kate-hazen-COSMIC-desktop-wallpaper.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-COSMIC-desktop-wallpaper.png
+      sha256: 20dadacaf0b080f7d1fe36a8c1c52a2f1e7731fec627727d4d151ce0ee169613
+    - filename: kate-hazen-mort1mer.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-mort1mer.png
+      sha256: d7af3671b7dd33829d99b37e66e56f79a0805cfd2795f9bf873e56d882faf2bb
+    - filename: kate-hazen-pop-m3lvin.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-m3lvin.png
+      sha256: bd3985ac7862a1b1b1b6ddaa1d62ce484ebbd2f3576845662d7df6afc7fb894a
+    - filename: kate-hazen-pop-retro1.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-retro1.png
+      sha256: 1edfb33f45ed6baaaec03d0967464cd5af0a33d86a593c19a343be605821f2e6
+    - filename: kate-hazen-pop-retro2.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-retro2.png
+      sha256: 9cce6111f5445ab8d0f14bff346df034d7b79f0d5316f18d46f71c83e08309b8
+    - filename: kate-hazen-pop-space.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-pop-space.png
+      sha256: 95fa00cf12286199fcf9f97256937f2d71aaf38ff40807cfb9130a53784d0813
+    - filename: kate-hazen-unleash-your-robot-blue.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-unleash-your-robot-blue.png
+      sha256: f7fc1451d5a4aa7d8df1c4144a86131ba11711ad874b1497ffc00fde1b784dbc
+    - filename: kate-hazen-unleash-your-robot.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/kate-hazen-unleash-your-robot.png
+      sha256: bb04e9090371ce92cd4013c43e8973d0f49383dad423ff1f345701bf607a9e5a
+    - filename: nick-nazzaro-bedroom.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-bedroom.png
+      sha256: 75f303714d68dad77aa60f859688f4046657b2551e05e673ac096a0ee470817e
+    - filename: nick-nazzaro-desert.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-desert.png
+      sha256: a696180658501a2689d52d992c73fdd910f39709e32487f50acf684ca353aa59
+    - filename: nick-nazzaro-ice-cave.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-ice-cave.png
+      sha256: 607933d283d0c5f71eac37c144eb8db073e4fe83983854ba684962509342c502
+    - filename: nick-nazzaro-jungle-green.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-jungle-green.png
+      sha256: 7eab639a280b4d6574d9874508716a599ac809c01fadee36507b51f2e1e9baac
+    - filename: nick-nazzaro-jungle-red.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-jungle-red.png
+      sha256: da563ed2700fdfbc53bae2190092de7d8f4fd75e0021f75925d65f6a3bfd5665
+    - filename: nick-nazzaro-space-blue.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-space-blue.png
+      sha256: 27194f621cca0b810c4e547447f866e7e835db95b0103f1401b6019ccd17191c
+    - filename: nick-nazzaro-space-red.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-space-red.png
+      sha256: 59866d11d448962b83ce0f07b0ebcfed2c28d0d65010014e186e8f0acac1dee7
+    - filename: nick-nazzaro-underwater.png
+      url: https://raw.githubusercontent.com/pop-os/wallpapers/master/original/nick-nazzaro-underwater.png
+      sha256: 5c75e6dd8328a7eab813302a6f36d5d8613095fc533f3a79bcff0ae6b4f80631

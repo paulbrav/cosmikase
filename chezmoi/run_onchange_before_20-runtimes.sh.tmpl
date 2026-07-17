@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# run_onchange_before_20-runtimes.sh — language runtimes & version managers.
+# Version pins carried over from the old install automation that this replaced.
+# Every installer is guarded by a command/path check so re-runs are no-ops.
+# x86_64 only (the reference hardware is AMD x86_64).
+#
+# manifest-sha256: {{ include (joinPath .repo_dir "cosmikase.yaml") | sha256sum }}
+#
+# CI mode (COSMIKASE_CI=1): skipped entirely — runtimes are heavy and unneeded
+# for the container smoke test.
+set -euo pipefail
+
+MANIFEST="{{ .repo_dir }}/cosmikase.yaml"
+MANIFEST_READER="{{ .repo_dir }}/bin/cosmikase-manifest"
+CI="${COSMIKASE_CI:-0}"
+[ -f "$MANIFEST" ] || { echo "manifest not found: $MANIFEST" >&2; exit 1; }
+
+if [ "$CI" = "1" ]; then
+    echo "==> CI mode: skipping runtimes"
+    exit 0
+fi
+
+# One canonical manifest reader (bin/cosmikase-manifest). `enabled` honours the
+# documented default (a missing `install:` means install; see cosmikase.yaml:10).
+manifest() { "$MANIFEST_READER" -m "$MANIFEST" "$@"; }
+enabled() { manifest enabled "runtimes.$1"; }       # $1 runtime -> 1|0
+field() { manifest get "runtimes.$1.$2"; }          # $1 runtime $2 field -> value
+
+mkdir -p "$HOME/.local/bin"
+
+# ── rustup ───────────────────────────────────────────────────────────────────
+if [ "$(enabled rust)" = "1" ] && ! command -v rustc >/dev/null 2>&1 && [ ! -x "$HOME/.cargo/bin/rustc" ]; then
+    echo "==> rustup"
+    curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path
+fi
+
+# ── uv ───────────────────────────────────────────────────────────────────────
+if [ "$(enabled uv)" = "1" ] && ! command -v uv >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/uv" ]; then
+    echo "==> uv"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+# ── nvm + node ───────────────────────────────────────────────────────────────
+if [ "$(enabled nvm)" = "1" ]; then
+    NVM_VER="$(field nvm version)"; NVM_VER="${NVM_VER:-0.40.3}"
+    if [ ! -s "$HOME/.nvm/nvm.sh" ]; then
+        echo "==> nvm v$NVM_VER"
+        curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VER}/install.sh" | bash
+    fi
+    export NVM_DIR="$HOME/.nvm"
+    # shellcheck disable=SC1091
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+    NODE_REQ="$(field nvm node)"; NODE_REQ="${NODE_REQ:-lts}"
+    if command -v nvm >/dev/null 2>&1 && [ ! -d "$HOME/.nvm/versions/node" ]; then
+        echo "==> node ($NODE_REQ)"
+        if [ "$NODE_REQ" = "lts" ]; then nvm install --lts; else nvm install "$NODE_REQ"; fi
+    fi
+fi
+
+# ── bun ──────────────────────────────────────────────────────────────────────
+if [ "$(enabled bun)" = "1" ] && [ ! -x "$HOME/.bun/bin/bun" ]; then
+    echo "==> bun"
+    curl -fsSL https://bun.sh/install | bash
+fi
+
+# ── go (tarball -> /usr/local/go) ────────────────────────────────────────────
+if [ "$(enabled go)" = "1" ] && [ ! -x /usr/local/go/bin/go ]; then
+    GO_VER="$(field go version)"; GO_VER="${GO_VER:-1.24.4}"
+    echo "==> go $GO_VER"
+    tmp="$(mktemp -d)"
+    if curl -fsSL "https://go.dev/dl/go${GO_VER}.linux-amd64.tar.gz" -o "$tmp/go.tgz"; then
+        sudo rm -rf /usr/local/go
+        sudo tar -C /usr/local -xzf "$tmp/go.tgz"
+    fi
+    rm -rf "$tmp"
+fi
+
+# ── zig (tarball -> /opt/zig-<ver>, symlink /usr/local/bin/zig) ───────────────
+if [ "$(enabled zig)" = "1" ] && [ ! -x /usr/local/bin/zig ]; then
+    ZIG_VER="$(field zig version)"; ZIG_VER="${ZIG_VER:-0.15.2}"
+    echo "==> zig $ZIG_VER"
+    tmp="$(mktemp -d)"
+    if curl -fsSL "https://ziglang.org/download/${ZIG_VER}/zig-x86_64-linux-${ZIG_VER}.tar.xz" -o "$tmp/zig.txz"; then
+        sudo rm -rf "/opt/zig-${ZIG_VER}"
+        sudo mkdir -p "/opt/zig-${ZIG_VER}"
+        sudo tar -C "/opt/zig-${ZIG_VER}" --strip-components=1 -xJf "$tmp/zig.txz"
+        sudo ln -sfn "/opt/zig-${ZIG_VER}/zig" /usr/local/bin/zig
+    fi
+    rm -rf "$tmp"
+fi
+
+# ── julia (juliaup) ──────────────────────────────────────────────────────────
+if [ "$(enabled julia)" = "1" ] && ! command -v juliaup >/dev/null 2>&1 && ! command -v julia >/dev/null 2>&1; then
+    echo "==> juliaup"
+    curl -fsSL https://install.julialang.org | sh -s -- -y
+fi
+
+# ── starship ─────────────────────────────────────────────────────────────────
+if [ "$(enabled starship)" = "1" ] && ! command -v starship >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/starship" ]; then
+    echo "==> starship"
+    curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"
+fi
+
+echo "==> runtimes done"

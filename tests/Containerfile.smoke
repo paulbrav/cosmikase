@@ -1,52 +1,45 @@
-# Containerfile.smoke - Fast smoke test container for cosmikase
-# Pre-bakes Ansible and Python dependencies for faster test runs
+# Containerfile.smoke - "can this build a machine?" smoke test for cosmikase.
 #
-# Build: podman build -f tests/Containerfile.smoke -t cosmikase-smoke .
-# Run:   podman run --rm -v $(pwd):/workspace:ro cosmikase-smoke
+# It runs the real bootstrap (install.sh) in CI mode on a clean Ubuntu 24.04
+# image as a non-root user with sudo, then the default command asserts that the
+# machine was actually configured (see tests/container-smoke-assert.sh).
+#
+# CI mode (COSMIKASE_CI=1) keeps the build fast and headless: install.sh applies
+# chezmoi and the apt "core" packages but skips flatpak/snap/GUI/runtime steps.
+#
+# Build: docker build -f tests/Containerfile.smoke -t cosmikase-smoke .
+# Run:   docker run --rm cosmikase-smoke
+# (Normally driven by tests/container-smoke.sh, which auto-detects docker/podman.)
 
 FROM ubuntu:24.04
 
-LABEL maintainer="cosmikase"
-LABEL description="Smoke test container for cosmikase Ansible playbook validation"
+LABEL org.opencontainers.image.title="cosmikase-smoke"
+LABEL org.opencontainers.image.description="Smoke test: install.sh on a clean Ubuntu 24.04"
 
-# Avoid interactive prompts during package installation
+# Non-interactive apt + headless CI bootstrap mode.
 ENV DEBIAN_FRONTEND=noninteractive
+ENV COSMIKASE_CI=1
 
-# Install base dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    sudo \
-    curl \
-    rsync \
-    unzip \
-    python3 \
-    python3-pip \
-    python3-venv \
-    git \
-    software-properties-common \
+# Minimal bootstrap deps. install.sh installs its own prerequisites (curl, git,
+# python3-yaml, chezmoi); we only need sudo + a non-root user for it to target.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends sudo ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ansible and required Python packages
-RUN pip3 install --break-system-packages \
-    ansible \
-    pyyaml
+# Create a passwordless-sudo non-root user (install.sh must not run as root).
+RUN useradd --create-home --shell /bin/bash tester \
+    && echo 'tester ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/tester \
+    && chmod 0440 /etc/sudoers.d/tester
 
-# Install Ansible collections
-RUN ansible-galaxy collection install community.general ansible.posix
+USER tester
+WORKDIR /home/tester/cosmikase
 
-# Set working directory
-WORKDIR /workspace
+# Copy the repository (build context = repo root; see .dockerignore).
+COPY --chown=tester:tester . /home/tester/cosmikase
 
-# Default command runs the smoke test
-CMD ["/bin/bash", "-c", "\
-    echo '=== Running Ansible playbook (check mode) ===' && \
-    cd /workspace/ansible && \
-    ansible-playbook -i inventory.yml playbook.yml --check \
-        -e \"config_file=${CONFIG_FILE:-/workspace/tests/test-config.yaml}\" \
-        --skip-tags ghostty,dotfiles \
-        -v && \
-    echo '=== Verifying Python module ===' && \
-    cd /workspace && \
-    python3 -c \"from src.cosmikase.config import load_config, get_value; print('Python module OK')\" && \
-    echo '=== Smoke test passed! ===' \
-"]
+# Run the real bootstrap in CI mode. This is where the machine gets built;
+# a failure here fails the image build with a clear signal.
+RUN COSMIKASE_CI=1 ./install.sh
 
+# Default command verifies the applied state.
+CMD ["bash", "tests/container-smoke-assert.sh"]

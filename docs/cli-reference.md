@@ -1,777 +1,251 @@
 # CLI Reference
 
-Complete reference for all command-line utilities in the cosmikase project.
+Every command that ships in cosmikase after the first-principles rebuild. Runtime tooling is
+bash scripts in `bin/` plus two single-file `uv` helpers; there is no Python CLI package.
 
 ## Table of Contents
 
-- [Shell Scripts](#shell-scripts)
+- [Bootstrap](#bootstrap)
+  - [install.sh](#installsh)
+- [Make targets](#make-targets)
+- [Runtime scripts](#runtime-scripts)
   - [cosmikase](#cosmikase)
+  - [cosmikase-preflight](#cosmikase-preflight)
   - [cosmikase-theme](#cosmikase-theme)
+  - [cosmikase-wallpapers](#cosmikase-wallpapers)
+  - [cosmikase-dropterm](#cosmikase-dropterm)
   - [cosmikase-update](#cosmikase-update)
-  - [cosmikase-install](#cosmikase-install)
   - [cosmikase-databases](#cosmikase-databases)
   - [cosmikase-cursor-extensions](#cosmikase-cursor-extensions)
   - [cosmikase-power-helper](#cosmikase-power-helper)
-- [Python CLI Tools](#python-cli-tools)
-  - [cosmikase-cli](#cosmikase-cli)
-  - [cosmikase-config](#cosmikase-config)
-  - [cosmikase-validate-config](#cosmikase-validate-config)
+- [Internal helpers](#internal-helpers)
   - [cosmikase-chezmoi](#cosmikase-chezmoi)
-  - [cosmikase-validate-ron](#cosmikase-validate-ron)
-  - [cosmikase-themes-dir](#cosmikase-themes-dir)
-  - [theme-tui](#theme-tui)
+  - [theme helpers](#theme-helpers)
 
 ---
 
-## Shell Scripts
+## Bootstrap
+
+### install.sh
+
+The one-command entry point. Bootstraps prereqs and chezmoi, then applies everything.
+
+```bash
+./install.sh              # full bootstrap + apply
+./install.sh --dry-run    # preview changes (passes through to chezmoi)
+```
+
+**What it does:**
+1. Checks the OS (warns if not Pop!_OS / Ubuntu 24.04+).
+2. Installs prereqs (`curl`, `git`, `python3-yaml`) with a single sudo prompt up front.
+3. Installs the `chezmoi` binary to `~/.local/bin` if missing.
+4. Runs `chezmoi init --source ./chezmoi --apply`, whose `run_onchange_` scripts read
+   `cosmikase.yaml` and install apt/flatpak packages, runtimes, and tools.
+5. Suggests running `bin/cosmikase-preflight`.
+
+**Environment:**
+- `COSMIKASE_CI=1` — CI-safe mode: skips flatpak / snap / GUI-only steps. Used by the
+  container smoke test.
+
+---
+
+## Make targets
+
+Thin wrappers so everyone runs the same steps:
+
+| Target | Action |
+|--------|--------|
+| `make help` | List targets. |
+| `make setup` | Install dev/bootstrap dependencies. |
+| `make install` | Run `./install.sh`. |
+| `make apply` | `chezmoi apply` only (re-render dotfiles). |
+| `make preflight` | Run `bin/cosmikase-preflight`. |
+| `make theme` | Launch the theme picker. |
+| `make lint` | `shellcheck bin/* install.sh` + `ruff` on the Python files. |
+| `make test` | Run the pytest suite via `uv run`. |
+| `make plugins` | Build the Cargo workspace (`cargo build --release`). |
+| `make plugins-install` | Build + install all pop-launcher plugins. |
+| `make clean` | Remove build artifacts. |
+
+---
+
+## Runtime scripts
 
 ### cosmikase
 
-Interactive menu entrypoint for common cosmikase actions.
+Interactive menu (built with `gum`, with a plain-prompt fallback).
 
-**Usage:**
 ```bash
 cosmikase
 ```
 
-**Description:**
-Provides a text-based menu interface using `gum` for:
-- Theme selection
-- Optional software installation
-- Docker database setup
-- System updates
-- Power settings
-- Cursor extension management
+**Entries:** Preflight, Install/Update system (`install.sh`), Apply dotfiles
+(`chezmoi apply`), Theme picker (`cosmikase-theme`), Update everything (`cosmikase-update`),
+Databases (`cosmikase-databases`), Quit.
 
-**Requirements:**
-- `gum` must be installed (`sudo apt install gum`)
+---
 
-**Menu Options:**
-- **Change Theme**: Launches `theme-tui` if available, otherwise prompts for theme selection
-- **Install Optional Software**: Runs `cosmikase-install`
-- **Setup Docker Databases**: Runs `cosmikase-databases`
-- **Update Everything**: Runs `cosmikase-update`
-- **Power Settings**: Runs `cosmikase-power-helper`
-- **Cursor Extensions**: Runs `cosmikase-cursor-extensions`
-- **Exit**: Closes the menu
+### cosmikase-preflight
 
-**Examples:**
+Hardware/environment gate. Prints a PASS/FAIL/WARN table and exits `0` only if all checks PASS.
+
 ```bash
-# Launch interactive menu
-cosmikase
+cosmikase-preflight
 ```
 
-**Exit Codes:**
-- `0`: Success
-- `1`: Error (e.g., `gum` not found)
+**Checks:** COSMIC session present; kernel ≥ 7.2 **or** the `amd_capture` module available
+(`modinfo`); `/lib/firmware/amdgpu/isp_4_1_1.bin*` present; fingerprint (fprintd + Synaptics);
+battery/power udev rule active; Flathub reachable; free disk space.
+
+Runs on non-COSMIC hosts too (missing pieces become WARN, not crashes), so it is usable on the
+reference hardware today.
 
 ---
 
 ### cosmikase-theme
 
-Switch themes by updating chezmoi configuration and applying theme changes to running applications.
+Switch the active theme. chezmoi is the single orchestrator: this command validates the
+theme, records history, rewrites `[data].theme` (via `cosmikase-chezmoi`), and runs
+`chezmoi apply --force`. The live application — COSMIC, terminals, editors, and per-app
+assets — is done once by the `run_onchange_after_10-setup-theme` hook, which fires because
+the theme changed. Re-selecting the theme that is already active re-runs the helper scripts
+directly, since `run_onchange` will not refire.
 
-**Usage:**
 ```bash
-cosmikase-theme <theme-name> [options]
+cosmikase-theme <theme-name>
 cosmikase-theme --rollback
 ```
 
-**Description:**
-Switches the active theme by:
-1. Updating `~/.config/chezmoi/chezmoi.toml` with the new theme
-2. Running `chezmoi apply` to regenerate dotfiles
-3. Calling helper scripts to update running applications (Cursor, COSMIC, terminals)
+**Common flags:** `--rollback` (previous theme from history), `--quiet` / `-q` (suppress
+helper output). Theme history lives at `~/.config/cosmikase/theme-history`. The per-app
+helpers (`cosmikase-theme-cosmic`, `-cursor`, `-terminal`) remain directly callable.
 
-**Arguments:**
-- `<theme-name>`: Name of the theme to switch to (e.g., `nord`, `tokyo-night`, `catppuccin`)
+See [themes/README.md](../themes/README.md) and [editor-theming.md](editor-theming.md).
 
-**Options:**
-- `--rollback`: Roll back to the previous theme (uses theme history)
-- `--no-cursor`: Skip Cursor/VS Code theme update
-- `--no-cosmic`: Skip COSMIC desktop theme update
-- `--no-terminals`: Skip terminal reload signals
-- `--no-chezmoi`: Skip chezmoi apply (only run helper scripts for live updates)
-- `--quiet`, `-q`: Suppress output from helper scripts
-- `-h`, `--help`: Show help message
+---
 
-**Examples:**
+### cosmikase-wallpapers
+
+Fetch and verify the wallpapers whose upstream source left git. Most wallpapers ship in-tree
+under `themes/<name>/backgrounds/` (git owns their integrity); this command handles only the
+fetchable ones listed in `themes/wallpapers.yaml`, downloading and sha256-verifying them into
+`~/.local/share/cosmikase/backgrounds/<theme>/`.
+
 ```bash
-# Switch to nord theme
-cosmikase-theme nord
-
-# Switch theme but skip Cursor update
-cosmikase-theme tokyo-night --no-cursor
-
-# Only update running apps (don't regenerate dotfiles)
-cosmikase-theme catppuccin --no-chezmoi
-
-# Roll back to previous theme
-cosmikase-theme --rollback
-
-# Quiet mode (minimal output)
-cosmikase-theme nord --quiet
+cosmikase-wallpapers fetch [theme]   # download + sha256-verify (all themes, or one)
+cosmikase-wallpapers verify          # check existing files against the manifest
 ```
 
-**Theme History:**
-The script maintains a history file at `~/.config/cosmikase/theme-history` to enable rollback functionality.
+Sources and checksums live in `themes/wallpapers.yaml`. The theme apply hook calls `fetch`
+automatically when backgrounds are missing (guarded and offline-safe).
 
-**Exit Codes:**
-- `0`: Success
-- `1`: Error (invalid theme, chezmoi not found, etc.)
+---
 
-**See Also:**
-- [Theme System Documentation](../themes/README.md)
-- [Editor Theming Guide](editor-theming.md)
+### cosmikase-dropterm
+
+Toggle the Ghostty drop-down quick terminal. Bound to `Super + grave`; a fallback for when
+Ghostty's built-in `quick-terminal` global is unavailable.
+
+```bash
+cosmikase-dropterm
+```
 
 ---
 
 ### cosmikase-update
 
-Updates all installed software and system components.
+Update installed software across ecosystems.
 
-**Usage:**
 ```bash
 cosmikase-update
 ```
 
-**Description:**
-Comprehensive system update script that updates:
-- APT packages (`apt update && apt full-upgrade`)
-- Flatpak applications
-- Snap packages (if snapd is active)
-- Rust toolchain (via `rustup`)
-- uv Python package manager
-- Bun JavaScript runtime
-- Julia (via `juliaup`)
-- Global NPM packages
-- Ghostty terminal (if built from source)
-- Firmware (via `fwupdmgr`)
-
-**Requirements:**
-- `sudo` access for system package updates
-- Internet connection
-
-**What It Updates:**
-1. **System Packages**: APT, Flatpak, Snap
-2. **Runtimes**: Rust, Bun, Julia, Node.js (via npm)
-3. **Package Managers**: uv (installs if missing)
-4. **Ghostty**: Rebuilds from source if `~/ghostty-source` exists
-5. **Firmware**: Checks for firmware updates (does not install automatically)
-
-**Examples:**
-```bash
-# Run full system update
-cosmikase-update
-```
-
-**Notes:**
-- Firmware updates require manual confirmation: `sudo fwupdmgr update`
-- Ghostty rebuild requires Zig 0.13+ to be installed
-- uv will be installed automatically if missing
-
-**Exit Codes:**
-- `0`: Success
-- Non-zero: Error during update process
-
----
-
-### cosmikase-install
-
-Interactive installer for optional software marked as `install: false` in `cosmikase.yaml`.
-
-**Usage:**
-```bash
-cosmikase-install [--config PATH]
-```
-
-**Description:**
-Scans the configuration file for items marked `install: false` and allows interactive selection and installation via `gum`.
-
-**Options:**
-- `--config PATH`: Path to `cosmikase.yaml` (default: `./cosmikase.yaml` or `$COSMIKASE_CONFIG`)
-- `-h`, `--help`: Show help message
-
-**Environment Variables:**
-- `COSMIKASE_CONFIG`: Path to configuration file
-
-**Examples:**
-```bash
-# Install optional software (run from repo root)
-cosmikase-install
-
-# Use custom config file
-cosmikase-install --config /path/to/cosmikase.yaml
-
-# Using environment variable
-export COSMIKASE_CONFIG=/path/to/cosmikase.yaml
-cosmikase-install
-```
-
-**What It Installs:**
-- APT packages from `apt.core`, `apt.gui`, `apt.terminal` sections
-- Flatpak applications from `flatpak.utility` section
-- Only items with `install: false` are shown for selection
-
-**Removing Installed Software:**
-```bash
-# APT packages
-sudo apt remove <package-name>
-
-# Flatpak applications
-flatpak uninstall <app-id>
-```
-
-**Requirements:**
-- `gum` must be installed
-- `cosmikase-config` must be available (or `uv` for fallback)
-
-**Exit Codes:**
-- `0`: Success
-- `1`: Error (config not found, dependencies missing)
-
-**See Also:**
-- [Configuration Reference](configuration-reference.md)
-- [cosmikase-menu.md](cosmikase-menu.md)
+Updates apt and flatpak packages, language runtimes (rust, uv, bun, node, julia, …), global
+CLI tools, and checks firmware (`fwupdmgr`, no automatic install). Requires sudo and a network
+connection. Missing tools are skipped, not failed.
 
 ---
 
 ### cosmikase-databases
 
-Setup development databases via Docker containers.
+Start development databases as Docker containers named `cosmikase-*`.
 
-**Usage:**
 ```bash
 cosmikase-databases
 ```
 
-**Description:**
-Interactive script to create and start Docker containers for common development databases:
-- PostgreSQL (port 5432)
-- MySQL (port 3306)
-- Redis (port 6379)
-- MongoDB (port 27017)
-
-**Requirements:**
-- `docker` must be installed and running
-- `gum` must be installed
-
-**What It Creates:**
-- Docker containers named `cosmikase-postgres`, `cosmikase-mysql`, `cosmikase-redis`, `cosmikase-mongodb`
-- Docker volumes for data persistence:
-  - `cosmikase-postgres-data`
-  - `cosmikase-mysql-data`
-  - `cosmikase-redis-data`
-  - `cosmikase-mongodb-data`
-
-**Connection Strings:**
-- **PostgreSQL**: `postgres://postgres:<password>@localhost:5432/postgres`
-- **MySQL**: `mysql -h 127.0.0.1 -P 3306 -u root -p`
-- **Redis**: `redis-cli -h 127.0.0.1 -p 6379`
-- **MongoDB**: `mongosh mongodb://127.0.0.1:27017`
-
-**Examples:**
-```bash
-# Launch interactive database setup
-cosmikase-databases
-
-# Verify containers are running
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-```
+Creates PostgreSQL (5432), MySQL (3306), Redis (6379), and/or MongoDB (27017) with persistent
+volumes. Requires `docker` and `gum`.
 
 **Cleanup:**
 ```bash
-# Stop and remove containers
 docker rm -f cosmikase-postgres cosmikase-mysql cosmikase-redis cosmikase-mongodb
-
-# Remove volumes (deletes all data)
 docker volume rm cosmikase-postgres-data cosmikase-mysql-data cosmikase-redis-data cosmikase-mongodb-data
 ```
-
-**Exit Codes:**
-- `0`: Success
-- `1`: Error (docker/gum not found, password empty)
-
-**See Also:**
-- [cosmikase-menu.md](cosmikase-menu.md)
 
 ---
 
 ### cosmikase-cursor-extensions
 
-Manage Cursor/VS Code extensions from a text file.
+Manage Cursor/VS Code extensions from a text file (default `~/.config/Cursor/extensions.txt`).
 
-**Usage:**
 ```bash
-cosmikase-cursor-extensions <command> [-f FILE]
+cosmikase-cursor-extensions export    # write installed extensions to the list
+cosmikase-cursor-extensions install   # install everything in the list
+cosmikase-cursor-extensions list      # show what would be installed
+cosmikase-cursor-extensions diff      # list vs. installed
 ```
 
-**Description:**
-Manages Cursor/VS Code extensions via a simple text file, making it easy to:
-- Export current extensions
-- Install extensions on a new machine
-- Compare installed vs. listed extensions
-
-**Commands:**
-- `install`: Install all extensions from the list
-- `export`: Export currently installed extensions to the list
-- `list`: Show extensions that would be installed
-- `diff`: Show extensions in list but not installed (and vice versa)
-
-**Options:**
-- `-f FILE`: Use a different extensions file (default: `~/.config/Cursor/extensions.txt`)
-- `-h`, `--help`: Show help message
-
-**Environment Variables:**
-- `EXTENSIONS_FILE`: Path to extensions file (default: `~/.config/Cursor/extensions.txt`)
-- `CURSOR_CMD`: Command to use (default: `cursor`, falls back to `code`)
-
-**Examples:**
-```bash
-# Export current extensions
-cosmikase-cursor-extensions export
-
-# Install all extensions from list
-cosmikase-cursor-extensions install
-
-# See what's different
-cosmikase-cursor-extensions diff
-
-# List extensions in file
-cosmikase-cursor-extensions list
-
-# Use custom file
-cosmikase-cursor-extensions install -f ~/my-extensions.txt
-```
-
-**Extensions File Format:**
-The extensions file (`~/.config/Cursor/extensions.txt`) is a simple text file with one extension ID per line:
-```
-# Cursor/VS Code Extensions
-# Exported on 2025-01-27 12:00:00
-# Install with: cosmikase-cursor-extensions install
-
-catppuccin.catppuccin-vsc
-ms-python.python
-ms-python.vscode-pylance
-```
-
-**Exit Codes:**
-- `0`: Success
-- `1`: Error (file not found, command not found)
-
-**See Also:**
-- [Editor Theming Guide](editor-theming.md)
+**Options:** `-f FILE` (custom list). **Env:** `EXTENSIONS_FILE`, `CURSOR_CMD`.
 
 ---
 
 ### cosmikase-power-helper
 
-Switch power profiles based on AC/Battery state.
+Switch System76 power profiles based on AC/battery state. Usually invoked by the power udev
+rule, but runnable by hand.
 
-**Usage:**
 ```bash
-cosmikase-power-helper [--ac|--battery|--apply]
+cosmikase-power-helper            # auto-detect and apply
+cosmikase-power-helper --ac       # force performance
+cosmikase-power-helper --battery  # force battery
 ```
 
-**Description:**
-Helper script for managing System76 power profiles. Typically called by udev rules when AC power state changes, but can also be run manually.
-
-**Options:**
-- `--ac`: Set power profile to performance (or balanced if performance unavailable)
-- `--battery`: Set power profile to battery
-- `--apply` (default): Auto-detect AC state and apply appropriate profile
-
-**Examples:**
-```bash
-# Auto-detect and apply profile
-cosmikase-power-helper
-
-# Force performance mode
-cosmikase-power-helper --ac
-
-# Force battery mode
-cosmikase-power-helper --battery
-```
-
-**Udev Integration:**
-The script is designed to be called by udev rules (see `cosmikase/udev/99-cosmikase-power.rules`). When AC power is plugged/unplugged, udev triggers this script to switch profiles automatically.
-
-**Requirements:**
-- `system76-power` must be installed
-- Script must be executable and on PATH
-
-**Exit Codes:**
-- `0`: Success
-- `1`: Failed to set profile
-
-**See Also:**
-- System76 Power Management documentation
+Requires `system76-power`.
 
 ---
 
-## Python CLI Tools
-
-### cosmikase-cli
-
-Unified Python CLI for cosmikase (separate from the interactive `cosmikase` menu).
-
-**Usage:**
-```bash
-cosmikase-cli <command> [options]
-```
-
-**Commands:**
-- `theme` (switch themes; supports `--list`, `--no-apply`, `--no-helpers`)
-- `config` (query configuration values)
-- `validate` (validate configuration file)
-- `themes-dir` (print theme directories)
-
-**Examples:**
-```bash
-cosmikase-cli theme nord
-cosmikase-cli theme --list
-cosmikase-cli config defaults.theme
-cosmikase-cli validate cosmikase.yaml
-cosmikase-cli themes-dir --all
-```
-
-**Notes:**
-- Use `cosmikase` for the interactive menu.
-
-### cosmikase-config
-
-Query the `cosmikase.yaml` configuration file from shell scripts.
-
-**Usage:**
-```bash
-cosmikase-config [--config PATH] <command> [options]
-```
-
-**Description:**
-Python CLI tool for querying the YAML configuration file. Used by shell scripts to extract configuration values.
-
-**Global Options:**
-- `--config PATH`, `-c PATH`: Path to config file (default: `cosmikase.yaml`)
-
-**Commands:**
-
-#### `get`
-Get a value by dot-separated path.
-
-```bash
-cosmikase-config get <path> [--default VALUE]
-```
-
-**Options:**
-- `--default VALUE`, `-d VALUE`: Default value if path not found
-
-**Examples:**
-```bash
-# Get default theme
-cosmikase-config get defaults.theme
-
-# Get theme with default
-cosmikase-config get defaults.theme --default nord
-
-# Get boolean value
-cosmikase-config get defaults.install
-# Output: true or false
-```
-
-#### `list`
-List items from a section/group.
-
-```bash
-cosmikase-config list <section> [group] [options]
-```
-
-**Arguments:**
-- `section`: Section name (e.g., `apt`, `flatpak`, `runtimes`)
-- `group`: Optional group name within section (e.g., `core`, `utility`)
-
-**Options:**
-- `--names-only`, `-n`: Output only package names (one per line)
-- `--json`, `-j`: Output as JSON
-- `--all`, `-a`: Include disabled items (`install: false`)
-- `--disabled`, `-d`: Show ONLY disabled items
-
-**Examples:**
-```bash
-# List enabled apt core packages
-cosmikase-config list apt core
-
-# List only names
-cosmikase-config list apt core --names-only
-
-# List all (including disabled)
-cosmikase-config list apt core --all
-
-# List only disabled items
-cosmikase-config list apt core --disabled
-
-# Output as JSON
-cosmikase-config list flatpak utility --json
-
-# List top-level section (no group)
-cosmikase-config list npm
-```
-
-**Exit Codes:**
-- `0`: Success
-- `1`: Error (config not found, invalid section/group)
-
-**See Also:**
-- [Configuration Reference](configuration-reference.md)
-
----
-
-### cosmikase-validate-config
-
-Validate `cosmikase.yaml` against the Pydantic schema.
-
-**Usage:**
-```bash
-cosmikase-validate-config [path] [options]
-```
-
-**Options:**
-- `-q`, `--quiet`: Only print errors.
-
-**Examples:**
-```bash
-cosmikase-validate-config
-cosmikase-validate-config /path/to/cosmikase.yaml --quiet
-```
-
-**Exit Codes:**
-- `0`: Valid configuration
-- `1`: Validation errors
+## Internal helpers
 
 ### cosmikase-chezmoi
 
-Update chezmoi configuration with theme information.
+A single-file PEP 723 `uv` script (`#!/usr/bin/env -S uv run --script`, dependency: `tomlkit`)
+that atomically edits chezmoi's TOML config (tempfile + rename). It replaces the old Python
+package's `chezmoi.py`.
 
-**Usage:**
 ```bash
-cosmikase-chezmoi <theme> <themes-dir>
+cosmikase-chezmoi set theme <name>   # set the active theme
+cosmikase-chezmoi get theme          # read the current theme
 ```
 
-**Description:**
-Internal utility used by `cosmikase-theme` to safely update `~/.config/chezmoi/chezmoi.toml` with theme data. Performs atomic writes to prevent corruption.
+Typically called by `cosmikase-theme`; direct use is rarely needed. If `uv` is missing it
+prints an actionable error.
 
-**Arguments:**
-- `theme`: Theme name to set
-- `themes-dir`: Path to themes directory
+### theme helpers
 
-**What It Updates:**
-Updates the `[data]` section in `chezmoi.toml`:
-```toml
-[data]
-theme = "nord"
-themes_dir = "/path/to/themes"
-```
+`cosmikase-theme` calls three helpers to push a theme into running applications. They are not
+meant to be run directly:
 
-**Examples:**
-```bash
-# Update chezmoi config (typically called by cosmikase-theme)
-cosmikase-chezmoi nord ~/.local/share/cosmikase/themes
-```
+- `cosmikase-theme-cosmic` — updates COSMIC desktop theme (RON files).
+- `cosmikase-theme-cursor` — updates Cursor/VS Code color theme.
+- `cosmikase-theme-terminal` — updates cosmic-term and Ghostty colors.
 
-**Exit Codes:**
-- `0`: Success
-- `1`: Error (invalid TOML, permission denied, write failed)
-
-**Note:** This command is typically called automatically by `cosmikase-theme`. Direct usage is rarely needed.
+Shared bash helpers live in `bin/cosmikase-lib.sh` (sourced, not executed).
 
 ---
 
-### cosmikase-validate-ron
+## See Also
 
-Validate RON (Rusty Object Notation) file syntax.
-
-**Usage:**
-```bash
-cosmikase-validate-ron <path>
-```
-
-**Description:**
-Basic RON syntax validator that checks for balanced parentheses, brackets, and braces. Used to validate COSMIC theme files.
-
-**Arguments:**
-- `path`: Path to RON file to validate
-
-**Examples:**
-```bash
-# Validate a COSMIC theme file
-cosmikase-validate-ron ~/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark
-
-# Validate theme file
-cosmikase-validate-ron themes/nord/cosmic.ron
-```
-
-**Limitations:**
-This is a basic validator that checks bracket/parenthesis balance. It does not perform full RON parsing or semantic validation.
-
-**Exit Codes:**
-- `0`: File is valid (basic check passed)
-- `1`: File is invalid or not found
-
-**See Also:**
-- [COSMIC Theming Guide](cosmic-theming.md)
-
----
-
-### cosmikase-themes-dir
-
-Discover and print the themes directory path.
-
-**Usage:**
-```bash
-cosmikase-themes-dir [--all|--list]
-```
-
-**Description:**
-Discovers the themes directory by checking multiple locations and prints the primary path. Used by shell scripts to locate theme files.
-
-**Options:**
-- `--all`, `-a`: Print all discovered theme directories (one per line)
-- `--list`, `-l`: List available themes in the primary directory
-
-**Search Order:**
-1. `$THEMES_DIR` environment variable
-2. `themes/` directory in repo root
-3. `./themes` in current directory
-4. `~/.local/share/cosmikase/themes`
-
-**Examples:**
-```bash
-# Print primary themes directory
-cosmikase-themes-dir
-# Output: /home/user/.local/share/cosmikase/themes
-
-# List all theme directories
-cosmikase-themes-dir --all
-
-# List available themes
-cosmikase-themes-dir --list
-```
-
-**Exit Codes:**
-- `0`: Success
-- `1`: No theme directories found
-
-**See Also:**
-- [Theme System Documentation](../themes/README.md)
-
----
-
-### theme-tui
-
-Interactive terminal UI for browsing and applying themes.
-
-**Usage:**
-```bash
-theme-tui
-```
-
-**Description:**
-Text-based user interface built with Textual for browsing available themes, previewing colors, and applying themes interactively.
-
-**Features:**
-- Browse all available themes
-- Preview theme colors and metadata
-- Apply theme with Enter key
-- Navigate with arrow keys
-- Exit with `q` or `Ctrl+C`
-
-**Keyboard Shortcuts:**
-- `↑` / `↓`: Navigate theme list
-- `Enter`: Apply selected theme
-- `q`: Quit
-- `Ctrl+C`: Quit
-
-**Requirements:**
-- Python 3.10+
-- Textual library (installed via `uv sync`)
-- `cosmikase-theme` script must be available
-
-**Examples:**
-```bash
-# Launch theme browser
-theme-tui
-```
-
-**What It Shows:**
-- Theme name
-- Variant (dark/light)
-- Color swatches (background, foreground, accent, error, warning)
-- Cursor theme name
-- Wallpaper path
-
-**Exit Codes:**
-- `0`: Success (theme applied or user quit)
-- Non-zero: Error
-
-**See Also:**
-- [Theme System Documentation](../themes/README.md)
-- [Editor Theming Guide](editor-theming.md)
-
----
-
-## Common Patterns
-
-### Finding Command Locations
-
-Most commands are installed to `~/.local/bin` after running `make install`. Verify with:
-
-```bash
-which cosmikase-theme
-which cosmikase-config
-```
-
-### Using uv Run
-
-If commands aren't on PATH, use `uv run`:
-
-```bash
-uv run cosmikase-config list apt core
-uv run theme-tui
-```
-
-### Environment Variables
-
-Several commands respect environment variables:
-
-```bash
-# Themes directory
-export THEMES_DIR=/custom/path/to/themes
-
-# Config file
-export COSMIKASE_CONFIG=/path/to/config.yaml
-
-# Extensions file
-export EXTENSIONS_FILE=~/.config/Cursor/extensions.txt
-
-# Cursor command
-export CURSOR_CMD=cursor
-```
-
----
-
-## Getting Help
-
-Most commands support `--help` or `-h`:
-
-```bash
-cosmikase-theme --help
-cosmikase-cli --help
-cosmikase-config --help
-cosmikase-cursor-extensions --help
-```
-
-For more information, see:
-- [README.md](../README.md) - Project overview
-- [Configuration Reference](configuration-reference.md) - Config file schema
-- [Troubleshooting Guide](troubleshooting.md) - Common issues
-
+- [README.md](../README.md) — project overview.
+- [Configuration Reference](configuration-reference.md) — the `cosmikase.yaml` schema.
+- [Troubleshooting Guide](troubleshooting.md) — common issues.

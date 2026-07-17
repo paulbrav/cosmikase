@@ -24,7 +24,7 @@ alias mv='mv -i'
 
 # Utility
 alias h='history'
-alias j='jobs -l'
+# NOTE: `j` is intentionally NOT aliased — zoxide owns it (`zoxide init --cmd j`).
 alias path='echo -e ${PATH//:/\\n}'
 
 # Quick edit configs

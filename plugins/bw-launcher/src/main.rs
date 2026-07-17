@@ -1,101 +1,15 @@
 //! Bitwarden Pop Launcher Plugin
 //!
-//! A plugin for Pop!_OS launcher that provides access to your Bitwarden vault.
-//! Passwords, usernames, and TOTP codes can be copied to clipboard.
+//! A plugin for the Pop!_OS / COSMIC launcher that provides access to your
+//! Bitwarden vault. Passwords, usernames, and TOTP codes can be copied to the
+//! clipboard. The launcher protocol lives in `plugin-common`; this file is
+//! only the Bitwarden-specific logic.
 
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::io::{self, BufRead, Write};
-use std::process::{Command, Stdio};
-
-// ============================================================================
-// Pop Launcher Protocol Types
-// ============================================================================
-
-/// Requests received from pop-launcher via stdin
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-#[allow(non_snake_case, dead_code)]
-enum Request {
-    Activate {
-        Activate: u32,
-    },
-    ActivateContext {
-        ActivateContext: ActivateContextData,
-    },
-    Complete {
-        Complete: u32,
-    },
-    Context {
-        Context: u32,
-    },
-    Quit {
-        Quit: u32,
-    },
-    Search {
-        Search: String,
-    },
-    Simple(SimpleRequest),
-}
-
-#[derive(Debug, Deserialize)]
-struct ActivateContextData {
-    id: u32,
-    context: u32,
-}
-
-#[derive(Debug, Deserialize)]
-enum SimpleRequest {
-    Exit,
-    Interrupt,
-}
-
-/// Responses sent to pop-launcher via stdout
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-#[allow(non_snake_case, dead_code)]
-enum PluginResponse {
-    Append { Append: PluginSearchResult },
-    Clear(ClearResponse),
-    Close(CloseResponse),
-    Fill { Fill: String },
-    Finished(FinishedResponse),
-}
-
-#[derive(Debug, Serialize)]
-enum ClearResponse {
-    Clear,
-}
-
-#[derive(Debug, Serialize)]
-enum CloseResponse {
-    Close,
-}
-
-#[derive(Debug, Serialize)]
-enum FinishedResponse {
-    Finished,
-}
-
-#[derive(Debug, Serialize)]
-struct PluginSearchResult {
-    id: u32,
-    name: String,
-    description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    keywords: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    icon: Option<IconSource>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    exec: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[allow(dead_code)]
-enum IconSource {
-    Name(String),
-    Mime(String),
-}
+use plugin_common::{
+    copy_to_clipboard, Activation, ContextOption, IconSource, PluginHandler, Row, Search,
+};
+use serde::Deserialize;
+use std::process::Command;
 
 // ============================================================================
 // Bitwarden Types
@@ -135,65 +49,13 @@ const KEYRING_ATTRIBUTE: &str = "session";
 // ============================================================================
 
 struct Plugin {
-    /// Store items for activation by index
-    results: HashMap<u32, BitwardenItem>,
     /// Cached session key
     session: Option<String>,
 }
 
 impl Plugin {
     fn new() -> Self {
-        Plugin {
-            results: HashMap::new(),
-            session: None,
-        }
-    }
-
-    fn run(&mut self) {
-        let stdin = io::stdin();
-        let mut stdout = io::stdout();
-
-        for line in stdin.lock().lines() {
-            let line = match line {
-                Ok(l) => l,
-                Err(_) => break,
-            };
-
-            if line.is_empty() {
-                continue;
-            }
-
-            let request: Request = match serde_json::from_str(&line) {
-                Ok(r) => r,
-                Err(_) => continue,
-            };
-
-            match request {
-                Request::Search { Search: query } => {
-                    self.handle_search(&query, &mut stdout);
-                }
-                Request::Activate { Activate: id } => {
-                    self.handle_activate(id, &mut stdout);
-                }
-                Request::Simple(SimpleRequest::Exit) => {
-                    break;
-                }
-                Request::Simple(SimpleRequest::Interrupt) => {
-                    self.send_finished(&mut stdout);
-                }
-                Request::Context { Context: id } => {
-                    self.handle_context(id, &mut stdout);
-                }
-                Request::ActivateContext {
-                    ActivateContext: data,
-                } => {
-                    self.handle_activate_context(data.id, data.context, &mut stdout);
-                }
-                _ => {
-                    self.send_finished(&mut stdout);
-                }
-            }
-        }
+        Plugin { session: None }
     }
 
     fn get_session(&mut self) -> Option<String> {
@@ -251,151 +113,6 @@ impl Plugin {
         None
     }
 
-    #[allow(dead_code)]
-    fn store_session_in_keyring(&self, session: &str) -> bool {
-        let ss = match secret_service::blocking::SecretService::connect(
-            secret_service::EncryptionType::Dh,
-        ) {
-            Ok(ss) => ss,
-            Err(_) => return false,
-        };
-
-        let collection = match ss.get_default_collection() {
-            Ok(c) => c,
-            Err(_) => return false,
-        };
-
-        // Unlock collection if needed
-        if collection.is_locked().unwrap_or(true) {
-            let _ = collection.unlock();
-        }
-
-        let attributes = std::collections::HashMap::from([(KEYRING_ATTRIBUTE, KEYRING_SERVICE)]);
-
-        let result = collection
-            .create_item(
-                "Bitwarden Session",
-                attributes,
-                session.as_bytes(),
-                true, // replace if exists
-                "text/plain",
-            )
-            .is_ok();
-        result
-    }
-
-    fn handle_search(&mut self, query: &str, stdout: &mut io::Stdout) {
-        // Clear previous results
-        self.results.clear();
-        self.send_response(PluginResponse::Clear(ClearResponse::Clear), stdout);
-
-        // Strip the "bw " prefix if present
-        let search_query = query.strip_prefix("bw ").unwrap_or(query).trim();
-
-        if search_query.is_empty() {
-            // Show help when no query
-            let result = PluginSearchResult {
-                id: 0,
-                name: "Bitwarden Search".to_string(),
-                description: "Type to search your vault...".to_string(),
-                keywords: None,
-                icon: Some(IconSource::Name("bitwarden".to_string())),
-                exec: None,
-            };
-            self.send_response(PluginResponse::Append { Append: result }, stdout);
-            self.send_finished(stdout);
-            return;
-        }
-
-        // Get session
-        let session = match self.get_session() {
-            Some(s) => s,
-            None => {
-                self.send_error_result(
-                    "Vault locked",
-                    "Run 'bw unlock' and store session with 'bw-session-store'",
-                    stdout,
-                );
-                self.send_finished(stdout);
-                return;
-            }
-        };
-
-        // Search Bitwarden vault
-        let output = Command::new("bw")
-            .args([
-                "list",
-                "items",
-                "--search",
-                search_query,
-                "--session",
-                &session,
-            ])
-            .output();
-
-        match output {
-            Ok(output) => {
-                if output.status.success() {
-                    match serde_json::from_slice::<Vec<BitwardenItem>>(&output.stdout) {
-                        Ok(items) => {
-                            if items.is_empty() {
-                                self.send_error_result(
-                                    "No results",
-                                    &format!("No items found for '{}'", search_query),
-                                    stdout,
-                                );
-                            } else {
-                                for (idx, item) in items.into_iter().take(10).enumerate() {
-                                    let id = idx as u32;
-
-                                    let description = self.format_item_description(&item);
-
-                                    let search_result = PluginSearchResult {
-                                        id,
-                                        name: item.name.clone(),
-                                        description,
-                                        keywords: None,
-                                        icon: Some(IconSource::Name("dialog-password".to_string())),
-                                        exec: None,
-                                    };
-
-                                    self.results.insert(id, item);
-                                    self.send_response(
-                                        PluginResponse::Append {
-                                            Append: search_result,
-                                        },
-                                        stdout,
-                                    );
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            self.send_error_result("Parse error", &e.to_string(), stdout);
-                        }
-                    }
-                } else {
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    if stderr.contains("Invalid session") || stderr.contains("not logged in") {
-                        // Invalidate cached session
-                        self.session = None;
-                        self.send_error_result(
-                            "Session expired",
-                            "Run 'bw unlock' and store session again",
-                            stdout,
-                        );
-                    } else {
-                        self.send_error_result("Bitwarden error", &stderr, stdout);
-                    }
-                }
-            }
-            Err(e) => {
-                self.send_error_result("Failed to run bw", &e.to_string(), stdout);
-            }
-        }
-
-        self.send_finished(stdout);
-    }
-
     fn format_item_description(&self, item: &BitwardenItem) -> String {
         let mut parts = Vec::new();
 
@@ -422,66 +139,18 @@ impl Plugin {
         }
     }
 
-    fn handle_activate(&mut self, id: u32, stdout: &mut io::Stdout) {
-        // Default action: copy password
-        self.copy_credential(id, CredentialType::Password, stdout);
-    }
-
-    fn handle_context(&self, id: u32, stdout: &mut io::Stdout) {
-        if let Some(item) = self.results.get(&id) {
-            let mut options = vec![
-                serde_json::json!({"id": 0, "name": "Copy password"}),
-                serde_json::json!({"id": 1, "name": "Copy username"}),
-            ];
-
-            // Add TOTP option if available
-            if item
-                .login
-                .as_ref()
-                .map(|l| l.totp.is_some())
-                .unwrap_or(false)
-            {
-                options.push(serde_json::json!({"id": 2, "name": "Copy TOTP code"}));
-            }
-
-            let context_response = serde_json::json!({
-                "Context": {
-                    "id": id,
-                    "options": options
-                }
-            });
-            let _ = writeln!(stdout, "{}", context_response);
-            let _ = stdout.flush();
-        }
-    }
-
-    fn handle_activate_context(&mut self, id: u32, context: u32, stdout: &mut io::Stdout) {
-        let credential_type = match context {
-            0 => CredentialType::Password,
-            1 => CredentialType::Username,
-            2 => CredentialType::Totp,
-            _ => return,
-        };
-
-        self.copy_credential(id, credential_type, stdout);
-    }
-
+    /// Copy the requested credential of `item` to the clipboard. Returns
+    /// `KeepOpen` (deliberately withholding the launcher `Close`) when no
+    /// session is available, so the user sees the vault is locked instead of the
+    /// launcher silently closing.
     fn copy_credential(
         &mut self,
-        id: u32,
+        item: &BitwardenItem,
         credential_type: CredentialType,
-        stdout: &mut io::Stdout,
-    ) {
-        let item_id = match self.results.get(&id) {
-            Some(item) => item.id.clone(),
-            None => return,
-        };
-
+    ) -> Activation {
         let session = match self.get_session() {
             Some(s) => s,
-            None => {
-                return;
-            }
+            None => return Activation::KeepOpen,
         };
 
         let (bw_type, type_name) = match credential_type {
@@ -490,15 +159,20 @@ impl Plugin {
             CredentialType::Totp => ("totp", "TOTP"),
         };
 
+        // Arguments are passed as a vector, never through a shell. The session
+        // token goes through the BW_SESSION env var (which the bw CLI reads
+        // natively) instead of --session, so the secret is never exposed in
+        // /proc/<pid>/cmdline to other local processes.
         let output = Command::new("bw")
-            .args(["get", bw_type, &item_id, "--session", &session])
+            .env("BW_SESSION", &session)
+            .args(["get", bw_type, &item.id])
             .output();
 
         match output {
             Ok(output) => {
                 if output.status.success() {
                     let value = String::from_utf8_lossy(&output.stdout);
-                    self.copy_to_clipboard(value.trim());
+                    copy_to_clipboard(value.trim());
                 } else {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     eprintln!("Failed to get {}: {}", type_name, stderr);
@@ -509,49 +183,115 @@ impl Plugin {
             }
         }
 
-        self.send_response(PluginResponse::Close(CloseResponse::Close), stdout);
+        Activation::Close
     }
+}
 
-    fn copy_to_clipboard(&self, text: &str) {
-        // Try wl-copy first (Wayland)
-        if Command::new("wl-copy").arg(text).status().is_ok() {
-            return;
+impl PluginHandler for Plugin {
+    type Item = BitwardenItem;
+    const PREFIX: &'static str = "bw ";
+
+    fn search(&mut self, query: &str) -> Search<BitwardenItem> {
+        if query.is_empty() {
+            // Show help when no query
+            return Search::help(
+                "Bitwarden Search",
+                "Type to search your vault...",
+                IconSource::Name("bitwarden".to_string()),
+            );
         }
 
-        // Fallback to xclip (X11)
-        if let Ok(mut child) = Command::new("xclip")
-            .args(["-selection", "clipboard"])
-            .stdin(Stdio::piped())
-            .spawn()
-        {
-            if let Some(stdin) = child.stdin.as_mut() {
-                let _ = stdin.write_all(text.as_bytes());
+        // Get session
+        let session = match self.get_session() {
+            Some(s) => s,
+            None => {
+                return Search::error(
+                    "Vault locked",
+                    "Store a session: secret-tool store --label='Bitwarden Session' session bw-launcher, or export BW_SESSION=$(bw unlock --raw)",
+                )
             }
-            let _ = child.wait();
-        }
-    }
-
-    fn send_error_result(&self, title: &str, message: &str, stdout: &mut io::Stdout) {
-        let result = PluginSearchResult {
-            id: 999,
-            name: title.to_string(),
-            description: message.to_string(),
-            keywords: None,
-            icon: Some(IconSource::Name("dialog-error".to_string())),
-            exec: None,
         };
-        self.send_response(PluginResponse::Append { Append: result }, stdout);
-    }
 
-    fn send_finished(&self, stdout: &mut io::Stdout) {
-        self.send_response(PluginResponse::Finished(FinishedResponse::Finished), stdout);
-    }
+        // Search Bitwarden vault. The query is passed as a distinct argument;
+        // the session token goes via the BW_SESSION env var (not --session) so
+        // it never appears in /proc/<pid>/cmdline.
+        let output = Command::new("bw")
+            .env("BW_SESSION", &session)
+            .args(["list", "items", "--search", query])
+            .output();
 
-    fn send_response(&self, response: PluginResponse, stdout: &mut io::Stdout) {
-        if let Ok(json) = serde_json::to_string(&response) {
-            let _ = writeln!(stdout, "{}", json);
-            let _ = stdout.flush();
+        match output {
+            Ok(output) => {
+                if output.status.success() {
+                    match serde_json::from_slice::<Vec<BitwardenItem>>(&output.stdout) {
+                        Ok(items) => {
+                            if items.is_empty() {
+                                Search::error(
+                                    "No results",
+                                    format!("No items found for '{}'", query),
+                                )
+                            } else {
+                                Search::Results(items.into_iter().take(10).collect())
+                            }
+                        }
+                        Err(e) => Search::error("Parse error", e.to_string()),
+                    }
+                } else {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    if stderr.contains("Invalid session") || stderr.contains("not logged in") {
+                        // Invalidate cached session
+                        self.session = None;
+                        Search::error("Session expired", "Run 'bw unlock' and store session again")
+                    } else {
+                        Search::error("Bitwarden error", stderr.into_owned())
+                    }
+                }
+            }
+            Err(e) => Search::error("Failed to run bw", e.to_string()),
         }
+    }
+
+    fn row(&self, item: &BitwardenItem) -> Row {
+        Row::new(
+            item.name.clone(),
+            self.format_item_description(item),
+            IconSource::Name("dialog-password".to_string()),
+        )
+    }
+
+    fn activate(&mut self, item: &BitwardenItem) -> Activation {
+        // Default action: copy password
+        self.copy_credential(item, CredentialType::Password)
+    }
+
+    fn context_menu(&self, item: &BitwardenItem) -> Vec<ContextOption> {
+        let mut options = vec![
+            ContextOption::new(0, "Copy password"),
+            ContextOption::new(1, "Copy username"),
+        ];
+
+        // Add TOTP option if available
+        if item
+            .login
+            .as_ref()
+            .map(|l| l.totp.is_some())
+            .unwrap_or(false)
+        {
+            options.push(ContextOption::new(2, "Copy TOTP code"));
+        }
+
+        options
+    }
+
+    fn activate_context(&mut self, item: &BitwardenItem, context: u32) -> Activation {
+        let credential_type = match context {
+            0 => CredentialType::Password,
+            1 => CredentialType::Username,
+            2 => CredentialType::Totp,
+            _ => return Activation::KeepOpen,
+        };
+
+        self.copy_credential(item, credential_type)
     }
 }
 
@@ -563,8 +303,7 @@ enum CredentialType {
 }
 
 fn main() {
-    let mut plugin = Plugin::new();
-    plugin.run();
+    Plugin::new().run();
 }
 
 #[cfg(test)]

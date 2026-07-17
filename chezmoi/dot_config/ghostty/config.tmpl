@@ -1,8 +1,10 @@
 # Ghostty terminal configuration
 # Theme is dynamically applied via chezmoi template
 
-# Theme - include from themes directory
-config-file = {{ .themes_dir }}/{{ .theme }}/ghostty.conf
+# Theme - include from the active-theme pointer. The `current` symlink under
+# ~/.local/share/cosmikase/ is re-pointed on every theme switch, so this file is
+# theme-independent and never re-renders per theme (item 2.5).
+config-file = {{ .chezmoi.homeDir }}/.local/share/cosmikase/current/ghostty.conf
 
 # Font
 font-family = "{{ .font_family }}"
@@ -35,6 +37,27 @@ keybind = super+control+shift+alt+arrow_right=resize_split:right,100
 
 # Slowdown mouse scrolling
 mouse-scroll-multiplier = 0.95
+
+# --- Quick terminal (drop-down) ---
+# Ghostty's quick terminal is the intended "quake-style" drop-down. On Linux it
+# needs a Wayland compositor with wlr-layer-shell-v1 (COSMIC has this) AND, for a
+# `global:` keybind that fires while ghostty is unfocused, the XDG desktop portal
+# GlobalShortcuts interface.
+#
+# CAVEAT (verified 2026-07-16): xdg-desktop-portal-cosmic does NOT implement
+# org.freedesktop.impl.portal.GlobalShortcuts — its data/cosmic.portal declares only
+# Access, FileChooser, Screenshot, Settings, ScreenCast:
+#   https://github.com/pop-os/xdg-desktop-portal-cosmic/blob/master/data/cosmic.portal
+# So the `global:` keybind below is INERT on COSMIC today. The working drop-down on
+# COSMIC is the compositor-level custom shortcut Super+` -> cosmikase-dropterm, in
+# ~/.config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom.
+# The settings below still take effect (a) on compositors that DO expose the portal
+# (KDE, GNOME, Hyprland, Niri) and (b) automatically once COSMIC ships it.
+# Refs: https://ghostty.org/docs/config/keybind/reference (toggle_quick_terminal)
+#       https://github.com/ghostty-org/ghostty (Config.zig: quick-terminal-*)
+quick-terminal-position = top
+quick-terminal-autohide = true
+keybind = global:super+grave=toggle_quick_terminal
 
 
 

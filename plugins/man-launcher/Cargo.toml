@@ -1,0 +1,10 @@
+[package]
+name = "man-launcher"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pop!_OS launcher plugin for searching man pages"
+
+[dependencies]
+plugin-common = { path = "../plugin-common" }
+regex = "1.11"

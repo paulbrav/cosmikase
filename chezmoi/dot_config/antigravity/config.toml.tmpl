@@ -1,16 +1,9 @@
 # Antigravity configuration
-# Theme colors are dynamically applied via chezmoi template
-
-{{- $cursorJson := joinPath .themes_dir .theme "cursor.json" | include | fromJson }}
+# The active theme's file is reached through the ~/.local/share/cosmikase/current
+# symlink (re-pointed on every theme switch), so this file is theme-independent
+# and never re-renders per theme (item 2.5). Editor colors are owned entirely by
+# bin/cosmikase-theme-cursor now (item 4.1); the old [colors] block was dead.
 
 [theme]
 # Reference the theme file for Antigravity-specific styling
-file = "{{ .themes_dir }}/{{ .theme }}/antigravity.conf"
-
-[colors]
-# Extracted from theme for easy programmatic access
-background = "{{ $cursorJson.colors.background }}"
-foreground = "{{ $cursorJson.colors.foreground }}"
-accent = "{{ $cursorJson.colors.accent }}"
-warning = "{{ $cursorJson.colors.warning }}"
-error = "{{ $cursorJson.colors.error }}"
+file = "{{ .chezmoi.homeDir }}/.local/share/cosmikase/current/antigravity.conf"

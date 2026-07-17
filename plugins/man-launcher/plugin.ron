@@ -1,0 +1,13 @@
+(
+    name: "Man Pages",
+    description: "Search and open man pages",
+    bin: (
+        path: "man-launcher",
+    ),
+    icon: Name("help-contents"),
+    query: (
+        isolate: true,
+        regex: "^man ",
+    )
+)
+

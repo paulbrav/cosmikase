@@ -1,101 +1,16 @@
 //! Exa.ai Pop Launcher Plugin
 //!
-//! A plugin for Pop!_OS launcher that provides AI-powered web search via Exa.ai.
+//! A plugin for the Pop!_OS / COSMIC launcher that provides AI-powered web
+//! search via Exa.ai. The launcher protocol lives in `plugin-common`; this file
+//! is only the Exa.ai-specific logic.
 
+use plugin_common::{
+    copy_to_clipboard, truncate_string, Activation, ContextOption, IconSource, PluginHandler, Row,
+    Search,
+};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 use std::process::Command;
-
-// ============================================================================
-// Pop Launcher Protocol Types
-// ============================================================================
-
-/// Requests received from pop-launcher via stdin
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-#[allow(non_snake_case, dead_code)]
-enum Request {
-    Activate {
-        Activate: u32,
-    },
-    ActivateContext {
-        ActivateContext: ActivateContextData,
-    },
-    Complete {
-        Complete: u32,
-    },
-    Context {
-        Context: u32,
-    },
-    Quit {
-        Quit: u32,
-    },
-    Search {
-        Search: String,
-    },
-    Simple(SimpleRequest),
-}
-
-#[derive(Debug, Deserialize)]
-struct ActivateContextData {
-    id: u32,
-    context: u32,
-}
-
-#[derive(Debug, Deserialize)]
-enum SimpleRequest {
-    Exit,
-    Interrupt,
-}
-
-/// Responses sent to pop-launcher via stdout
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-#[allow(non_snake_case, dead_code)]
-enum PluginResponse {
-    Append { Append: PluginSearchResult },
-    Clear(ClearResponse),
-    Close(CloseResponse),
-    Fill { Fill: String },
-    Finished(FinishedResponse),
-}
-
-#[derive(Debug, Serialize)]
-enum ClearResponse {
-    Clear,
-}
-
-#[derive(Debug, Serialize)]
-enum CloseResponse {
-    Close,
-}
-
-#[derive(Debug, Serialize)]
-enum FinishedResponse {
-    Finished,
-}
-
-#[derive(Debug, Serialize)]
-struct PluginSearchResult {
-    id: u32,
-    name: String,
-    description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    keywords: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    icon: Option<IconSource>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    exec: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-#[allow(dead_code)]
-enum IconSource {
-    Name(String),
-    Mime(String),
-}
 
 // ============================================================================
 // Exa.ai API Types
@@ -179,95 +94,36 @@ impl Config {
 struct Plugin {
     config: Config,
     client: reqwest::blocking::Client,
-    /// Store URLs for activation by index
-    results: HashMap<u32, String>,
 }
 
 impl Plugin {
     fn new() -> Self {
-        let config = Config::load();
-        let client = reqwest::blocking::Client::new();
         Plugin {
-            config,
-            client,
-            results: HashMap::new(),
+            config: Config::load(),
+            client: reqwest::blocking::Client::new(),
         }
     }
+}
 
-    fn run(&mut self) {
-        let stdin = io::stdin();
-        let mut stdout = io::stdout();
+impl PluginHandler for Plugin {
+    type Item = ExaResult;
+    const PREFIX: &'static str = "exa ";
 
-        for line in stdin.lock().lines() {
-            let line = match line {
-                Ok(l) => l,
-                Err(_) => break,
-            };
-
-            if line.is_empty() {
-                continue;
-            }
-
-            let request: Request = match serde_json::from_str(&line) {
-                Ok(r) => r,
-                Err(_) => continue,
-            };
-
-            match request {
-                Request::Search { Search: query } => {
-                    self.handle_search(&query, &mut stdout);
-                }
-                Request::Activate { Activate: id } => {
-                    self.handle_activate(id, &mut stdout);
-                }
-                Request::Simple(SimpleRequest::Exit) => {
-                    break;
-                }
-                Request::Simple(SimpleRequest::Interrupt) => {
-                    // Cancel current operation - just send Finished
-                    self.send_finished(&mut stdout);
-                }
-                Request::Context { Context: id } => {
-                    self.handle_context(id, &mut stdout);
-                }
-                Request::ActivateContext {
-                    ActivateContext: data,
-                } => {
-                    self.handle_activate_context(data.id, data.context, &mut stdout);
-                }
-                _ => {
-                    self.send_finished(&mut stdout);
-                }
-            }
-        }
-    }
-
-    fn handle_search(&mut self, query: &str, stdout: &mut io::Stdout) {
-        // Clear previous results
-        self.results.clear();
-        self.send_response(PluginResponse::Clear(ClearResponse::Clear), stdout);
-
-        // Strip the "exa " prefix if present
-        let search_query = query.strip_prefix("exa ").unwrap_or(query).trim();
-
-        if search_query.is_empty() {
-            self.send_finished(stdout);
-            return;
+    fn search(&mut self, query: &str) -> Search<ExaResult> {
+        if query.is_empty() {
+            // Nothing to show for an empty query.
+            return Search::Results(Vec::new());
         }
 
         // Check for API key
         let api_key = match &self.config.api_key {
             Some(key) => key.clone(),
-            None => {
-                self.send_error_result("No API key configured", stdout);
-                self.send_finished(stdout);
-                return;
-            }
+            None => return Search::error("Error", "No API key configured"),
         };
 
         // Make API request
         let request_body = ExaSearchRequest {
-            query: search_query.to_string(),
+            query: query.to_string(),
             num_results: self.config.num_results.or(Some(8)),
             contents: Some(ExaContents {
                 text: ExaTextOptions {
@@ -288,169 +144,65 @@ impl Plugin {
             Ok(resp) => {
                 if resp.status().is_success() {
                     match resp.json::<ExaSearchResponse>() {
-                        Ok(exa_response) => {
-                            for (idx, result) in exa_response.results.into_iter().enumerate() {
-                                let id = idx as u32;
-                                let title = result.title.unwrap_or_else(|| "Untitled".to_string());
-                                let description = result
-                                    .text
-                                    .map(|t| truncate_string(&t, 100))
-                                    .unwrap_or_else(|| result.url.clone());
-
-                                // Store URL for activation
-                                self.results.insert(id, result.url);
-
-                                let search_result = PluginSearchResult {
-                                    id,
-                                    name: title,
-                                    description,
-                                    keywords: None,
-                                    icon: Some(IconSource::Name("web-browser".to_string())),
-                                    exec: None,
-                                };
-
-                                self.send_response(
-                                    PluginResponse::Append {
-                                        Append: search_result,
-                                    },
-                                    stdout,
-                                );
-                            }
-                        }
-                        Err(e) => {
-                            self.send_error_result(&format!("Parse error: {}", e), stdout);
-                        }
+                        Ok(exa_response) => Search::Results(exa_response.results),
+                        Err(e) => Search::error("Error", format!("Parse error: {}", e)),
                     }
                 } else {
-                    self.send_error_result(&format!("API error: {}", resp.status()), stdout);
+                    Search::error("Error", format!("API error: {}", resp.status()))
                 }
             }
-            Err(e) => {
-                self.send_error_result(&format!("Request failed: {}", e), stdout);
+            Err(e) => Search::error("Error", format!("Request failed: {}", e)),
+        }
+    }
+
+    fn row(&self, result: &ExaResult) -> Row {
+        let name = result
+            .title
+            .clone()
+            .unwrap_or_else(|| "Untitled".to_string());
+        let description = result
+            .text
+            .as_ref()
+            .map(|t| truncate_string(t, 100))
+            .unwrap_or_else(|| result.url.clone());
+        Row::new(
+            name,
+            description,
+            IconSource::Name("web-browser".to_string()),
+        )
+    }
+
+    fn activate(&mut self, result: &ExaResult) -> Activation {
+        // Open URL in default browser
+        let _ = Command::new("xdg-open").arg(&result.url).spawn();
+        Activation::Close
+    }
+
+    fn context_menu(&self, _result: &ExaResult) -> Vec<ContextOption> {
+        vec![
+            ContextOption::new(0, "Open in browser"),
+            ContextOption::new(1, "Copy URL to clipboard"),
+        ]
+    }
+
+    fn activate_context(&mut self, result: &ExaResult, context: u32) -> Activation {
+        match context {
+            0 => {
+                let _ = Command::new("xdg-open").arg(&result.url).spawn();
             }
+            1 => copy_to_clipboard(&result.url),
+            _ => {}
         }
-
-        self.send_finished(stdout);
-    }
-
-    fn handle_activate(&self, id: u32, stdout: &mut io::Stdout) {
-        if let Some(url) = self.results.get(&id) {
-            // Open URL in default browser
-            let _ = Command::new("xdg-open").arg(url).spawn();
-            self.send_response(PluginResponse::Close(CloseResponse::Close), stdout);
-        }
-    }
-
-    fn handle_context(&self, id: u32, stdout: &mut io::Stdout) {
-        if self.results.contains_key(&id) {
-            // Provide context options: Open, Copy URL
-            let context_response = serde_json::json!({
-                "Context": {
-                    "id": id,
-                    "options": [
-                        {"id": 0, "name": "Open in browser"},
-                        {"id": 1, "name": "Copy URL to clipboard"}
-                    ]
-                }
-            });
-            let _ = writeln!(stdout, "{}", context_response);
-            let _ = stdout.flush();
-        }
-    }
-
-    fn handle_activate_context(&self, id: u32, context: u32, stdout: &mut io::Stdout) {
-        if let Some(url) = self.results.get(&id) {
-            match context {
-                0 => {
-                    // Open in browser
-                    let _ = Command::new("xdg-open").arg(url).spawn();
-                }
-                1 => {
-                    // Copy to clipboard using wl-copy (Wayland) or xclip (X11)
-                    if Command::new("wl-copy").arg(url).status().is_err() {
-                        let _ = Command::new("xclip")
-                            .args(["-selection", "clipboard"])
-                            .stdin(std::process::Stdio::piped())
-                            .spawn()
-                            .and_then(|mut child| {
-                                if let Some(stdin) = child.stdin.as_mut() {
-                                    stdin.write_all(url.as_bytes())?;
-                                }
-                                child.wait()
-                            });
-                    }
-                }
-                _ => {}
-            }
-            self.send_response(PluginResponse::Close(CloseResponse::Close), stdout);
-        }
-    }
-
-    fn send_error_result(&self, message: &str, stdout: &mut io::Stdout) {
-        let result = PluginSearchResult {
-            id: 999,
-            name: "Error".to_string(),
-            description: message.to_string(),
-            keywords: None,
-            icon: Some(IconSource::Name("dialog-error".to_string())),
-            exec: None,
-        };
-        self.send_response(PluginResponse::Append { Append: result }, stdout);
-    }
-
-    fn send_finished(&self, stdout: &mut io::Stdout) {
-        self.send_response(PluginResponse::Finished(FinishedResponse::Finished), stdout);
-    }
-
-    fn send_response(&self, response: PluginResponse, stdout: &mut io::Stdout) {
-        if let Ok(json) = serde_json::to_string(&response) {
-            let _ = writeln!(stdout, "{}", json);
-            let _ = stdout.flush();
-        }
-    }
-}
-
-fn truncate_string(s: &str, max_chars: usize) -> String {
-    let chars: Vec<char> = s.chars().collect();
-    if chars.len() <= max_chars {
-        s.to_string()
-    } else {
-        chars[..max_chars.saturating_sub(3)]
-            .iter()
-            .collect::<String>()
-            + "..."
+        Activation::Close
     }
 }
 
 fn main() {
-    let mut plugin = Plugin::new();
-    plugin.run();
+    Plugin::new().run();
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[test]
-    fn test_truncate_string_short() {
-        assert_eq!(truncate_string("hello", 10), "hello");
-    }
-
-    #[test]
-    fn test_truncate_string_exact() {
-        assert_eq!(truncate_string("hello", 5), "hello");
-    }
-
-    #[test]
-    fn test_truncate_string_long() {
-        assert_eq!(truncate_string("hello world", 8), "hello...");
-    }
-
-    #[test]
-    fn test_truncate_string_unicode() {
-        // Ensure we don't panic on multi-byte characters and truncate correctly
-        let s = "héllo wörld";
-        let truncated = truncate_string(s, 8);
-        assert_eq!(truncated, "héllo...");
-    }
+    // The truncate_string helper and its edge cases (including multi-byte
+    // characters) are now unit-tested in the shared `plugin-common` crate.
 }

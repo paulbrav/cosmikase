@@ -243,10 +243,13 @@ copy_on_select true      // Copy on selection
 
 ### Theme
 
-The theme is automatically set based on your active cosmikase theme:
+Cosmikase does **not** set a zellij `theme` line. Only a few cosmikase theme names match a
+zellij built-in theme, so the rest would silently fall back to zellij's default anyway. Rather
+than ship a per-theme mapping, the managed config omits the `theme` line and zellij uses its
+built-in default for every cosmikase theme. Add one manually if you want a specific built-in:
 
 ```kdl
-theme "nord"  // Set via chezmoi template
+theme "nord"  // Optional: any zellij built-in theme name
 ```
 
 ### Default Layout
@@ -436,19 +439,15 @@ Zellij sessions persist across terminal restarts. Use `zellij attach` to reconne
    copy_command "wl-copy"  // For Wayland
    ```
 
-### Theme Not Applying
+### Theme
 
-The theme is set via chezmoi template. Update it:
-
-```bash
-cosmikase-theme <theme-name>
-```
-
-Or manually:
+Zellij uses its built-in default theme under cosmikase; there is no `theme` line in the
+managed config (see [Theme](#theme) above). To use a specific zellij built-in theme, add one
+yourself:
 
 ```bash
 chezmoi edit ~/.config/zellij/config.kdl
-# Change theme line
+# Add a line such as:  theme "nord"
 chezmoi apply
 ```
 

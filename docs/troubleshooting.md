@@ -1,925 +1,256 @@
 # Troubleshooting Guide
 
-Common issues and solutions for cosmikase.
+Common issues and fixes for cosmikase. Everything routes through one orchestrator (chezmoi),
+so most problems are an apply, a manifest edit, or a hardware gate.
 
 ## Table of Contents
 
-- [Installation Issues](#installation-issues)
-- [Theme Switching Problems](#theme-switching-problems)
-- [CLI Command Errors](#cli-command-errors)
-- [Ansible Failures](#ansible-failures)
-- [Chezmoi Issues](#chezmoi-issues)
-- [Configuration Problems](#configuration-problems)
-- [Recovery Procedures](#recovery-procedures)
-- [Debug Commands](#debug-commands)
+- [Installation](#installation)
+- [Package Installation](#package-installation)
+- [Preflight & Hardware](#preflight--hardware)
+- [Theme Switching](#theme-switching)
+- [Chezmoi](#chezmoi)
+- [Configuration](#configuration)
+- [Recovery](#recovery)
 
 ---
 
-## Installation Issues
+## Installation
 
-### uv Not Found
+### chezmoi not found
 
-**Symptom:**
-```
-Error: uv is not installed
-```
+`install.sh` installs the `chezmoi` binary to `~/.local/bin`. If it is not on your PATH
+afterward:
 
-**Solution:**
 ```bash
-# Install uv
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Add to PATH (if not already)
-export PATH="$HOME/.local/bin:$PATH"
-
-# Verify
-which uv
-```
-
-**Prevention:** Run `make setup` before `make install` to ensure all dependencies are installed.
-
----
-
-### Chezmoi Not Found
-
-**Symptom:**
-```
-Error: chezmoi not found
-```
-
-**Solution:**
-```bash
-# Install chezmoi
-curl -sfL https://get.chezmoi.io | sh
-
-# Or via make setup
-make setup
-```
-
-**Verify:**
-```bash
-which chezmoi
+export PATH="$HOME/.local/bin:$PATH"   # add to ~/.bashrc if missing
 chezmoi --version
 ```
 
----
+Re-running `./install.sh` is safe and idempotent.
 
-### Ansible Collection Missing
+### Prereqs missing
 
-**Symptom:**
-```
-ERROR! couldn't resolve module/action 'ansible.posix.synchronize'
-```
+`install.sh` installs `curl`, `git`, and `python3-yaml` up front (single sudo prompt). If a
+`run_onchange_` package script fails complaining a tool is missing, re-run the installer:
 
-**Solution:**
 ```bash
-# Install required collections
-uv run ansible-galaxy collection install community.general ansible.posix
-
-# make setup installs community.general; run the command above for ansible.posix
-make setup
+./install.sh
 ```
 
----
+### Permission denied on a script
 
-### Permission Denied Errors
-
-**Symptom:**
-```
-Permission denied: /home/user/.local/bin/cosmikase-theme
-```
-
-**Solution:**
 ```bash
-# Make scripts executable
-chmod +x ~/.local/bin/cosmikase-*
-
-# Or re-run installation
-make install
+chmod +x bin/cosmikase-*
+# or re-run the installer, which restores the managed copies
+./install.sh
 ```
 
 ---
 
-### Ghostty Build Fails
+## Package Installation
 
-**Symptom:**
-```
-Warning: Ghostty build failed
-```
+### apt package fails
 
-**Causes:**
-- Zig 0.13+ not installed
-- Missing build dependencies
-- Network issues during git pull
-
-**Solution:**
 ```bash
-# Check Zig version
-zig version  # Should be 0.13.0 or higher
-
-# Install Zig if missing
-# See: https://ziglang.org/download/
-
-# Check Ghostty source directory
-ls -la ~/ghostty-source
-
-# Try manual build
-cd ~/ghostty-source
-git pull
-zig build -Doptimize=ReleaseFast
+sudo apt update                 # refresh the package cache first
+apt-cache search <package>      # confirm the name/availability
 ```
 
-**Workaround:** Disable Ghostty build in config:
-```yaml
-defaults:
-  ghostty: false
-```
+Fix the name in `cosmikase.yaml` if it is wrong, then re-run `./install.sh` (the package step
+reruns when the manifest changes).
 
----
+### Flatpak install fails
 
-## Theme Switching Problems
-
-### Theme Not Found
-
-**Symptom:**
-```
-Error: Theme 'xyz' not found
-```
-
-**Solution:**
 ```bash
-# List available themes
-cosmikase-themes-dir --list
-
-# Or check themes directory
-ls -la ~/.local/share/cosmikase/themes/
-
-# Verify theme exists
-ls -la ~/.local/share/cosmikase/themes/nord/
+flatpak remote-list             # is flathub present?
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak search <app-name>       # verify the application ID
 ```
 
-**Check theme name:** Theme names are case-sensitive and must match directory names exactly.
+The package script adds flatpak + the Flathub remote automatically when any flatpak app is
+enabled; if that step was skipped (e.g. `COSMIKASE_CI=1`), add the remote by hand as above.
 
 ---
 
-### Cursor Theme Not Applying
+## Preflight & Hardware
 
-**Symptom:** Theme name is set but colors don't change.
+`bin/cosmikase-preflight` prints a PASS/FAIL/WARN table. WARN is expected on non-COSMIC hosts
+and before the webcam driver lands — it does not block the rest of the setup.
 
-**Solutions:**
-1. **Reload Cursor window:**
-   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
-   - Type "reload"
-   - Select "Developer: Reload Window"
+### Webcam WARN/FAIL
 
-2. **Verify extension is installed:**
+The HP ZBook Ultra G1a webcam (sensor OV05C10, AMD ISP4) needs the `amd_capture` driver, which
+merged into **mainline Linux 7.2**. Pop!_OS 24.04 ships 6.17.9, so preflight will WARN until:
+
+```bash
+modinfo amd_capture                       # driver present?
+ls /lib/firmware/amdgpu/isp_4_1_1.bin*     # firmware present?
+uname -r                                   # kernel ≥ 7.2?
+```
+
+Interim paths: the Ubuntu **OEM kernel** (`linux-oem-24.04c`), a **DKMS backport** of
+`amd_capture`, or a self-built **≥ 7.2** kernel. The sensor is an AMD ISP4 MIPI/CSI camera
+(not USB UVC); it exposes a plain V4L2 node (`/dev/video0`) and needs no libcamera. Confirm
+with `v4l2-ctl --list-devices` (from `v4l-utils`).
+
+### Fingerprint FAIL
+
+The HP ZBook Ultra G1a has a Synaptics fingerprint sensor. It works with `fprintd` after a
+firmware update, once enabled in PAM:
+
+```bash
+fwupdmgr update                        # apply the sensor firmware update, then reboot
+pam-auth-update --enable fprintd       # enable fingerprint auth in PAM
+systemctl status fprintd
+fprintd-enroll                         # enroll a finger once fprintd + the reader are present
+```
+
+### WiFi unstable
+
+The MediaTek **MT7925** adapter's stability improved in **kernel 6.16+**; if you see drops on
+an older kernel, moving to a newer kernel (the interim webcam kernels above all qualify) fixes
+it.
+
+### Power udev rule inactive
+
+The power profile switcher (`cosmikase-power-helper`) is triggered by a udev rule installed
+during apply. Verify and re-apply if needed:
+
+```bash
+cosmikase-power-helper          # run it manually to confirm it works
+chezmoi apply                   # reinstall the managed udev rule
+```
+
+---
+
+## Theme Switching
+
+### Theme not found
+
+```bash
+ls ~/.local/share/cosmikase/themes/          # installed themes
+ls ~/.local/share/cosmikase/themes/nord/     # verify one exists
+```
+
+Theme names are case-sensitive and must match a directory under `themes/`.
+
+### Cursor theme not applying
+
+1. Reload the window: `Ctrl+Shift+P` → "Developer: Reload Window".
+2. Confirm the color-theme extension is installed:
    ```bash
-   # Check installed extensions
    cursor --list-extensions | grep -i catppuccin
-   
-   # Install if missing
    cosmikase-cursor-extensions install
    ```
+3. Check the setting: `grep colorTheme ~/.config/Cursor/User/settings.json`.
 
-3. **Check settings.json:**
-   ```bash
-   cat ~/.config/Cursor/User/settings.json | grep colorTheme
-   ```
+See [editor-theming.md](editor-theming.md).
 
-4. **Verify theme name matches exactly:**
-   - Theme name in settings must match VS Code extension name exactly
-   - Check [editor-theming.md](editor-theming.md) for correct names
+### COSMIC theme not updating
 
-**See Also:** [Editor Theming Guide](editor-theming.md)
-
----
-
-### COSMIC Theme Not Updating
-
-**Symptom:** Desktop theme doesn't change after `cosmikase-theme`.
-
-**Solutions:**
-1. **Check COSMIC settings daemon:**
-   ```bash
-   # Restart COSMIC settings daemon
-   systemctl --user restart cosmic-settings-daemon
-   ```
-
-2. **Verify RON file was updated:**
-   ```bash
-   cat ~/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark
-   ```
-
-3. **Check theme file exists:**
-   ```bash
-   ls -la ~/.local/share/cosmikase/themes/nord/cosmic.ron
-   ```
-
-4. **Log out and back in** (sometimes required for full theme application)
-
-**See Also:** [COSMIC Theming Guide](cosmic-theming.md)
-
----
-
-### Chezmoi Conflicts During Theme Switch
-
-**Symptom:**
-```
-chezmoi: source file conflicts with target
-```
-
-**Solution:**
 ```bash
-# See what would change
-chezmoi diff
+systemctl --user restart cosmic-settings-daemon
+cat ~/.config/cosmic/com.system76.CosmicTheme.Mode/v1/is_dark
+```
 
-# Force apply (overwrites local changes)
+Logging out and back in applies a theme fully if a component does not hot-reload. See
+[cosmic-theming.md](cosmic-theming.md).
+
+### Chezmoi conflict during a theme switch
+
+```bash
+chezmoi diff            # see what differs
+chezmoi apply --force   # overwrite local edits with the managed version
+```
+
+Don't hand-edit chezmoi-managed files; edit the templates under `chezmoi/` instead.
+
+### Rollback fails
+
+Rollback reads `~/.config/cosmikase/theme-history`, created on the first switch. If it is
+missing, switch back explicitly:
+
+```bash
+cosmikase-theme <previous-theme-name>
+```
+
+---
+
+## Chezmoi
+
+### Apply fails
+
+```bash
+chezmoi status     # what is out of date
+chezmoi diff       # what would change
+chezmoi doctor     # environment + template sanity
 chezmoi apply --force
-
-# Or merge conflicts manually
-chezmoi merge <file>
 ```
 
-**Prevention:** Don't manually edit files managed by chezmoi. Edit templates in `chezmoi/` instead.
+### Config (chezmoi.toml) looks wrong
 
----
-
-### Theme History Missing (Rollback Fails)
-
-**Symptom:**
-```
-Error: No theme history found to roll back
-```
-
-**Solution:**
-```bash
-# Check history file
-cat ~/.config/cosmikase/theme-history
-
-# Manually switch to previous theme
-cosmikase-theme <previous-theme-name>
-```
-
-**Note:** History is created automatically on first theme switch. If missing, rollback won't work.
-
----
-
-## CLI Command Errors
-
-### Command Not Found
-
-**Symptom:**
-```
-cosmikase-theme: command not found
-```
-
-**Solutions:**
-1. **Check PATH:**
-   ```bash
-   echo $PATH | grep -q "$HOME/.local/bin" || export PATH="$HOME/.local/bin:$PATH"
-   ```
-
-2. **Verify installation:**
-   ```bash
-   ls -la ~/.local/bin/cosmikase-*
-   ```
-
-3. **Re-run installation:**
-   ```bash
-   make install
-   ```
-
-4. **Use uv run:**
-   ```bash
-   uv run cosmikase-config list apt core
-   ```
-
----
-
-### cosmikase-config Fails
-
-**Symptom:**
-```
-Config file not found: cosmikase.yaml
-```
-
-**Solutions:**
-```bash
-# Run from repository root
-cd ~/Repos/cosmikase
-cosmikase-config list apt core
-
-# Or specify config path
-cosmikase-config --config /path/to/cosmikase.yaml list apt core
-
-# Or set environment variable
-export COSMIKASE_CONFIG=/path/to/config.yaml
-cosmikase-config list apt core
-```
-
----
-
-### gum Not Found
-
-**Symptom:**
-```
-Error: gum is not installed
-```
-
-**Solution:**
-```bash
-# Install gum
-sudo apt install gum
-
-# Or via cosmikase (if already partially installed)
-cosmikase-install  # Select gum from optional software
-```
-
----
-
-### Python CLI Tools Not Found
-
-**Symptom:**
-```
-cosmikase-config: command not found
-```
-
-**Solutions:**
-1. **Install Python tools:**
-   ```bash
-   make setup
-   ```
-
-2. **Use uv run:**
-   ```bash
-   uv run cosmikase-config list apt core
-   ```
-
-3. **Check installation:**
-   ```bash
-   uv run python -m cosmikase.config --help
-   ```
-
----
-
-## Ansible Failures
-
-### Playbook Fails with "No such file or directory"
-
-**Symptom:**
-```
-ERROR! the file '/path/to/cosmikase.yaml' was not found
-```
-
-**Solution:**
-```bash
-# Run from repository root
-cd ~/Repos/cosmikase
-
-# Or specify config file
-make install CONFIG_FILE=/path/to/cosmikase.yaml
-```
-
----
-
-### APT Package Installation Fails
-
-**Symptom:**
-```
-Failed to install package: <package-name>
-```
-
-**Solutions:**
-1. **Update package cache:**
-   ```bash
-   sudo apt update
-   ```
-
-2. **Check package exists:**
-   ```bash
-   apt search <package-name>
-   ```
-
-3. **Try installing manually:**
-   ```bash
-   sudo apt install <package-name>
-   ```
-
-4. **Check for typos in config:**
-   ```bash
-   cosmikase-config list apt core --names-only
-   ```
-
----
-
-### Flatpak Installation Fails
-
-**Symptom:**
-```
-Error: Unable to install <app-id>
-```
-
-**Solutions:**
-1. **Check Flatpak remote:**
-   ```bash
-   flatpak remote-list
-   ```
-
-2. **Add Flathub if missing:**
-   ```bash
-   flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-   ```
-
-3. **Update remotes:**
-   ```bash
-   flatpak update --appstream
-   ```
-
-4. **Verify app ID:**
-   ```bash
-   flatpak search <app-name>
-   ```
-
----
-
-### Ghostty Build Fails in Ansible
-
-**Symptom:**
-```
-fatal: [localhost]: FAILED! => {"msg": "Ghostty build failed"}
-```
-
-**Solutions:**
-1. **Check Zig installation:**
-   ```bash
-   which zig
-   zig version  # Must be 0.13.0+
-   ```
-
-2. **Check Ghostty source:**
-   ```bash
-   ls -la ~/ghostty-source
-   ```
-
-3. **Disable Ghostty build:**
-   ```yaml
-   defaults:
-     ghostty: false
-   ```
-
-4. **Build manually:**
-   ```bash
-   cd ~/ghostty-source
-   git pull
-   zig build -Doptimize=ReleaseFast
-   ```
-
----
-
-## Chezmoi Issues
-
-### Chezmoi Apply Fails
-
-**Symptom:**
-```
-chezmoi apply: error applying dotfiles
-```
-
-**Solutions:**
-1. **Check chezmoi status:**
-   ```bash
-   chezmoi status
-   ```
-
-2. **See what would change:**
-   ```bash
-   chezmoi diff
-   ```
-
-3. **Force apply:**
-   ```bash
-   chezmoi apply --force
-   ```
-
-4. **Check for syntax errors in templates:**
-   ```bash
-   chezmoi doctor
-   ```
-
----
-
-### Chezmoi Config Corrupted
-
-**Symptom:**
-```
-Error: chezmoi.toml has invalid TOML syntax
-```
-
-**Solution:**
-```bash
-# Backup current config
-cp ~/.config/chezmoi/chezmoi.toml ~/.config/chezmoi/chezmoi.toml.bak
-
-# Regenerate config
-cosmikase-chezmoi nord ~/.local/share/cosmikase/themes
-
-# Or edit manually
-nano ~/.config/chezmoi/chezmoi.toml
-```
-
-**Validate TOML:**
-```bash
-python3 -c "import tomli; tomli.load(open('~/.config/chezmoi/chezmoi.toml', 'rb'))"
-```
-
----
-
-### Dotfiles Not Updating
-
-**Symptom:** Changes to templates don't appear in dotfiles.
-
-**Solutions:**
-1. **Re-apply chezmoi:**
-   ```bash
-   chezmoi apply
-   ```
-
-2. **Check template syntax:**
-   ```bash
-   chezmoi doctor
-   ```
-
-3. **Verify template was modified:**
-   ```bash
-   chezmoi diff
-   ```
-
-4. **Force re-apply:**
-   ```bash
-   chezmoi apply --force
-   ```
-
----
-
-## Configuration Problems
-
-### Invalid YAML Syntax
-
-**Symptom:**
-```
-ERROR! YAML syntax error in cosmikase.yaml
-```
-
-**Solution:**
-```bash
-# Validate YAML
-python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
-
-# Or use online validator
-# https://www.yamllint.com/
-```
-
-**Common Issues:**
-- Missing colons after keys
-- Incorrect indentation (must use spaces, not tabs)
-- Unquoted strings with special characters
-- Missing quotes around values containing colons
-
----
-
-### Section Not Found Error
-
-**Symptom:**
-```
-Error: Section 'xyz' not found in config
-```
-
-**Solution:**
-```bash
-# List available sections
-cosmikase-config list apt  # Will show error with available sections
-
-# Check config structure
-cat cosmikase.yaml | grep -E "^[a-z_]+:"
-```
-
-**Common Mistakes:**
-- Typo in section name (case-sensitive)
-- Missing section in config file
-- Incorrect indentation
-
----
-
-### Package Not Installing
-
-**Symptom:** Package listed in config but not installed.
-
-**Solutions:**
-1. **Check install flag:**
-   ```bash
-   cosmikase-config list apt core --all | grep <package-name>
-   ```
-
-2. **Verify defaults.install:**
-   ```bash
-   cosmikase-config get defaults.install
-   ```
-
-3. **Check if package was skipped:**
-   ```bash
-   # Re-run installation
-   make install
-   ```
-
-4. **Install manually:**
-   ```bash
-   sudo apt install <package-name>
-   ```
-
----
-
-## Recovery Procedures
-
-### Rollback Theme Change
-
-**Solution:**
-```bash
-# Use rollback if available
-cosmikase-theme --rollback
-
-# Or manually switch to previous theme
-cosmikase-theme <previous-theme-name>
-
-# Check theme history
-cat ~/.config/cosmikase/theme-history
-```
-
----
-
-### Purge Chezmoi
-
-**Warning:** This removes all chezmoi-managed dotfiles.
-
-**Solution:**
-```bash
-# See what would be removed
-chezmoi diff
-
-# Remove chezmoi-managed files
-chezmoi purge
-
-# Re-initialize
-chezmoi init --source ~/Repos/cosmikase/chezmoi
-chezmoi apply
-```
-
----
-
-### Reset Configuration
-
-**Solution:**
-```bash
-# Backup current config
-cp cosmikase.yaml cosmikase.yaml.bak
-
-# Restore from repository
-git restore cosmikase.yaml
-
-# Or re-copy from a known-good file
-cp /path/to/repo/cosmikase.yaml cosmikase.yaml
-```
-
----
-
-### Uninstall Everything
-
-**Solution:**
-```bash
-# Remove dotfiles
-chezmoi purge
-
-# Remove scripts
-rm -rf ~/.local/bin/cosmikase-*
-
-# Remove themes
-rm -rf ~/.local/share/cosmikase
-
-# Remove shell integration (edit manually)
-# Remove COSMIKASE MANAGED BLOCK from ~/.bashrc and ~/.zshrc
-
-# Remove chezmoi config
-rm -rf ~/.config/chezmoi
-```
-
-**Note:** This does not uninstall packages. Remove those manually:
-```bash
-# List installed packages
-cosmikase-config list apt core --names-only | xargs sudo apt remove
-
-# Remove Flatpak apps
-cosmikase-config list flatpak utility --names-only | xargs flatpak uninstall
-```
-
----
-
-## Debug Commands
-
-### Check Installation Status
+`cosmikase-chezmoi` writes the theme into chezmoi's config atomically. Inspect or repair:
 
 ```bash
-# Verify scripts are installed
-ls -la ~/.local/bin/cosmikase-*
-
-# Check Python tools
-uv run cosmikase-config --help
-
-# Verify themes directory
-cosmikase-themes-dir --list
-
-# Check chezmoi status
-chezmoi status
-```
-
----
-
-### Validate Configuration
-
-```bash
-# Validate YAML syntax
-python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
-
-# Check config structure
-cosmikase-config get defaults.theme
-
-# List all sections
-cosmikase-config list apt
-```
-
----
-
-### Check Chezmoi
-
-```bash
-# Check chezmoi health
-chezmoi doctor
-
-# See what would change
-chezmoi diff
-
-# Check config
 cat ~/.config/chezmoi/chezmoi.toml
+cosmikase-chezmoi set theme nord      # rewrite the theme safely
+```
 
-# Verify templates
-chezmoi execute-template < ~/.local/share/chezmoi/dot_config/Cursor/User/settings.json.tmpl
+Validate the TOML:
+
+```bash
+python3 -c "import tomllib,sys; tomllib.load(open(sys.argv[1],'rb'))" ~/.config/chezmoi/chezmoi.toml
+```
+
+If `cosmikase-chezmoi` reports that `uv` is missing, install it or re-run `./install.sh`.
+
+---
+
+## Configuration
+
+### Invalid YAML in cosmikase.yaml
+
+```bash
+python3 -c "import yaml; yaml.safe_load(open('cosmikase.yaml'))"
+```
+
+Common causes: missing colons, tabs instead of spaces, or unquoted values containing colons.
+
+### A package I enabled did not install
+
+```bash
+grep -n "<package>" cosmikase.yaml   # confirm it is present and install: true
+./install.sh                         # the package step reruns on manifest change
+sudo apt install <package>           # or install it directly to confirm availability
 ```
 
 ---
 
-### Debug Theme Switching
+## Recovery
+
+### Purge chezmoi-managed dotfiles
 
 ```bash
-# Check current theme
-cosmikase-config get defaults.theme
-
-# List available themes
-cosmikase-themes-dir --list
-
-# Check theme files
-ls -la ~/.local/share/cosmikase/themes/nord/
-
-# Verify chezmoi data
-cat ~/.config/chezmoi/chezmoi.toml | grep theme
-
-# Check theme history
-cat ~/.config/cosmikase/theme-history
+chezmoi diff     # preview what would be removed
+chezmoi purge
 ```
 
----
+Re-initialize with `chezmoi init --source ~/Repos/cosmikase/chezmoi --apply`.
 
-### Debug Ansible
+### Uninstall cosmikase (keep packages)
 
 ```bash
-# Dry-run (no changes)
-make dry-run
-
-# Verbose output
-cd ansible
-uv run ansible-playbook -i inventory.yml playbook.yml -vvv
-
-# Check specific role
-uv run ansible-playbook -i inventory.yml playbook.yml --tags packages
-
-# Test config loading
-uv run ansible-playbook -i inventory.yml playbook.yml --check
+chezmoi purge
+rm -rf ~/.local/bin/cosmikase-* ~/.local/share/cosmikase ~/.config/chezmoi
 ```
 
----
-
-### Check Logs
-
-```bash
-# System logs (for udev/power helper)
-journalctl -t cosmikase-power
-
-# Ansible logs (if redirected)
-# Check output from make install
-
-# Chezmoi logs (if enabled)
-chezmoi doctor -v
-```
-
----
-
-## Getting Help
-
-### Before Asking for Help
-
-1. **Check documentation:**
-   - [README.md](../README.md)
-   - [CLI Reference](cli-reference.md)
-   - [Configuration Reference](configuration-reference.md)
-
-2. **Run debug commands:**
-   - See [Debug Commands](#debug-commands) section above
-
-3. **Check for similar issues:**
-   - Search repository issues
-   - Check recent commits
-
-### Providing Debug Information
-
-When reporting issues, include:
-
-```bash
-# System information
-uname -a
-lsb_release -a
-
-# Installation status
-which cosmikase-theme
-cosmikase-config --help 2>/dev/null || uv run cosmikase-config --help
-
-# Configuration
-cosmikase-config get defaults.theme
-cosmikase-config get defaults.install
-
-# Chezmoi status
-chezmoi doctor
-
-# Error messages
-# Full output of failing command
-```
-
----
-
-## Common Workarounds
-
-### Use uv run for Python Tools
-
-If Python CLI tools aren't on PATH:
-
-```bash
-uv run cosmikase-config list apt core
-uv run theme-tui
-```
-
-### Manual Theme Application
-
-If `cosmikase-theme` fails:
-
-```bash
-# Update chezmoi manually
-cosmikase-chezmoi nord ~/.local/share/cosmikase/themes
-
-# Apply dotfiles
-chezmoi apply
-
-# Reload applications manually
-# Cursor: Ctrl+Shift+P -> "Developer: Reload Window"
-# COSMIC: Log out and back in
-```
-
-### Skip Problematic Steps
-
-Use flags to skip failing steps:
-
-```bash
-# Skip Cursor update
-cosmikase-theme nord --no-cursor
-
-# Skip COSMIC update
-cosmikase-theme nord --no-cosmic
-
-# Skip chezmoi (only update running apps)
-cosmikase-theme nord --no-chezmoi
-```
+Packages are not removed automatically. Remove any you no longer want with `apt`/`flatpak`.
 
 ---
 
 ## See Also
 
-- [CLI Reference](cli-reference.md) - Complete command documentation
-- [Configuration Reference](configuration-reference.md) - Config file schema
-- [Editor Theming Guide](editor-theming.md) - Theme troubleshooting
-- [COSMIC Theming Guide](cosmic-theming.md) - Desktop theme issues
-
+- [CLI Reference](cli-reference.md) — every command and its flags.
+- [Configuration Reference](configuration-reference.md) — the `cosmikase.yaml` schema.
+- [Editor Theming](editor-theming.md) · [COSMIC Theming](cosmic-theming.md)

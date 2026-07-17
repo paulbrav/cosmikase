@@ -1,5 +1,6 @@
 # ~/.bashrc: executed by bash(1) for non-login shells.
-# Managed by chezmoi - edit the template in cosmikase/chezmoi/
+# COSMIKASE_BASHRC — managed entirely by chezmoi.
+# Edit the template: chezmoi/dot_bashrc.tmpl (do not hand-edit ~/.bashrc).
 
 # If not running interactively, don't do anything
 case $- in
@@ -112,10 +113,10 @@ if command -v fzf >/dev/null 2>&1; then
 fi
 
 # ============================================================================
-# Zoxide (smarter cd)
+# Zoxide (smarter cd) — `j <dir>` jumps to frequent paths (autojump muscle memory)
 # ============================================================================
 if command -v zoxide >/dev/null 2>&1; then
-    eval "$(zoxide init bash)"
+    eval "$(zoxide init bash --cmd j)"
 fi
 
 # ============================================================================
@@ -153,11 +154,6 @@ fi
 # Source aliases
 if [[ -f ~/.config/shell/aliases/cosmikase_aliases.sh ]]; then
     source ~/.config/shell/aliases/cosmikase_aliases.sh
-fi
-
-# Source secrets (API keys from Bitwarden)
-if [[ -f ~/.config/shell/secrets.sh ]]; then
-    source ~/.config/shell/secrets.sh
 fi
 
 # Flatpak Obsidian alias

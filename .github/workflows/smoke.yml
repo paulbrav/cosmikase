@@ -1,0 +1,42 @@
+name: Container Smoke
+
+# The only end-to-end gate: builds a clean Ubuntu image and runs
+# COSMIKASE_CI=1 ./install.sh + `chezmoi apply`, then asserts the machine was
+# actually configured (tests/container-smoke-assert.sh).
+#
+# Kept in its own workflow so it runs only when something it exercises changes
+# (paths below), every night (schedule), or on demand (dispatch) — never on
+# unrelated PRs, where it would just add cost. paths: is workflow-level, so it
+# lives here rather than on lint.yml (which must run on every change).
+on:
+  pull_request:
+    paths:
+      - install.sh
+      - chezmoi/**
+      - cosmikase.yaml
+      - tests/Containerfile.smoke
+      - tests/container-smoke*.sh
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      run_smoke:
+        description: "Run the container smoke test"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  container_smoke:
+    name: Container Smoke
+    runs-on: ubuntu-latest
+    # Always run on pull_request and schedule; on manual dispatch honour the
+    # toggle. run_smoke is a *boolean* input, so reference it directly — the
+    # old `== 'true'` string comparison never matched a boolean, so the job
+    # ran on no event at all.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_smoke }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run container smoke test
+        run: ENGINE=docker ./tests/container-smoke.sh

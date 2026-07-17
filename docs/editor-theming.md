@@ -16,7 +16,7 @@ A comprehensive guide to theming Cursor and Antigravity within the cosmikase eco
 
 ## Cosmikase Theme System Overview
 
-The cosmikase system provides unified theming across multiple applications with a single command. When you run `cosmikase-theme`, it updates configurations for COSMIC desktop, terminals (Ghostty, Kitty, Alacritty), Cursor, Antigravity, and other tools simultaneously.
+The cosmikase system provides unified theming across multiple applications with a single command. When you run `cosmikase-theme`, it updates configurations for COSMIC desktop, terminals (cosmic-term and Ghostty), Cursor, Antigravity, and other tools simultaneously.
 
 ### How Theme Switching Works
 
@@ -25,9 +25,11 @@ cosmikase-theme <theme-name>
 ```
 
 This command:
-1. Updates `~/.config/chezmoi/chezmoi.toml` with the new theme name
-2. Runs `chezmoi apply` to regenerate all templated config files
-3. Applications pick up changes via their own mechanisms (inotify, reload, etc.)
+1. Updates `~/.config/chezmoi/chezmoi.toml` with the new theme name (via `cosmikase-chezmoi`)
+2. Runs `chezmoi apply --force`, which regenerates templated config files and re-points the
+   `~/.local/share/cosmikase/current` symlink at the active theme
+3. The `run_onchange_after_10-setup-theme` hook fires (because the theme changed) and applies
+   the live theme: COSMIC desktop, terminals, and editor settings (via `cosmikase-theme-cursor`)
 
 ### Theme Directory Structure
 
@@ -36,25 +38,34 @@ Each theme lives in `themes/<name>/` with application-specific files:
 ```
 themes/catppuccin/
 ├── antigravity.conf    # Antigravity color palette
-├── cursor.json         # Cursor/VS Code color metadata
+├── cursor.json         # Cursor/VS Code color metadata (source of truth for editors)
 ├── ghostty.conf        # Ghostty terminal colors
-├── kitty.conf          # Kitty terminal colors
+├── cosmic-term.ron     # cosmic-term colors
 ├── cosmic.ron          # COSMIC desktop theme
 ├── btop.theme          # btop system monitor
 └── ...
 ```
 
-### Chezmoi Template Flow
+The theme scripts copy these curated per-app files into place directly; there is no
+intermediate palette layer to keep in sync.
 
-Chezmoi templates in `chezmoi/dot_config/` reference the active theme:
+### How Editor Theming Is Applied
+
+There is no chezmoi template for editor `settings.json`. `bin/cosmikase-theme-cursor` is the
+**sole writer** of editor theme settings (item 4.1): it reads the active theme's `cursor.json`
+and merges `workbench.colorTheme`, the preferred dark/light themes, `colorCustomizations`, and
+`tokenColorCustomizations` into each editor's existing `User/settings.json`, preserving every
+other key (including edits made in the GUI). It runs automatically from the
+`run_onchange_after_10-setup-theme` hook on a theme switch, and is seeded on bootstrap by
+`run_onchange_after_30-editor-extensions`.
+
+The one surviving chezmoi template here is Antigravity's `config.toml`, which is
+theme-independent — it points at the active theme through the `~/.local/share/cosmikase/current`
+symlink (re-pointed on every switch) rather than baking a per-theme path:
 
 | Template | Destination | Purpose |
 |----------|-------------|---------|
-| `Cursor/User/settings.json.tmpl` | `~/.config/Cursor/User/settings.json` | Sets `workbench.colorTheme` |
-| `Cursor/theme.json.tmpl` | `~/.config/Cursor/theme.json` | Theme metadata |
-| `antigravity/config.toml.tmpl` | `~/.config/antigravity/config.toml` | Points to theme file |
-
-Templates use `.theme` and `.themes_dir` variables from chezmoi config.
+| `antigravity/config.toml.tmpl` | `~/.config/antigravity/config.toml` | Points `[theme] file` at `current/antigravity.conf` |
 
 ---
 
@@ -72,7 +83,7 @@ Cosmikase uses a hybrid approach for Cursor theming:
 
 ### How Cosmikase Themes Cursor
 
-The template `chezmoi/dot_config/Cursor/User/settings.json.tmpl` reads configuration from each theme's `cursor.json`.
+`bin/cosmikase-theme-cursor` reads configuration from each theme's `cursor.json` and merges it into the editor's `User/settings.json`.
 
 ```json
 {
@@ -143,14 +154,13 @@ Antigravity is an AI-powered terminal tool. It reads its theme configuration fro
 
 ### Template Structure
 
-The chezmoi template (`chezmoi/dot_config/antigravity/config.toml.tmpl`):
+The chezmoi template (`chezmoi/dot_config/antigravity/config.toml.tmpl`) is theme-independent:
+it points at the active theme through the `current` symlink, so it never re-renders per theme.
 
 ```toml
 # Antigravity configuration
-# Theme is dynamically applied via chezmoi template
-
 [theme]
-file = "{{ .themes_dir }}/{{ .theme }}/antigravity.conf"
+file = "~/.local/share/cosmikase/current/antigravity.conf"
 ```
 
 ### Theme File Format
@@ -238,7 +248,7 @@ error=#f7768e
 cosmikase-theme my-new-theme
 ```
 
-The template automatically reads your `cursor.json` and applies the theme.
+The `run_onchange_after_10-setup-theme` hook reads your `cursor.json` (via `cosmikase-theme-cursor`) and applies the theme.
 
 ---
 
@@ -281,7 +291,7 @@ For a persistent default (useful for syncing via dotfiles):
 }
 ```
 
-> **Note**: If you're using cosmikase themes, edits to `settings.json` will be overwritten on the next `chezmoi apply`. Edit the template instead for permanent changes.
+> **Note**: `settings.json` is owned by `cosmikase-theme-cursor`, not chezmoi — chezmoi no longer manages it. Your GUI/manual edits persist across `chezmoi apply`; only the theme keys (`workbench.colorTheme`, the preferred dark/light themes, `colorCustomizations`, and `tokenColorCustomizations`) are re-merged when you switch themes.
 
 ### Custom Color Overrides
 

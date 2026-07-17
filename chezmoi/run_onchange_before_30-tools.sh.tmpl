@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# run_onchange_before_30-tools.sh — cargo/go/uv/npm tools + AI CLIs & editors.
+# Depends on runtimes from 20-runtimes. Every install is guarded by a command
+# check so re-runs are no-ops.
+#
+# manifest-sha256: {{ include (joinPath .repo_dir "cosmikase.yaml") | sha256sum }}
+#
+# CI mode (COSMIKASE_CI=1): skipped entirely.
+set -euo pipefail
+
+MANIFEST="{{ .repo_dir }}/cosmikase.yaml"
+MANIFEST_READER="{{ .repo_dir }}/bin/cosmikase-manifest"
+CI="${COSMIKASE_CI:-0}"
+[ -f "$MANIFEST" ] || { echo "manifest not found: $MANIFEST" >&2; exit 1; }
+
+if [ "$CI" = "1" ]; then
+    echo "==> CI mode: skipping tools"
+    exit 0
+fi
+
+# Make runtimes visible for this process.
+# shellcheck disable=SC1091
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+export PATH="/usr/local/go/bin:$HOME/go/bin:$HOME/.local/bin:$PATH"
+export NVM_DIR="$HOME/.nvm"
+# shellcheck disable=SC1091
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+# One canonical manifest reader (bin/cosmikase-manifest). `list <section>
+# <field...>` emits installable entries, fields joined by the ASCII Unit
+# Separator (0x1f) — NOT a tab: tab is IFS whitespace, so an empty middle field
+# (e.g. an ai_tools entry with no `source`) would collapse under a tab-split and
+# shift every later field left. The Unit Separator preserves empty fields, so
+# the `IFS=$'\x1f' read` loops below stay column-aligned.
+manifest() { "$MANIFEST_READER" -m "$MANIFEST" "$@"; }
+
+# ── cargo tools ──────────────────────────────────────────────────────────────
+if command -v cargo >/dev/null 2>&1; then
+    while IFS=$'\x1f' read -r name; do
+        [ -z "$name" ] && continue
+        command -v "$name" >/dev/null 2>&1 && continue
+        echo "==> cargo install $name"
+        cargo install --locked "$name" || echo "  (skip $name)"
+    done < <(manifest list cargo_tools name)
+else
+    echo "  (cargo not found; skipping cargo tools)"
+fi
+
+# ── go tools ─────────────────────────────────────────────────────────────────
+if command -v go >/dev/null 2>&1; then
+    while IFS=$'\x1f' read -r name pkg; do
+        [ -z "$name" ] && continue
+        command -v "$name" >/dev/null 2>&1 && continue
+        echo "==> go install $pkg"
+        go install "$pkg" || echo "  (skip $name)"
+    done < <(manifest list go_tools name package)
+else
+    echo "  (go not found; skipping go tools)"
+fi
+
+# ── uv tools ─────────────────────────────────────────────────────────────────
+if command -v uv >/dev/null 2>&1; then
+    installed_uv="$(uv tool list 2>/dev/null | awk '{print $1}')"
+    while IFS=$'\x1f' read -r name; do
+        [ -z "$name" ] && continue
+        printf '%s\n' "$installed_uv" | grep -qx "$name" && continue
+        echo "==> uv tool install $name"
+        uv tool install "$name" || echo "  (skip $name)"
+    done < <(manifest list uv_tools name)
+else
+    echo "  (uv not found; skipping uv tools)"
+fi
+
+# ── npm globals ──────────────────────────────────────────────────────────────
+if command -v npm >/dev/null 2>&1; then
+    while IFS=$'\x1f' read -r name; do
+        [ -z "$name" ] && continue
+        npm ls -g --depth=0 "$name" >/dev/null 2>&1 && continue
+        echo "==> npm install -g $name"
+        npm install -g "$name" || echo "  (skip $name)"
+    done < <(manifest list npm_globals name)
+else
+    echo "  (npm not found; skipping npm globals)"
+fi
+
+# ── AI CLIs + editors via official installers ────────────────────────────────
+while IFS=$'\x1f' read -r name method source check key_url repo_line package; do
+    [ -z "$name" ] && continue
+    if [ -n "$check" ] && command -v "$check" >/dev/null 2>&1; then continue; fi
+    echo "==> $name ($method)"
+    case "$method" in
+        native|xai|script) curl -fsSL "$source" | bash || echo "  (skip $name)" ;;
+        zed)               curl -f "$source" | sh || echo "  (skip $name)" ;;
+        deb)
+            tmp="$(mktemp -d)"
+            if curl -fsSL "$source" -o "$tmp/pkg.deb"; then
+                sudo apt-get install -y "$tmp/pkg.deb" || echo "  (skip $name)"
+            fi
+            rm -rf "$tmp"
+            ;;
+        awscli)
+            tmp="$(mktemp -d)"
+            if curl -fsSL "$source" -o "$tmp/aws.zip" && unzip -oq "$tmp/aws.zip" -d "$tmp"; then
+                sudo "$tmp/aws/install" --update || echo "  (skip $name)"
+            fi
+            rm -rf "$tmp"
+            ;;
+        apt-repo)
+            # Never write a malformed sources.list line: a bad entry makes every
+            # later `apt-get update` fail system-wide. Require a real `deb ` line.
+            case "$repo_line" in
+                "deb "*) : ;;
+                *) echo "  (invalid repo_line for $name; skipping)"; continue ;;
+            esac
+            sudo install -d -m 0755 /etc/apt/keyrings
+            keyfile="/etc/apt/keyrings/${name}-repo-key.gpg"
+            [ -f "$keyfile" ] || curl -fsSL "$key_url" | sudo gpg --dearmor -o "$keyfile" || echo "  (key fail $name)"
+            echo "$repo_line" | sudo tee "/etc/apt/sources.list.d/${name}.list" >/dev/null
+            # Guard update so a transient/failed refresh cannot abort chezmoi apply.
+            sudo apt-get update -qq || { echo "  (apt update failed for $name)"; continue; }
+            sudo apt-get install -y "$package" || echo "  (skip $name)"
+            ;;
+        *) echo "  (unknown method '$method' for $name; skipping)" ;;
+    esac
+done < <(manifest list ai_tools name method source check key_url repo_line package)
+
+echo "==> tools done"

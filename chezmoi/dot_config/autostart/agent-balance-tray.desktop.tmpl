@@ -1,0 +1,12 @@
+{{- /* XDG autostart entry: renders empty (chezmoi skips it) unless agent-balance exists. */ -}}
+{{- if lookPath "agent-balance" -}}
+[Desktop Entry]
+Type=Application
+Name=agent-balance tray (cosmikase)
+Comment=Tray indicator for the multi-account Claude Code balancer
+# Placeholder subcommand — verify against your agent-balance CLI (see private-tools.md).
+Exec={{ lookPath "agent-balance" }} tray
+Icon=utilities-system-monitor
+Terminal=false
+X-GNOME-Autostart-enabled=true
+{{ end -}}

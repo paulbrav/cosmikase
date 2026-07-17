@@ -1,0 +1,6 @@
+# Targets removed from already-applied machines on the next `chezmoi apply`.
+# Paths are relative to the destination dir ($HOME).
+
+# Dead nvim theme loader from the old (omarchy_pop) architecture. init.lua loads
+# lua/cosmikase/theme.lua instead; nothing ever loaded this symlink.
+.config/nvim/lua/omarchy_pop

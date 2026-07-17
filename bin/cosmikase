@@ -1,91 +1,102 @@
 #!/usr/bin/env bash
-# cosmikase - Main interactive menu entrypoint for Cosmikase on Pop!_OS
-# Uses gum for a stylish CLI interface.
-
+# cosmikase — interactive menu for the Pop!_OS / COSMIC environment.
+# Uses gum when available; falls back to a plain `select` menu otherwise.
 set -euo pipefail
 
-# Find script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve the real script location so this works both from the repo and from the
+# ~/.local/bin symlink chezmoi installs via its native symlink_ entries.
+REAL="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$REAL")"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+INSTALL_SH="$REPO_DIR/install.sh"
 
-# Source shared helpers (themes dir discovery, etc.)
+# Shared helpers: find_helper / run_helper / find_themes_dir (item 6.2).
 # shellcheck source=bin/cosmikase-lib.sh
-if [[ -f "$SCRIPT_DIR/cosmikase-lib.sh" ]]; then
-    # shellcheck disable=SC1091
-    source "$SCRIPT_DIR/cosmikase-lib.sh"
-fi
+source "$SCRIPT_DIR/cosmikase-lib.sh"
 
-# Check for gum
-if ! command -v gum >/dev/null 2>&1; then
-    echo "Error: gum is not installed. Please install it with 'sudo apt install gum' or 'make install'."
-    exit 1
-fi
+THEMES_DIR="$(find_themes_dir)"
 
-main_menu() {
-    clear
-    echo "     ██████╗ ██████╗ ███████╗███╗   ███╗██╗██╗  ██╗ █████╗ ███████╗███████╗"
-    echo "    ██╔════╝██╔═══██╗██╔════╝████╗ ████║██║██║ ██╔╝██╔══██╗██╔════╝██╔════╝"
-    echo "    ██║     ██║   ██║███████╗██╔████╔██║██║█████╔╝ ███████║███████╗█████╗  "
-    echo "    ██║     ██║   ██║╚════██║██║╚██╔╝██║██║██╔═██╗ ██╔══██║╚════██║██╔══╝  "
-    echo "    ╚██████╗╚██████╔╝███████║██║ ╚═╝ ██║██║██║  ██╗██║  ██║███████║███████╗"
-    echo "     ╚═════╝ ╚═════╝ ╚══════╝╚═╝     ╚═╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝"
-    echo "                          COSMIC Omakase for Pop!_OS                       "
-    echo ""
-
-    CHOICE=$(gum choose \
-        "🎨 Change Theme" \
-        "📦 Install Optional Software" \
-        "🐳 Setup Docker Databases" \
-        "🔄 Update Everything" \
-        "⚡ Power Settings" \
-        "🪛 Cursor Extensions" \
-        "❌ Exit")
-
-    case "$CHOICE" in
-        "🎨 Change Theme")
-            if command -v theme-tui >/dev/null 2>&1; then
-                theme-tui
-            elif [[ -f "$SCRIPT_DIR/cosmikase-theme" ]]; then
-                # Fallback to simple choice if TUI fails
-                if command -v find_themes_dir >/dev/null 2>&1; then
-                    THEMES_DIR="$(find_themes_dir)"
-                else
-                    # Last-resort fallback
-                    THEMES_DIR="${THEMES_DIR:-$HOME/.local/share/cosmikase/themes}"
-                fi
-                THEME=$(
-                    find "$THEMES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
-                    | sort \
-                    | gum choose
-                )
-                "$SCRIPT_DIR/cosmikase-theme" "$THEME"
-            fi
-            ;;
-        "📦 Install Optional Software")
-            "$SCRIPT_DIR/cosmikase-install"
-            ;;
-        "🐳 Setup Docker Databases")
-            "$SCRIPT_DIR/cosmikase-databases"
-            ;;
-        "🔄 Update Everything")
-            "$SCRIPT_DIR/cosmikase-update"
-            ;;
-        "⚡ Power Settings")
-            "$SCRIPT_DIR/cosmikase-power-helper"
-            ;;
-        "🪛 Cursor Extensions")
-            "$SCRIPT_DIR/cosmikase-cursor-extensions"
-            ;;
-        "❌ Exit")
-            exit 0
-            ;;
-    esac
+banner() {
+    cat <<'EOF'
+     ██████╗ ██████╗ ███████╗███╗   ███╗██╗██╗  ██╗ █████╗ ███████╗███████╗
+    ██╔════╝██╔═══██╗██╔════╝████╗ ████║██║██║ ██╔╝██╔══██╗██╔════╝██╔════╝
+    ██║     ██║   ██║███████╗██╔████╔██║██║█████╔╝ ███████║███████╗█████╗
+    ██║     ██║   ██║╚════██║██║╚██╔╝██║██║██╔═██╗ ██╔══██║╚════██║██╔══╝
+    ╚██████╗╚██████╔╝███████║██║ ╚═╝ ██║██║██║  ██╗██║  ██║███████║███████╗
+     ╚═════╝ ╚═════╝ ╚══════╝╚═╝     ╚═╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝
+                          COSMIC Omakase for Pop!_OS
+EOF
+    echo
 }
 
-# Run menu in a loop unless user exits
-while true; do
-    main_menu
-    echo ""
-    echo "Press any key to return to menu..."
-    read -r -n 1
-done
+# ── Actions ──────────────────────────────────────────────────────────────────
+# run_helper (from the lib) resolves the helper, runs it, or prints "<name> not
+# found" — using an if/else so a helper that runs and fails is not misreported
+# as missing (item 6.2).
+do_preflight() { run_helper cosmikase-preflight; }
+do_install()   { if [ -x "$INSTALL_SH" ]; then "$INSTALL_SH"; else echo "install.sh not found at $INSTALL_SH"; fi; }
+do_apply()     { if command -v chezmoi >/dev/null 2>&1; then chezmoi apply; else echo "chezmoi not installed (run Install/Update system first)"; fi; }
+do_update()    { run_helper cosmikase-update; }
+do_databases() { run_helper cosmikase-databases; }
 
+do_theme() {
+    local theme_cmd; theme_cmd="$(find_helper cosmikase-theme)"
+    if [ -z "$theme_cmd" ]; then echo "cosmikase-theme not found"; return; fi
+    if [ -d "$THEMES_DIR" ] && command -v gum >/dev/null 2>&1; then
+        local choice
+        choice="$(find "$THEMES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | gum choose || true)"
+        [ -n "$choice" ] && "$theme_cmd" "$choice"
+    else
+        # No gum (or no themes dir): cosmikase-theme with no args prints its usage,
+        # which lists the available themes; re-run it with a name to switch.
+        "$theme_cmd"
+    fi
+}
+
+# Menu entry labels (order matters).
+LABELS=(
+    "Preflight (hardware check)"
+    "Install / Update system"
+    "Apply dotfiles"
+    "Theme picker"
+    "Update everything"
+    "Databases"
+    "Quit"
+)
+
+dispatch() {
+    case "$1" in
+        "Preflight (hardware check)") do_preflight ;;
+        "Install / Update system")    do_install ;;
+        "Apply dotfiles")             do_apply ;;
+        "Theme picker")               do_theme ;;
+        "Update everything")          do_update ;;
+        "Databases")                  do_databases ;;
+        "Quit")                       return 1 ;;
+    esac
+    return 0
+}
+
+main() {
+    banner
+    while true; do
+        local choice
+        if command -v gum >/dev/null 2>&1; then
+            choice="$(printf '%s\n' "${LABELS[@]}" | gum choose || echo Quit)"
+        else
+            echo "Select an option:"
+            local PS3="> "
+            select choice in "${LABELS[@]}"; do
+                [ -n "${choice:-}" ] && break
+            done
+            choice="${choice:-Quit}"
+        fi
+        dispatch "$choice" || break
+        echo
+        echo "Press any key to return to the menu…"
+        read -r -n 1 _ || true
+        echo
+    done
+}
+
+main "$@"

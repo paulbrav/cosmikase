@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# cosmikase-dropterm — a minimal drop-down ("quake") terminal toggle for COSMIC.
+#
+# WHY THIS EXISTS
+#   Ghostty's built-in quick terminal is the nicer drop-down, but summoning it while
+#   ghostty is unfocused needs a `global:` keybind, which needs the XDG desktop
+#   portal GlobalShortcuts interface. xdg-desktop-portal-cosmic does not implement
+#   that interface yet (verified 2026-07-16: data/cosmic.portal lists only Access,
+#   FileChooser, Screenshot, Settings, ScreenCast). There is also no CLI/IPC to
+#   toggle ghostty's quick terminal from another process.
+#
+#   So on COSMIC this script is bound to Super+` via a compositor-level custom
+#   shortcut (see chezmoi/dot_config/cosmic/.../Shortcuts/v1/custom) and provides a
+#   poor-man's drop-down: it launches a dedicated terminal window, and toggles it
+#   OFF by killing that dedicated instance on the next press.
+#
+# LIMITATIONS (honest)
+#   - "Hide" is implemented as "close": the session is lost when you toggle off,
+#     because Wayland gives no portable way to hide a window from a script.
+#   - The window is a normal window; under COSMIC autotiling it tiles like any
+#     other (no floating/overlay). For a true overlay drop-down, use ghostty's
+#     quick terminal once COSMIC ships the GlobalShortcuts portal.
+#   - Non-blocking: it detaches the terminal and returns immediately.
+#
+# Override the terminal with COSMIKASE_DROPTERM_BIN (ghostty|cosmic-term).
+
+set -euo pipefail
+
+# Source shared library (for notify()).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
+
+# A unique marker so we only ever match OUR drop-down instance, never the daily
+# terminal. For ghostty it is the Wayland app-id / GTK application id (--class);
+# for cosmic-term we fall back to matching the window title in the process args.
+APP_ID="com.cosmikase.Dropterm"
+TITLE="cosmikase-dropterm"
+
+# Pick a terminal.
+term_bin="${COSMIKASE_DROPTERM_BIN:-}"
+if [[ -z "$term_bin" ]]; then
+    if command -v ghostty >/dev/null 2>&1; then
+        term_bin="ghostty"
+    elif command -v cosmic-term >/dev/null 2>&1; then
+        term_bin="cosmic-term"
+    fi
+fi
+
+if [[ -z "$term_bin" ]] || ! command -v "$term_bin" >/dev/null 2>&1; then
+    msg="No terminal found (need ghostty or cosmic-term)"
+    notify "cosmikase-dropterm" "$msg"
+    echo "cosmikase-dropterm: $msg" >&2
+    exit 1
+fi
+
+# Toggle OFF only for ghostty, matched by its unique --class app-id so we can never
+# hit the daily-driver terminal. cosmic-term has no safe unique marker, so it is
+# launch-only (repeated presses open new windows) rather than risk killing the main
+# terminal — that is a deliberate safety choice, see LIMITATIONS.
+if [[ "$term_bin" == "ghostty" ]]; then
+    pids="$(pgrep -f -- "--class=${APP_ID}" 2>/dev/null || true)"
+    if [[ -n "$pids" ]]; then
+        # Toggle OFF: close the dedicated drop-down (see LIMITATIONS above).
+        # shellcheck disable=SC2086
+        kill $pids 2>/dev/null || true
+        exit 0
+    fi
+fi
+
+# Toggle ON: launch a fresh, detached, non-blocking drop-down.
+cmd=()
+case "$term_bin" in
+    ghostty)
+        # A dedicated, distinct process (not the daily driver): --class gives it a
+        # unique app-id we can match/kill; --gtk-single-instance=false stops it from
+        # folding into an existing ghostty instance. (This is a normal window, not
+        # ghostty's built-in quick terminal — see WHY THIS EXISTS.)
+        cmd=(ghostty
+             "--class=${APP_ID}"
+             "--title=${TITLE}"
+             "--gtk-single-instance=false")
+        ;;
+    cosmic-term)
+        # cosmic-term exposes no stable app-id/title flag, so launch it plainly
+        # (launch-only fallback; no toggle-off — see the safety note above).
+        cmd=(cosmic-term)
+        ;;
+    *)
+        cmd=("$term_bin")
+        ;;
+esac
+
+if command -v setsid >/dev/null 2>&1; then
+    setsid "${cmd[@]}" >/dev/null 2>&1 &
+else
+    nohup "${cmd[@]}" >/dev/null 2>&1 &
+fi
+
+exit 0

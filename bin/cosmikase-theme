@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# cosmikase-theme - Switch themes using chezmoi and helper scripts
-# This script updates the theme in chezmoi data, reapplies dotfiles, and
-# calls per-app helper scripts for live theme updates
+# cosmikase-theme - Switch themes through chezmoi.
+#
+# chezmoi is the single orchestrator (item 1.1): this script only validates the
+# theme, records history, rewrites [data].theme, and runs `chezmoi apply`. The
+# actual application (COSMIC, terminals, editors, per-app assets) is done once by
+# the run_onchange_after_10-setup-theme hook, which fires because [data].theme
+# changed. There is no second, unguarded application pass here anymore.
 set -euo pipefail
 
 # Find script directory for helper scripts
@@ -13,18 +17,18 @@ source "$SCRIPT_DIR/cosmikase-lib.sh"
 
 THEMES_DIR="$(find_themes_dir)"
 
+# Active-theme pointer maintained by chezmoi (symlink_current); used to detect a
+# same-theme re-select, where the run_onchange hook will not refire.
+CURRENT_LINK="$HOME/.local/share/cosmikase/current"
+
 usage() {
     echo "Usage: $(basename "$0") <theme-name> [options]"
     echo ""
-    echo "Switch to a different theme by updating chezmoi data, reapplying dotfiles,"
-    echo "and calling per-app helper scripts for live theme updates."
+    echo "Switch to a different theme by updating chezmoi data and reapplying"
+    echo "dotfiles. chezmoi's post-apply hook performs the live theme update."
     echo ""
     echo "Options:"
     echo "  --rollback      Roll back to the previous theme"
-    echo "  --no-cursor     Skip Cursor/VS Code theme update"
-    echo "  --no-cosmic     Skip COSMIC desktop theme update"
-    echo "  --no-terminals  Skip terminal reload signals"
-    echo "  --no-chezmoi    Skip chezmoi apply (only run helper scripts)"
     echo "  --quiet, -q     Suppress output from helper scripts"
     echo "  -h, --help      Show this help message"
     echo ""
@@ -39,66 +43,22 @@ usage() {
     echo ""
     echo "Examples:"
     echo "  $(basename "$0") nord"
-    echo "  $(basename "$0") tokyo-night --no-cursor"
-    echo "  $(basename "$0") catppuccin --no-chezmoi  # Only update running apps"
+    echo "  $(basename "$0") tokyo-night"
+    echo "  $(basename "$0") --rollback"
 }
 
-# Parse arguments
-THEME=""
+# Parse arguments (shared scaffold in cosmikase-lib.sh + this script's flags).
 ROLLBACK=false
-APPLY_CURSOR=true
-APPLY_COSMIC=true
-APPLY_TERMINALS=true
-APPLY_CHEZMOI=true
-QUIET=false
 
-while [[ $# -gt 0 ]]; do
+parse_script_flag() {
     case "$1" in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        --rollback)
-            ROLLBACK=true
-            shift
-            ;;
-        --no-cursor)
-            APPLY_CURSOR=false
-            shift
-            ;;
-        --no-cosmic)
-            APPLY_COSMIC=false
-            shift
-            ;;
-        --no-terminals)
-            APPLY_TERMINALS=false
-            shift
-            ;;
-        --no-chezmoi)
-            APPLY_CHEZMOI=false
-            shift
-            ;;
-        --quiet|-q)
-            QUIET=true
-            shift
-            ;;
-        -*)
-            echo "Unknown option: $1" >&2
-            usage
-            exit 1
-            ;;
-        *)
-            if [[ -z "$THEME" ]]; then
-                THEME="$1"
-            else
-                echo "Error: Multiple theme names provided" >&2
-                usage
-                exit 1
-            fi
-            shift
-            ;;
+        --rollback) ROLLBACK=true ;;
+        *) return 1 ;;
     esac
-done
+    return 0
+}
+
+parse_common_args "$@"
 
 # Handle rollback
 if [[ "$ROLLBACK" == "true" ]]; then
@@ -117,79 +77,72 @@ if [[ -z "$THEME" ]]; then
     exit 1
 fi
 
-THEMES_DIR="$(find_themes_dir)"
 require_theme "$THEME" "$THEMES_DIR" || exit 1
+
+# Detect a same-theme re-select before we change anything: the currently active
+# theme is whatever the chezmoi-managed `current` symlink points at.
+CURRENT_THEME=""
+if current_target="$(readlink "$CURRENT_LINK" 2>/dev/null)" && [[ -n "$current_target" ]]; then
+    CURRENT_THEME="$(basename "$current_target")"
+fi
+SAME_THEME=false
+[[ "$THEME" == "$CURRENT_THEME" ]] && SAME_THEME=true
 
 echo "Switching to theme: $THEME"
 
 # Save history
 save_theme_history "$THEME"
 
-# Step 1: Update chezmoi and apply dotfiles
-if [[ "$APPLY_CHEZMOI" == "true" ]]; then
-    # Check if chezmoi is available
-    if ! command -v chezmoi >/dev/null 2>&1; then
-        echo "Error: chezmoi not found. Please install chezmoi first." >&2
-        echo "  curl -sfL https://get.chezmoi.io | sh" >&2
-        exit 1
-    fi
-
-    # Update chezmoi data using Python helper for safe TOML editing
-    echo "  - Updating chezmoi configuration..."
-    if ! uv run cosmikase-chezmoi "$THEME" "$THEMES_DIR"; then
-        echo "Error: Failed to update chezmoi configuration" >&2
-        exit 1
-    fi
-
-    # Reapply dotfiles with new theme
-    echo "  - Applying dotfiles..."
-    chezmoi apply --force
+# Require chezmoi
+if ! command -v chezmoi >/dev/null 2>&1; then
+    echo "Error: chezmoi not found. Please install chezmoi first." >&2
+    echo "  curl -sfL https://get.chezmoi.io | sh" >&2
+    exit 1
 fi
 
-# Step 2: Call helper scripts for live app updates
-echo ""
-echo "Updating applications..."
-
-# Helper script arguments
-HELPER_ARGS=("$THEME")
-if [[ "$QUIET" == "true" ]]; then
-    HELPER_ARGS+=("--quiet")
+# Update chezmoi data using the single-file helper for safe atomic TOML editing.
+# cosmikase-chezmoi is a PEP 723 uv script (shebang runs it via uv), so guard.
+echo "  - Updating chezmoi configuration..."
+if ! command -v uv >/dev/null 2>&1; then
+    echo "Error: 'uv' is required to update the chezmoi theme (bin/cosmikase-chezmoi)." >&2
+    echo "  Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh" >&2
+    exit 1
+fi
+if ! "$SCRIPT_DIR/cosmikase-chezmoi" "$THEME"; then
+    echo "Error: Failed to update chezmoi configuration" >&2
+    exit 1
 fi
 
-# Apply Cursor/VS Code theme
-if [[ "$APPLY_CURSOR" == "true" ]]; then
-    CURSOR_HELPER=$(find_helper "cosmikase-theme-cursor")
-    if [[ -n "$CURSOR_HELPER" ]]; then
-        echo "  - Applying Cursor theme..."
-        THEMES_DIR="$THEMES_DIR" "$CURSOR_HELPER" "${HELPER_ARGS[@]}" || true
-    else
-        echo "  - Warning: cosmikase-theme-cursor not found"
-    fi
-fi
+# Reapply dotfiles. When the theme changed this fires the run_onchange post-apply
+# hook, which does the single live application. --force so the theme switch wins
+# over any locally modified managed files.
+echo "  - Applying dotfiles..."
+chezmoi apply --force
 
-# Apply COSMIC desktop theme
-if [[ "$APPLY_COSMIC" == "true" ]]; then
-    COSMIC_HELPER=$(find_helper "cosmikase-theme-cosmic")
-    if [[ -n "$COSMIC_HELPER" ]]; then
-        echo "  - Applying COSMIC theme..."
-        THEMES_DIR="$THEMES_DIR" "$COSMIC_HELPER" "${HELPER_ARGS[@]}" || true
-    else
-        echo "  - Warning: cosmikase-theme-cosmic not found"
-    fi
-fi
+# Same-theme re-select: [data].theme did not change, so run_onchange will not
+# refire the hook. Apply the live helpers directly so the command is not a no-op.
+# (This is the cheap re-select path, not the old unconditional Step 2.)
+if [[ "$SAME_THEME" == "true" ]]; then
+    echo ""
+    echo "Theme unchanged; re-applying to running applications..."
 
-# Reload terminal emulators
-if [[ "$APPLY_TERMINALS" == "true" ]]; then
-    TERMINAL_HELPER=$(find_helper "cosmikase-theme-terminal")
-    if [[ -n "$TERMINAL_HELPER" ]]; then
-        echo "  - Reloading terminals..."
-        if [[ "$QUIET" == "true" ]]; then
-            "$TERMINAL_HELPER" --quiet || true
-        else
-            "$TERMINAL_HELPER" || true
+    helper_args=("$THEME")
+    [[ "$QUIET" == "true" ]] && helper_args+=("--quiet")
+
+    for name in cosmikase-theme-cursor cosmikase-theme-cosmic; do
+        helper="$(find_helper "$name")"
+        if [[ -n "$helper" ]]; then
+            THEMES_DIR="$THEMES_DIR" "$helper" "${helper_args[@]}" || true
         fi
-    else
-        echo "  - Warning: cosmikase-theme-terminal not found"
+    done
+
+    term_helper="$(find_helper "cosmikase-theme-terminal")"
+    if [[ -n "$term_helper" ]]; then
+        if [[ "$QUIET" == "true" ]]; then
+            "$term_helper" --quiet || true
+        else
+            "$term_helper" || true
+        fi
     fi
 fi
 

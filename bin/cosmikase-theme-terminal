@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# cosmikase-theme-terminal - Reload terminal emulators after theme change
-# This script sends reload signals to running terminal emulators
+# cosmikase-theme-terminal - Reload terminal emulators after a theme change.
+# Cosmikase ships two terminals: ghostty (quick-terminal dropdown) and
+# cosmic-term (daily driver). ghostty reloads its config on SIGUSR1; cosmic-term
+# watches its config via inotify and reloads automatically. Kitty and Alacritty
+# were removed from cosmikase, so they are not handled here.
 set -euo pipefail
 
 # Source shared library
@@ -11,18 +14,15 @@ source "$SCRIPT_DIR/cosmikase-lib.sh"
 usage() {
     echo "Usage: $(basename "$0") [options]"
     echo ""
-    echo "Send reload signals to running terminal emulators (kitty, ghostty)."
-    echo "These terminals support live config reload via SIGUSR1."
+    echo "Reload running cosmikase terminals after a theme change."
     echo ""
     echo "Options:"
     echo "  --quiet, -q    Suppress output"
     echo "  -h, --help     Show this help message"
     echo ""
-    echo "Supported terminals:"
-    echo "  - kitty       (SIGUSR1 reload)"
-    echo "  - ghostty     (SIGUSR1 reload)"
-    echo "  - alacritty   (auto-reload via inotify)"
-    echo "  - cosmic-term (auto-reload via inotify)"
+    echo "Terminals:"
+    echo "  - ghostty      (SIGUSR1 reload)"
+    echo "  - cosmic-term  (auto-reload via inotify)"
 }
 
 QUIET=false
@@ -47,38 +47,20 @@ done
 
 log "Reloading terminal emulators..."
 
-# Terminals that need SIGUSR1 signal to reload
-declare -A SIGNAL_TERMINALS=(
-    ["kitty"]="kitty"
-    ["ghostty"]="ghostty"
-)
-
-# Terminals that auto-reload via inotify (no action needed)
-declare -A INOTIFY_TERMINALS=(
-    ["alacritty"]="alacritty"
-    ["cosmic-term"]="cosmic-term"
-)
-
-# Reload signal-based terminals
-for name in "${!SIGNAL_TERMINALS[@]}"; do
-    process="${SIGNAL_TERMINALS[$name]}"
-    if pgrep -x "$process" >/dev/null 2>&1; then
-        if pkill -USR1 "$process" 2>/dev/null; then
-            log "  - Reloaded $name"
-        else
-            log "  - Failed to reload $name"
-        fi
+# ghostty reloads its configuration when sent SIGUSR1.
+if pgrep -x ghostty >/dev/null 2>&1; then
+    if pkill -USR1 -x ghostty 2>/dev/null; then
+        log "  - Reloaded ghostty"
     else
-        log "  - $name not running"
+        log "  - Failed to reload ghostty"
     fi
-done
+else
+    log "  - ghostty not running"
+fi
 
-# Note inotify-based terminals
-for name in "${!INOTIFY_TERMINALS[@]}"; do
-    process="${INOTIFY_TERMINALS[$name]}"
-    if pgrep -xf "$process" >/dev/null 2>&1; then
-        log "  - $name running (auto-reloads via inotify)"
-    fi
-done
+# cosmic-term watches its config file with inotify and reloads on its own.
+if pgrep -x cosmic-term >/dev/null 2>&1; then
+    log "  - cosmic-term running (auto-reloads via inotify)"
+fi
 
 log "Terminal reload complete!"

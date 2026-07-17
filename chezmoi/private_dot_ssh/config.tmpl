@@ -1,0 +1,38 @@
+# SSH client configuration  (managed by chezmoi -> ~/.ssh/config)
+# See ssh_config(5). This file holds ONLY generic hardening + connection
+# multiplexing. No host stanzas live in this repo (no private hostnames — see the
+# repo no-secrets rule); keep machine-specific `Host` blocks in the private include
+# below, outside version control.
+#
+# NOTE: the previous location chezmoi/dot_config/ssh/config was a real bug — OpenSSH
+# never reads ~/.config/ssh/config, only ~/.ssh/config. This template renders to the
+# correct path via chezmoi's `private_dot_ssh/` source dir (0700 ~/.ssh).
+
+# Private, un-versioned host stanzas. Create ~/.ssh/config.local yourself and put
+# real `Host` blocks there. `Include` must come before `Host *` so per-host options
+# can still override the wildcard defaults.
+Include ~/.ssh/config.local
+
+Host *
+    # Modern ciphers / MACs / key exchange
+    Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr
+    MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+
+    # Compression helps on slow links
+    Compression yes
+
+    # Keep idle connections alive
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+    # Connection multiplexing (reuse one TCP connection per host).
+    # ~/.ssh/sockets is created by chezmoi (private_sockets/) at mode 0700.
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 600
+
+    # Security defaults
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+    HashKnownHosts yes
+    VisualHostKey yes

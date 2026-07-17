@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = [
+    "plugin-common",
+    "bw-launcher",
+    "clip-launcher",
+    "exa-launcher",
+    "man-launcher",
+    "ssh-launcher",
+]
+
+# Shared metadata inherited by every member via `field.workspace = true`.
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+# Release profile lives once, on the workspace root. Cargo ignores (and warns
+# about) `[profile.*]` tables declared in non-root members, so the per-plugin
+# copies were removed.
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

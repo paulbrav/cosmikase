@@ -27,52 +27,22 @@ usage() {
     echo "  $(basename "$0") tokyo-night --no-wallpaper"
 }
 
-# Parse arguments
-THEME=""
+# Parse arguments (shared scaffold in cosmikase-lib.sh + this script's flags).
 APPLY_WALLPAPER=true
 APPLY_COLORS=true
 APPLY_TERMINAL=true
-QUIET=false
 
-while [[ $# -gt 0 ]]; do
+parse_script_flag() {
     case "$1" in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        --no-wallpaper)
-            APPLY_WALLPAPER=false
-            shift
-            ;;
-        --no-colors)
-            APPLY_COLORS=false
-            shift
-            ;;
-        --no-terminal)
-            APPLY_TERMINAL=false
-            shift
-            ;;
-        --quiet|-q)
-            QUIET=true
-            shift
-            ;;
-        -*)
-            echo "Unknown option: $1" >&2
-            usage
-            exit 1
-            ;;
-        *)
-            if [[ -z "$THEME" ]]; then
-                THEME="$1"
-            else
-                echo "Error: Multiple theme names provided" >&2
-                usage
-                exit 1
-            fi
-            shift
-            ;;
+        --no-wallpaper) APPLY_WALLPAPER=false ;;
+        --no-colors)    APPLY_COLORS=false ;;
+        --no-terminal)  APPLY_TERMINAL=false ;;
+        *) return 1 ;;
     esac
-done
+    return 0
+}
+
+parse_common_args "$@"
 
 # Require theme
 require_theme "$THEME" "$THEMES_DIR" || exit 1
@@ -85,94 +55,84 @@ fi
 
 log "Applying COSMIC theme: $THEME"
 
-# Validate RON files before applying
-if [[ -f "$THEME_PATH/cosmic.ron" ]]; then
-    if ! uv run cosmikase-validate-ron "$THEME_PATH/cosmic.ron" >/dev/null 2>&1; then
-        echo "Error: Invalid RON syntax in $THEME_PATH/cosmic.ron" >&2
-        exit 1
-    fi
-fi
-if [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
-    if ! uv run cosmikase-validate-ron "$THEME_PATH/cosmic-term.ron" >/dev/null 2>&1; then
-        echo "Error: Invalid RON syntax in $THEME_PATH/cosmic-term.ron" >&2
-        exit 1
-    fi
-fi
-
-# Determine if this is a light theme
+# Determine if this is a light theme. Dark/light is declared by cursor.json's
+# `light` flag (item 4.4 — the standalone light.mode marker file is gone). jq
+# prints lowercase `true`, python prints capitalised `True`; accept both.
 IS_LIGHT=false
-if [[ -f "$THEME_PATH/light.mode" ]]; then
-    IS_LIGHT=true
+if [[ -f "$THEME_PATH/cursor.json" ]]; then
+    light_flag="$(parse_json "$THEME_PATH/cursor.json" light)"
+    if [[ "$light_flag" == "true" ]] || [[ "$light_flag" == "True" ]]; then
+        IS_LIGHT=true
+    fi
 fi
 
-# Atomic update function for COSMIC configs
+# Write the COSMIC config files directly (item 2.7): three independent guarded
+# writes, no tmpdir staging and no doubled copy. COSMIC watches these files with
+# inotify and reloads on its own, so a plain write is what the old tmpdir dance
+# ultimately did anyway — just without the false "atomic" label.
 apply_cosmic_configs() {
-    local tmp_dir
-    tmp_dir=$(mktemp -d)
-    
-    # Prepare all files in tmp
-    if [[ "$IS_LIGHT" == "true" ]]; then
-        echo "false" > "$tmp_dir/is_dark"
-    else
-        echo "true" > "$tmp_dir/is_dark"
-    fi
-    
-    if [[ "$APPLY_COLORS" == "true" ]] && [[ -f "$THEME_PATH/cosmic.ron" ]]; then
-        cp "$THEME_PATH/cosmic.ron" "$tmp_dir/theme"
-    fi
-    
-    if [[ "$APPLY_TERMINAL" == "true" ]] && [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
-        cp "$THEME_PATH/cosmic-term.ron" "$tmp_dir/color_scheme"
-    fi
-
-    # Atomic moves to actual config locations
+    # Dark/light mode: prefer the cosmic-config CLI, else write the file directly.
+    local mode_dir="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1"
+    local is_dark="true"
+    [[ "$IS_LIGHT" == "true" ]] && is_dark="false"
     if command -v cosmic-config >/dev/null 2>&1; then
-        log "  - Using cosmic-config CLI..."
-        # Note: cosmic-config might not handle all files yet, but it's the future
-        # For now we'll use it for mode if possible
-        if [[ "$IS_LIGHT" == "true" ]]; then
-            cosmic-config set com.system76.CosmicTheme.Mode/v1 is_dark false
-        else
-            cosmic-config set com.system76.CosmicTheme.Mode/v1 is_dark true
-        fi
+        cosmic-config set com.system76.CosmicTheme.Mode/v1 is_dark "$is_dark"
         log "  - Set COSMIC mode via cosmic-config"
     else
-        mkdir -p "$COSMIC_MODE_DIR"
-        cp "$tmp_dir/is_dark" "$COSMIC_MODE_DIR/is_dark"
+        mkdir -p "$mode_dir"
+        echo "$is_dark" > "$mode_dir/is_dark"
         log "  - Set COSMIC mode via file write"
     fi
-    
-    if [[ -f "$tmp_dir/theme" ]]; then
+
+    # Colour theme (Light or Dark variant directory).
+    if [[ "$APPLY_COLORS" == "true" ]] && [[ -f "$THEME_PATH/cosmic.ron" ]]; then
+        local theme_dir
         if [[ "$IS_LIGHT" == "true" ]]; then
-            COSMIC_THEME_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Light/v1"
+            theme_dir="$HOME/.config/cosmic/com.system76.CosmicTheme.Light/v1"
         else
-            COSMIC_THEME_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Dark/v1"
+            theme_dir="$HOME/.config/cosmic/com.system76.CosmicTheme.Dark/v1"
         fi
-        mkdir -p "$COSMIC_THEME_DIR"
-        cp "$tmp_dir/theme" "$COSMIC_THEME_DIR/theme"
+        mkdir -p "$theme_dir"
+        cp "$THEME_PATH/cosmic.ron" "$theme_dir/theme"
         log "  - Applied COSMIC color theme"
     fi
-    
-    if [[ -f "$tmp_dir/color_scheme" ]]; then
-        COSMIC_TERM_DIR="$HOME/.config/cosmic/com.system76.CosmicTerm/v1"
-        mkdir -p "$COSMIC_TERM_DIR"
-        cp "$tmp_dir/color_scheme" "$COSMIC_TERM_DIR/color_scheme"
+
+    # Terminal colour scheme.
+    if [[ "$APPLY_TERMINAL" == "true" ]] && [[ -f "$THEME_PATH/cosmic-term.ron" ]]; then
+        local term_dir="$HOME/.config/cosmic/com.system76.CosmicTerm/v1"
+        mkdir -p "$term_dir"
+        cp "$THEME_PATH/cosmic-term.ron" "$term_dir/color_scheme"
         log "  - Applied COSMIC terminal color scheme"
     fi
-
-    # Cleanup manually instead of using a trap that might fail at exit
-    rm -rf "$tmp_dir"
 }
 
-# Set COSMIC paths
-COSMIC_MODE_DIR="$HOME/.config/cosmic/com.system76.CosmicTheme.Mode/v1"
-
-# Execute atomic update
 apply_cosmic_configs
 
-# Set COSMIC wallpaper
-if [[ "$APPLY_WALLPAPER" == "true" ]] && [[ -d "$THEME_PATH/backgrounds" ]]; then
-    WALLPAPER=$(find "$THEME_PATH/backgrounds" -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) 2>/dev/null | head -1)
+# Find the first wallpaper image in a backgrounds dir (ignores .gitkeep).
+first_wallpaper() {
+    find "$1" -maxdepth 1 -type f \
+        \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" \) \
+        2>/dev/null | sort | head -1
+}
+
+# Set COSMIC wallpaper. Wallpapers may live in the repo theme dir (source
+# "unknown") or, for removed-source themes, in the fetched runtime dir. If
+# neither has images, ask cosmikase-wallpapers to fetch them (offline-safe).
+if [[ "$APPLY_WALLPAPER" == "true" ]]; then
+    RUNTIME_BG="${XDG_DATA_HOME:-$HOME/.local/share}/cosmikase/backgrounds/$THEME"
+    WALLPAPER=""
+    [[ -d "$RUNTIME_BG" ]] && WALLPAPER=$(first_wallpaper "$RUNTIME_BG")
+    if [[ -z "$WALLPAPER" ]] && [[ -d "$THEME_PATH/backgrounds" ]]; then
+        WALLPAPER=$(first_wallpaper "$THEME_PATH/backgrounds")
+    fi
+    if [[ -z "$WALLPAPER" ]]; then
+        WALLPAPERS_HELPER=$(find_helper "cosmikase-wallpapers")
+        if [[ -n "$WALLPAPERS_HELPER" ]]; then
+            log "  - Fetching wallpapers for $THEME..."
+            "$WALLPAPERS_HELPER" fetch "$THEME" >/dev/null 2>&1 || true
+            [[ -d "$RUNTIME_BG" ]] && WALLPAPER=$(first_wallpaper "$RUNTIME_BG")
+        fi
+    fi
     if [[ -n "$WALLPAPER" ]]; then
         WALLPAPER=$(realpath "$WALLPAPER")
         COSMIC_BG_DIR="$HOME/.config/cosmic/com.system76.CosmicBackground/v1"

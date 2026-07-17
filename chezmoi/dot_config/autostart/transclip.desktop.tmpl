@@ -1,0 +1,11 @@
+{{- if lookPath "transclip" -}}
+[Desktop Entry]
+Type=Application
+Name=transclip (cosmikase)
+Comment=Clipboard-transcription / dictation daemon (triggered by Super+D)
+# Placeholder subcommand — this should launch the long-running transclip daemon
+# that the Super+D shortcut toggles. Verify against your transclip CLI.
+Exec={{ lookPath "transclip" }} daemon
+Terminal=false
+X-GNOME-Autostart-enabled=true
+{{ end -}}

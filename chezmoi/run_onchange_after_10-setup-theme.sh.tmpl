@@ -1,0 +1,95 @@
+#!/bin/bash
+# The single post-apply theme applier. This is a run_onchange hook whose body
+# embeds the active theme ({{ .theme }}), so it fires exactly when the theme
+# changes — a fresh install or a `cosmikase-theme <name>` switch — and NOT on an
+# unrelated `chezmoi apply`. That is what stops the old double-apply and the
+# every-apply COSMIC re-theme / wallpaper stomp (item 1.1).
+#
+# It owns COSMIC, terminals AND the editors (Cursor/VS Code/Antigravity): the
+# render-time Cursor settings template is gone, so cosmikase-theme-cursor is the
+# sole writer of editor theme settings now (item 4.1). Helper scripts are
+# symlinked into ~/.local/bin by chezmoi's native symlink_ entries; this hook
+# degrades gracefully when they are absent.
+
+set -euo pipefail
+
+THEME="{{ .theme }}"
+THEMES_DIR="{{ .chezmoi.homeDir }}/.local/share/cosmikase/themes"
+THEME_PATH="$THEMES_DIR/$THEME"
+# The per-app helpers resolve their themes dir from this env (find_themes_dir
+# honours $THEMES_DIR), so export it once for every helper this hook runs.
+export THEMES_DIR
+
+echo "Setting up theme: $THEME"
+
+# Ensure themes directory exists
+if [[ ! -d "$THEMES_DIR" ]]; then
+    echo "Warning: Themes directory not found at $THEMES_DIR"
+    echo "Run 'make install' to sync themes from the repository."
+    exit 0
+fi
+
+if [[ ! -d "$THEME_PATH" ]]; then
+    echo "Warning: Theme '$THEME' not found in $THEMES_DIR"
+    exit 0
+fi
+
+# Copy btop theme to btop themes directory
+if [[ -f "$THEME_PATH/btop.theme" ]]; then
+    mkdir -p ~/.config/btop/themes
+    rm -f ~/.config/btop/themes/"$THEME.theme"
+    cp "$THEME_PATH/btop.theme" ~/.config/btop/themes/"$THEME.theme"
+    echo "  - Copied btop theme"
+fi
+
+# Copy opencode theme to opencode themes directory
+if [[ -f "$THEME_PATH/opencode.json" ]]; then
+    mkdir -p ~/.config/opencode/themes
+    rm -f ~/.config/opencode/themes/"$THEME.json"
+    cp "$THEME_PATH/opencode.json" ~/.config/opencode/themes/"$THEME.json"
+    echo "  - Copied opencode theme"
+fi
+
+# Copy neovim theme (standardized filename: neovim.lua)
+if [[ -f "$THEME_PATH/neovim.lua" ]]; then
+    mkdir -p ~/.config/nvim/lua/cosmikase
+    rm -f ~/.config/nvim/lua/cosmikase/theme.lua
+    cp "$THEME_PATH/neovim.lua" ~/.config/nvim/lua/cosmikase/theme.lua
+    echo "  - Copied neovim theme"
+fi
+
+# The live application (wallpapers, COSMIC, editors, terminals) runs through the
+# per-app helpers. Resolve and run them via the shared library's find_helper /
+# run_optional (item 6.2) instead of hand-rolling a resolve-or-skip triple per
+# helper. cosmikase-lib.sh is symlinked into ~/.local/bin during the file phase,
+# before this run_after hook; if that symlink is somehow missing the machine is
+# already broken, so skip live application rather than error under set -u.
+LIB="$HOME/.local/bin/cosmikase-lib.sh"
+if [[ ! -r "$LIB" ]]; then
+    echo "  - Skipping live theme application (cosmikase-lib.sh not found)"
+    echo "Theme '$THEME' applied successfully!"
+    exit 0
+fi
+# shellcheck source=bin/cosmikase-lib.sh
+. "$LIB"
+
+# Fetch wallpapers whose source left git (offline-safe, sha256-verified, idempotent, silent).
+wallpapers="$(find_helper cosmikase-wallpapers)"
+if [[ -n "$wallpapers" ]]; then
+    "$wallpapers" fetch "$THEME" >/dev/null 2>&1 || true
+fi
+
+# Apply COSMIC theme (wallpaper, colors, terminal color scheme, dark/light mode).
+echo "  - Applying COSMIC theme..."
+run_optional cosmikase-theme-cosmic "$THEME" --quiet
+
+# Apply editor theme (Cursor / VS Code / Antigravity). The helper is the single
+# writer of editor settings.json now that the render-time template is gone.
+echo "  - Applying editor theme..."
+run_optional cosmikase-theme-cursor "$THEME" --quiet
+
+# Reload terminal emulators (ghostty + cosmic-term).
+echo "  - Reloading terminals..."
+run_optional cosmikase-theme-terminal --quiet
+
+echo "Theme '$THEME' applied successfully!"
