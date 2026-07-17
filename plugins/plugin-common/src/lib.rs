@@ -9,6 +9,7 @@
 //! [`PluginHandler`] and calls [`PluginHandler::run`].
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io::{self, BufRead, Write};
 use std::process::{Command, Stdio};
 
@@ -109,31 +110,147 @@ pub enum IconSource {
 }
 
 // ============================================================================
-// Dispatch loop
+// Plugin lifecycle
 // ============================================================================
 
-/// Behaviour each plugin provides. The blocking stdin/stdout dispatch loop is
-/// supplied by [`PluginHandler::run`]; a plugin only implements the handlers it
-/// needs (`handle_context` / `handle_activate_context` have no-op defaults).
-pub trait PluginHandler {
-    /// Handle a `Search` request. `query` still carries the launcher prefix
-    /// (e.g. `"ssh foo"`); strip it in the implementation.
-    fn handle_search(&mut self, query: &str, stdout: &mut io::Stdout);
+/// The display row emitted for one activatable result. `id`, `keywords`, and
+/// `exec` are supplied uniformly by the lifecycle; a plugin fills in only the
+/// three fields that vary per result.
+#[derive(Debug)]
+pub struct Row {
+    pub name: String,
+    pub description: String,
+    pub icon: IconSource,
+}
 
-    /// Handle default activation (Enter) of result `id`.
-    fn handle_activate(&mut self, id: u32, stdout: &mut io::Stdout);
+impl Row {
+    pub fn new(name: impl Into<String>, description: impl Into<String>, icon: IconSource) -> Self {
+        Row {
+            name: name.into(),
+            description: description.into(),
+            icon,
+        }
+    }
+}
 
-    /// Handle a request for the context menu of result `id`.
-    fn handle_context(&mut self, _id: u32, stdout: &mut io::Stdout) {
-        send_finished(stdout);
+/// One context-menu entry (`id` + label) offered for a result.
+#[derive(Debug)]
+pub struct ContextOption {
+    pub id: u32,
+    pub name: String,
+}
+
+impl ContextOption {
+    pub fn new(id: u32, name: impl Into<String>) -> Self {
+        ContextOption {
+            id,
+            name: name.into(),
+        }
+    }
+}
+
+/// Whether an activation should close the launcher. Returned by
+/// [`PluginHandler::activate`] / [`PluginHandler::activate_context`] so a plugin
+/// can deliberately stay open (e.g. a locked vault that produced no result).
+#[derive(Debug, Clone, Copy)]
+pub enum Activation {
+    /// Close the launcher after handling this activation.
+    Close,
+    /// Leave the launcher open.
+    KeepOpen,
+}
+
+/// The outcome of a [`PluginHandler::search`] call. The lifecycle turns each
+/// variant into the correct Clear/Append/Finished sequence: only `Results` rows
+/// are stored and therefore activatable, so `Help`/`Error` rows stay
+/// non-activatable by construction (they are never inserted into the store).
+pub enum Search<T> {
+    /// Activatable results, rendered via [`PluginHandler::row`]. An empty vec
+    /// yields a `Finished` with no rows.
+    Results(Vec<T>),
+    /// A single non-activatable informational row.
+    Help(PluginSearchResult),
+    /// A single non-activatable error row (title, message).
+    Error(String, String),
+}
+
+impl<T> Search<T> {
+    /// Build a `Help` informational row (fixed `id` 0, no keywords/exec).
+    pub fn help(name: impl Into<String>, description: impl Into<String>, icon: IconSource) -> Self {
+        Search::Help(PluginSearchResult {
+            id: 0,
+            name: name.into(),
+            description: description.into(),
+            keywords: None,
+            icon: Some(icon),
+            exec: None,
+        })
     }
 
-    /// Handle activation of context-menu option `context` on result `id`.
-    fn handle_activate_context(&mut self, _id: u32, _context: u32, _stdout: &mut io::Stdout) {}
+    /// Build an `Error` row (title + message).
+    pub fn error(title: impl Into<String>, message: impl Into<String>) -> Self {
+        Search::Error(title.into(), message.into())
+    }
+}
+
+/// Domain behaviour each plugin provides. The blocking stdin/stdout dispatch
+/// loop, the id-keyed result store, the prefix strip, and the whole
+/// Clear/Append/Finished/Close protocol dance are owned by the lifecycle
+/// ([`PluginHandler::run`]); an implementor writes only domain logic.
+pub trait PluginHandler {
+    /// The domain object stored per activatable result and handed back to
+    /// [`row`](Self::row), [`activate`](Self::activate), and the context handlers.
+    type Item;
+
+    /// The launcher prefix stripped (then trimmed) from every query before
+    /// [`search`](Self::search) sees it (e.g. `"ssh "`).
+    const PREFIX: &'static str;
+
+    /// Produce the search outcome for `query` (already prefix-stripped and
+    /// trimmed).
+    fn search(&mut self, query: &str) -> Search<Self::Item>;
+
+    /// Render the display row for one stored `Item`.
+    fn row(&self, item: &Self::Item) -> Row;
+
+    /// Handle default activation (Enter) of a stored `Item`.
+    fn activate(&mut self, item: &Self::Item) -> Activation;
+
+    /// Context-menu options for a stored `Item` (empty = no menu). Defaults to
+    /// none.
+    fn context_menu(&self, _item: &Self::Item) -> Vec<ContextOption> {
+        Vec::new()
+    }
+
+    /// Handle activation of context option `context` on a stored `Item`.
+    /// Defaults to leaving the launcher open.
+    fn activate_context(&mut self, _item: &Self::Item, _context: u32) -> Activation {
+        Activation::KeepOpen
+    }
 
     /// Run the blocking dispatch loop until the launcher sends `Exit` or stdin
     /// reaches EOF. Malformed lines are skipped rather than fatal.
-    fn run(&mut self) {
+    fn run(self)
+    where
+        Self: Sized,
+    {
+        let mut runner = Runner {
+            plugin: self,
+            results: HashMap::new(),
+        };
+        runner.dispatch();
+    }
+}
+
+/// Owns the id-keyed result store and drives the wire protocol so that plugin
+/// code never touches it.
+struct Runner<P: PluginHandler> {
+    plugin: P,
+    results: HashMap<u32, P::Item>,
+}
+
+impl<P: PluginHandler> Runner<P> {
+    fn dispatch(&mut self) {
         let stdin = io::stdin();
         let mut stdout = io::stdout();
 
@@ -153,15 +270,89 @@ pub trait PluginHandler {
             };
 
             match request {
-                Request::Search { Search: query } => self.handle_search(&query, &mut stdout),
-                Request::Activate { Activate: id } => self.handle_activate(id, &mut stdout),
+                Request::Search { Search: query } => self.on_search(&query, &mut stdout),
+                Request::Activate { Activate: id } => self.on_activate(id, &mut stdout),
                 Request::Simple(SimpleRequest::Exit) => break,
                 Request::Simple(SimpleRequest::Interrupt) => send_finished(&mut stdout),
-                Request::Context { Context: id } => self.handle_context(id, &mut stdout),
+                Request::Context { Context: id } => self.on_context(id, &mut stdout),
                 Request::ActivateContext {
                     ActivateContext: data,
-                } => self.handle_activate_context(data.id, data.context, &mut stdout),
+                } => self.on_activate_context(data.id, data.context, &mut stdout),
                 _ => send_finished(&mut stdout),
+            }
+        }
+    }
+
+    fn on_search(&mut self, query: &str, stdout: &mut io::Stdout) {
+        self.results.clear();
+        send_response(&PluginResponse::Clear(ClearResponse::Clear), stdout);
+
+        let stripped = query.strip_prefix(P::PREFIX).unwrap_or(query).trim();
+
+        match self.plugin.search(stripped) {
+            Search::Results(items) => {
+                for (idx, item) in items.into_iter().enumerate() {
+                    let id = idx as u32;
+                    let Row {
+                        name,
+                        description,
+                        icon,
+                    } = self.plugin.row(&item);
+                    let result = PluginSearchResult {
+                        id,
+                        name,
+                        description,
+                        keywords: None,
+                        icon: Some(icon),
+                        exec: None,
+                    };
+                    self.results.insert(id, item);
+                    send_response(&PluginResponse::Append { Append: result }, stdout);
+                }
+            }
+            Search::Help(row) => {
+                send_response(&PluginResponse::Append { Append: row }, stdout);
+            }
+            Search::Error(title, message) => {
+                send_error_result(&title, &message, stdout);
+            }
+        }
+
+        send_finished(stdout);
+    }
+
+    fn on_activate(&mut self, id: u32, stdout: &mut io::Stdout) {
+        // Destructure so the store (`results`) and the domain handler (`plugin`)
+        // are borrowed as disjoint fields — `activate` needs `&mut plugin` while
+        // the item borrows `results`.
+        let Runner { plugin, results } = self;
+        if let Some(item) = results.get(&id) {
+            if let Activation::Close = plugin.activate(item) {
+                send_response(&PluginResponse::Close(CloseResponse::Close), stdout);
+            }
+        }
+    }
+
+    fn on_context(&mut self, id: u32, stdout: &mut io::Stdout) {
+        if let Some(item) = self.results.get(&id) {
+            let options = self.plugin.context_menu(item);
+            if !options.is_empty() {
+                let options = serde_json::Value::Array(
+                    options
+                        .iter()
+                        .map(|o| serde_json::json!({ "id": o.id, "name": o.name }))
+                        .collect(),
+                );
+                send_context(id, options, stdout);
+            }
+        }
+    }
+
+    fn on_activate_context(&mut self, id: u32, context: u32, stdout: &mut io::Stdout) {
+        let Runner { plugin, results } = self;
+        if let Some(item) = results.get(&id) {
+            if let Activation::Close = plugin.activate_context(item, context) {
+                send_response(&PluginResponse::Close(CloseResponse::Close), stdout);
             }
         }
     }

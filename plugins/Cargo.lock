@@ -288,7 +288,6 @@ name = "clip-launcher"
 version = "0.1.0"
 dependencies = [
  "plugin-common",
- "serde_json",
 ]
 
 [[package]]
@@ -475,7 +474,6 @@ dependencies = [
  "plugin-common",
  "reqwest",
  "serde",
- "serde_json",
  "toml",
 ]
 
@@ -983,7 +981,6 @@ version = "0.1.0"
 dependencies = [
  "plugin-common",
  "regex",
- "serde_json",
 ]
 
 [[package]]
@@ -1669,8 +1666,6 @@ version = "0.1.0"
 dependencies = [
  "dirs",
  "plugin-common",
- "regex",
- "serde_json",
 ]
 
 [[package]]

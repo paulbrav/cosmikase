@@ -5,11 +5,10 @@
 //! `plugin-common`; this file is only the cliphist-specific logic.
 
 use plugin_common::{
-    command_exists, send_context, send_error_result, send_finished, send_response, truncate_string,
-    ClearResponse, CloseResponse, IconSource, PluginHandler, PluginResponse, PluginSearchResult,
+    command_exists, truncate_string, Activation, ContextOption, IconSource, PluginHandler, Row,
+    Search,
 };
-use std::collections::HashMap;
-use std::io::{self, Write};
+use std::io::Write;
 use std::process::{Command, Stdio};
 
 // ============================================================================
@@ -30,16 +29,11 @@ struct ClipboardEntry {
 // Plugin State
 // ============================================================================
 
-struct Plugin {
-    /// Store clipboard entries for activation by index
-    results: HashMap<u32, ClipboardEntry>,
-}
+struct Plugin;
 
 impl Plugin {
     fn new() -> Self {
-        Plugin {
-            results: HashMap::new(),
-        }
+        Plugin
     }
 
     fn get_clipboard_history(&self) -> Vec<ClipboardEntry> {
@@ -145,129 +139,84 @@ impl Plugin {
 }
 
 impl PluginHandler for Plugin {
-    fn handle_search(&mut self, query: &str, stdout: &mut io::Stdout) {
-        // Clear previous results
-        self.results.clear();
-        send_response(&PluginResponse::Clear(ClearResponse::Clear), stdout);
+    type Item = ClipboardEntry;
+    const PREFIX: &'static str = "clip ";
 
-        // Strip the "clip " prefix if present
-        let search_query = query
-            .strip_prefix("clip ")
-            .unwrap_or(query)
-            .trim()
-            .to_lowercase();
+    fn search(&mut self, query: &str) -> Search<ClipboardEntry> {
+        let query = query.to_lowercase();
 
         // Check if cliphist is available
         if !command_exists("cliphist") {
-            send_error_result(
+            return Search::error(
                 "cliphist not found",
                 "Install cliphist: go install go.senan.xyz/cliphist@latest",
-                stdout,
             );
-            send_finished(stdout);
-            return;
         }
 
         // Get clipboard history
         let entries = self.get_clipboard_history();
 
         if entries.is_empty() {
-            send_error_result("Clipboard empty", "No clipboard history available", stdout);
-            send_finished(stdout);
-            return;
+            return Search::error("Clipboard empty", "No clipboard history available");
         }
 
         // Filter entries by query if provided
-        let filtered_entries: Vec<&ClipboardEntry> = if search_query.is_empty() {
-            entries.iter().collect()
+        let filtered: Vec<ClipboardEntry> = if query.is_empty() {
+            entries
         } else {
             entries
-                .iter()
-                .filter(|e| e.display.to_lowercase().contains(&search_query))
+                .into_iter()
+                .filter(|e| e.display.to_lowercase().contains(&query))
                 .collect()
         };
 
-        if filtered_entries.is_empty() {
-            send_error_result(
+        if filtered.is_empty() {
+            Search::error(
                 "No matches",
-                &format!("No clipboard entries matching '{}'", search_query),
-                stdout,
-            );
+                format!("No clipboard entries matching '{}'", query),
+            )
         } else {
-            for (idx, entry) in filtered_entries.into_iter().take(20).enumerate() {
-                let id = idx as u32;
-                let icon = if entry.is_image {
-                    "image-x-generic"
-                } else {
-                    "edit-paste"
-                };
-
-                let search_result = PluginSearchResult {
-                    id,
-                    name: entry.display.clone(),
-                    description: if entry.is_image {
-                        "Image from clipboard".to_string()
-                    } else {
-                        "Text entry".to_string()
-                    },
-                    keywords: None,
-                    icon: Some(IconSource::Name(icon.to_string())),
-                    exec: None,
-                };
-                self.results.insert(id, entry.clone());
-                send_response(
-                    &PluginResponse::Append {
-                        Append: search_result,
-                    },
-                    stdout,
-                );
-            }
-        }
-
-        send_finished(stdout);
-    }
-
-    fn handle_activate(&mut self, id: u32, stdout: &mut io::Stdout) {
-        if let Some(entry) = self.results.get(&id) {
-            self.paste_entry(entry);
-            send_response(&PluginResponse::Close(CloseResponse::Close), stdout);
+            Search::Results(filtered.into_iter().take(20).collect())
         }
     }
 
-    fn handle_context(&mut self, id: u32, stdout: &mut io::Stdout) {
-        if self.results.contains_key(&id) {
-            send_context(
-                id,
-                serde_json::json!([
-                    {"id": 0, "name": "Paste to clipboard"},
-                    {"id": 1, "name": "Delete from history"}
-                ]),
-                stdout,
-            );
-        }
+    fn row(&self, entry: &ClipboardEntry) -> Row {
+        let (icon, description) = if entry.is_image {
+            ("image-x-generic", "Image from clipboard")
+        } else {
+            ("edit-paste", "Text entry")
+        };
+        Row::new(
+            entry.display.clone(),
+            description,
+            IconSource::Name(icon.to_string()),
+        )
     }
 
-    fn handle_activate_context(&mut self, id: u32, context: u32, stdout: &mut io::Stdout) {
-        if let Some(entry) = self.results.get(&id) {
-            match context {
-                0 => {
-                    // Paste to clipboard
-                    self.paste_entry(entry);
-                }
-                1 => {
-                    // Delete from history
-                    self.delete_entry(entry);
-                }
-                _ => {}
-            }
-            send_response(&PluginResponse::Close(CloseResponse::Close), stdout);
+    fn activate(&mut self, entry: &ClipboardEntry) -> Activation {
+        self.paste_entry(entry);
+        Activation::Close
+    }
+
+    fn context_menu(&self, _entry: &ClipboardEntry) -> Vec<ContextOption> {
+        vec![
+            ContextOption::new(0, "Paste to clipboard"),
+            ContextOption::new(1, "Delete from history"),
+        ]
+    }
+
+    fn activate_context(&mut self, entry: &ClipboardEntry, context: u32) -> Activation {
+        match context {
+            0 => self.paste_entry(entry),
+            1 => self.delete_entry(entry),
+            _ => {}
         }
+        Activation::Close
     }
 }
 
 fn main() {
-    let mut plugin = Plugin::new();
-    plugin.run();
+    Plugin::new().run();
 }
 
 #[cfg(test)]

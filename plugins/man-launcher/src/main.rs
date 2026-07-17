@@ -5,13 +5,10 @@
 //! `plugin-common`; this file is only the man-page-specific logic.
 
 use plugin_common::{
-    copy_to_clipboard, send_context, send_error_result, send_finished, send_response,
-    spawn_in_terminal, truncate_string, ClearResponse, CloseResponse, IconSource, PluginHandler,
-    PluginResponse, PluginSearchResult,
+    copy_to_clipboard, spawn_in_terminal, truncate_string, Activation, ContextOption, IconSource,
+    PluginHandler, Row, Search,
 };
 use regex::Regex;
-use std::collections::HashMap;
-use std::io;
 use std::process::Command;
 
 // ============================================================================
@@ -50,16 +47,11 @@ impl ManPage {
 // Plugin State
 // ============================================================================
 
-struct Plugin {
-    /// Store man pages for activation by index
-    results: HashMap<u32, ManPage>,
-}
+struct Plugin;
 
 impl Plugin {
     fn new() -> Self {
-        Plugin {
-            results: HashMap::new(),
-        }
+        Plugin
     }
 
     fn search_man_pages(&self, query: &str) -> Vec<ManPage> {
@@ -113,108 +105,67 @@ impl Plugin {
 }
 
 impl PluginHandler for Plugin {
-    fn handle_search(&mut self, query: &str, stdout: &mut io::Stdout) {
-        // Clear previous results
-        self.results.clear();
-        send_response(&PluginResponse::Clear(ClearResponse::Clear), stdout);
+    type Item = ManPage;
+    const PREFIX: &'static str = "man ";
 
-        // Strip the "man " prefix if present
-        let search_query = query.strip_prefix("man ").unwrap_or(query).trim();
-
-        if search_query.is_empty() {
+    fn search(&mut self, query: &str) -> Search<ManPage> {
+        if query.is_empty() {
             // Show help when no query
-            let result = PluginSearchResult {
-                id: 0,
-                name: "Man Page Search".to_string(),
-                description: "Type to search man pages...".to_string(),
-                keywords: None,
-                icon: Some(IconSource::Name("help-contents".to_string())),
-                exec: None,
-            };
-            send_response(&PluginResponse::Append { Append: result }, stdout);
-            send_finished(stdout);
-            return;
+            return Search::help(
+                "Man Page Search",
+                "Type to search man pages...",
+                IconSource::Name("help-contents".to_string()),
+            );
         }
 
-        // Search for man pages
-        let pages = self.search_man_pages(search_query);
+        let pages = self.search_man_pages(query);
 
         if pages.is_empty() {
-            send_error_result(
+            Search::error(
                 "No man pages found",
-                &format!("No man pages matching '{}'", search_query),
-                stdout,
-            );
+                format!("No man pages matching '{}'", query),
+            )
         } else {
-            for (idx, page) in pages.into_iter().take(15).enumerate() {
-                let id = idx as u32;
-                let search_result = PluginSearchResult {
-                    id,
-                    name: page.display_name(),
-                    description: truncate_string(&page.description, 80),
-                    keywords: None,
-                    icon: Some(IconSource::Name("help-contents".to_string())),
-                    exec: None,
-                };
-                self.results.insert(id, page);
-                send_response(
-                    &PluginResponse::Append {
-                        Append: search_result,
-                    },
-                    stdout,
-                );
+            Search::Results(pages.into_iter().take(15).collect())
+        }
+    }
+
+    fn row(&self, page: &ManPage) -> Row {
+        Row::new(
+            page.display_name(),
+            truncate_string(&page.description, 80),
+            IconSource::Name("help-contents".to_string()),
+        )
+    }
+
+    fn activate(&mut self, page: &ManPage) -> Activation {
+        page.open_in_terminal();
+        Activation::Close
+    }
+
+    fn context_menu(&self, _page: &ManPage) -> Vec<ContextOption> {
+        vec![
+            ContextOption::new(0, "Open in terminal"),
+            ContextOption::new(1, "Open in browser (man.cx)"),
+            ContextOption::new(2, "Copy man command"),
+        ]
+    }
+
+    fn activate_context(&mut self, page: &ManPage, context: u32) -> Activation {
+        match context {
+            0 => page.open_in_terminal(),
+            1 => {
+                let _ = Command::new("xdg-open").arg(page.web_url()).spawn();
             }
+            2 => copy_to_clipboard(&page.man_command()),
+            _ => {}
         }
-
-        send_finished(stdout);
-    }
-
-    fn handle_activate(&mut self, id: u32, stdout: &mut io::Stdout) {
-        if let Some(page) = self.results.get(&id) {
-            page.open_in_terminal();
-            send_response(&PluginResponse::Close(CloseResponse::Close), stdout);
-        }
-    }
-
-    fn handle_context(&mut self, id: u32, stdout: &mut io::Stdout) {
-        if self.results.contains_key(&id) {
-            send_context(
-                id,
-                serde_json::json!([
-                    {"id": 0, "name": "Open in terminal"},
-                    {"id": 1, "name": "Open in browser (man.cx)"},
-                    {"id": 2, "name": "Copy man command"}
-                ]),
-                stdout,
-            );
-        }
-    }
-
-    fn handle_activate_context(&mut self, id: u32, context: u32, stdout: &mut io::Stdout) {
-        if let Some(page) = self.results.get(&id) {
-            match context {
-                0 => {
-                    // Open in terminal
-                    page.open_in_terminal();
-                }
-                1 => {
-                    // Open in browser
-                    let _ = Command::new("xdg-open").arg(page.web_url()).spawn();
-                }
-                2 => {
-                    // Copy man command
-                    copy_to_clipboard(&page.man_command());
-                }
-                _ => {}
-            }
-            send_response(&PluginResponse::Close(CloseResponse::Close), stdout);
-        }
+        Activation::Close
     }
 }
 
 fn main() {
-    let mut plugin = Plugin::new();
-    plugin.run();
+    Plugin::new().run();
 }
 
 #[cfg(test)]

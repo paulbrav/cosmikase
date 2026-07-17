@@ -7,5 +7,4 @@ description = "Pop!_OS launcher plugin for searching man pages"
 
 [dependencies]
 plugin-common = { path = "../plugin-common" }
-serde_json = "1.0"
 regex = "1.11"

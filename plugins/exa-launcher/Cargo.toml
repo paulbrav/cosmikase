@@ -8,7 +8,6 @@ description = "Pop!_OS launcher plugin for Exa.ai web search"
 [dependencies]
 plugin-common = { path = "../plugin-common" }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 # TODO: reqwest pulls the full hyper + native-tls (openssl) stack for a single
 # blocking GET. A future pass should swap it for a lighter client (e.g. ureq
 # with rustls) — deliberately left as-is this pass to keep the change scoped.
