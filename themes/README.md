@@ -40,7 +40,6 @@ Each `themes/<name>/` directory contains:
 | `antigravity.conf` | Antigravity launcher colours |
 | `backgrounds/` | Wallpapers still tracked in git (see Wallpapers) |
 | `preview.png` | Theme preview image (ported themes) |
-| `light.mode` | Present only for light themes — marks COSMIC light mode |
 
 Terminals are **cosmic-term** (daily driver) and **ghostty** (quick-terminal
 dropdown). Kitty and Alacritty were removed, so their per-theme configs are gone.
@@ -51,8 +50,9 @@ removed — cosmikase targets COSMIC, not a Hyprland stack.
 
 Each app's colours live directly in that app's config file (`cursor.json`,
 `cosmic-term.ron`, `ghostty.conf`, …); editing a theme means editing those files.
-`cursor.json`'s `light` flag is the declared dark/light truth for a theme; light
-themes also carry a `light.mode` marker file, which flips COSMIC into light mode.
+`cursor.json`'s `light` flag is the single dark/light truth for a theme: the
+editors read it, and `cosmikase-theme-cosmic` reads the same flag to flip COSMIC
+into light mode. A light theme sets `"light": true`; anything else is dark.
 
 ## Why there is no per-theme manifest
 
@@ -117,8 +117,9 @@ reapplies dotfiles, and calls the per-app helpers:
 ## Adding a new theme
 
 1. Create `themes/<name>/` and add `cursor.json` (editor theme name + extension +
-   colours). For a light theme, set its `light` flag and add a `light.mode`
-   marker file next to it.
+   colours). For a light theme, set `"light": true` in `cursor.json` — that flag
+   is the single dark/light truth (the editors and COSMIC both read it); there is
+   no separate marker file.
 2. Add the per-app config files by copying an existing theme's and editing the
    colours: `ghostty.conf`, `cosmic-term.ron`, `cosmic.ron`, `neovim.lua`,
    `btop.theme`, `opencode.json`, `antigravity.conf`.

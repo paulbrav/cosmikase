@@ -4,19 +4,17 @@
 set -euo pipefail
 
 # Resolve the real script location so this works both from the repo and from the
-# ~/.local/bin symlink installed by run_before_05-install-cosmikase.
+# ~/.local/bin symlink chezmoi installs via its native symlink_ entries.
 REAL="$(readlink -f "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(dirname "$REAL")"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 INSTALL_SH="$REPO_DIR/install.sh"
-THEMES_DIR="${THEMES_DIR:-$HOME/.local/share/cosmikase/themes}"
 
-have() { command -v "$1" >/dev/null 2>&1; }
+# Shared helpers: find_helper / run_helper / find_themes_dir (item 6.2).
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
 
-# Locate a sibling cosmikase-* helper (script dir first, then PATH).
-helper() {
-    if [ -x "$SCRIPT_DIR/$1" ]; then echo "$SCRIPT_DIR/$1"; elif have "$1"; then command -v "$1"; fi
-}
+THEMES_DIR="$(find_themes_dir)"
 
 banner() {
     cat <<'EOF'
@@ -32,21 +30,25 @@ EOF
 }
 
 # ── Actions ──────────────────────────────────────────────────────────────────
-do_preflight() { local h; h="$(helper cosmikase-preflight)"; [ -n "$h" ] && "$h" || echo "cosmikase-preflight not found"; }
+# run_helper (from the lib) resolves the helper, runs it, or prints "<name> not
+# found" — using an if/else so a helper that runs and fails is not misreported
+# as missing (item 6.2).
+do_preflight() { run_helper cosmikase-preflight; }
 do_install()   { if [ -x "$INSTALL_SH" ]; then "$INSTALL_SH"; else echo "install.sh not found at $INSTALL_SH"; fi; }
-do_apply()     { if have chezmoi; then chezmoi apply; else echo "chezmoi not installed (run Install/Update system first)"; fi; }
-do_update()    { local h; h="$(helper cosmikase-update)"; [ -n "$h" ] && "$h" || echo "cosmikase-update not found"; }
-do_databases() { local h; h="$(helper cosmikase-databases)"; [ -n "$h" ] && "$h" || echo "cosmikase-databases not found"; }
+do_apply()     { if command -v chezmoi >/dev/null 2>&1; then chezmoi apply; else echo "chezmoi not installed (run Install/Update system first)"; fi; }
+do_update()    { run_helper cosmikase-update; }
+do_databases() { run_helper cosmikase-databases; }
 
 do_theme() {
-    local theme_cmd; theme_cmd="$(helper cosmikase-theme)"
+    local theme_cmd; theme_cmd="$(find_helper cosmikase-theme)"
     if [ -z "$theme_cmd" ]; then echo "cosmikase-theme not found"; return; fi
-    if [ -d "$THEMES_DIR" ] && have gum; then
+    if [ -d "$THEMES_DIR" ] && command -v gum >/dev/null 2>&1; then
         local choice
         choice="$(find "$THEMES_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | gum choose || true)"
         [ -n "$choice" ] && "$theme_cmd" "$choice"
     else
-        # Let cosmikase-theme present its own picker.
+        # No gum (or no themes dir): cosmikase-theme with no args prints its usage,
+        # which lists the available themes; re-run it with a name to switch.
         "$theme_cmd"
     fi
 }
@@ -79,7 +81,7 @@ main() {
     banner
     while true; do
         local choice
-        if have gum; then
+        if command -v gum >/dev/null 2>&1; then
             choice="$(printf '%s\n' "${LABELS[@]}" | gum choose || echo Quit)"
         else
             echo "Select an option:"

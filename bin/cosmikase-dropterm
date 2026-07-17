@@ -26,18 +26,16 @@
 
 set -euo pipefail
 
+# Source shared library (for notify()).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=bin/cosmikase-lib.sh
+source "$SCRIPT_DIR/cosmikase-lib.sh"
+
 # A unique marker so we only ever match OUR drop-down instance, never the daily
 # terminal. For ghostty it is the Wayland app-id / GTK application id (--class);
 # for cosmic-term we fall back to matching the window title in the process args.
 APP_ID="com.cosmikase.Dropterm"
 TITLE="cosmikase-dropterm"
-
-notify() {
-    if command -v notify-send >/dev/null 2>&1; then
-        notify-send -a "cosmikase" "cosmikase-dropterm" "$1" 2>/dev/null || true
-    fi
-    echo "cosmikase-dropterm: $1" >&2
-}
 
 # Pick a terminal.
 term_bin="${COSMIKASE_DROPTERM_BIN:-}"
@@ -50,7 +48,9 @@ if [[ -z "$term_bin" ]]; then
 fi
 
 if [[ -z "$term_bin" ]] || ! command -v "$term_bin" >/dev/null 2>&1; then
-    notify "No terminal found (need ghostty or cosmic-term)"
+    msg="No terminal found (need ghostty or cosmic-term)"
+    notify "cosmikase-dropterm" "$msg"
+    echo "cosmikase-dropterm: $msg" >&2
     exit 1
 fi
 

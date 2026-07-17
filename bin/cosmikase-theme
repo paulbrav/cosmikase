@@ -47,42 +47,18 @@ usage() {
     echo "  $(basename "$0") --rollback"
 }
 
-# Parse arguments
-THEME=""
+# Parse arguments (shared scaffold in cosmikase-lib.sh + this script's flags).
 ROLLBACK=false
-QUIET=false
 
-while [[ $# -gt 0 ]]; do
+parse_script_flag() {
     case "$1" in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        --rollback)
-            ROLLBACK=true
-            shift
-            ;;
-        --quiet|-q)
-            QUIET=true
-            shift
-            ;;
-        -*)
-            echo "Unknown option: $1" >&2
-            usage
-            exit 1
-            ;;
-        *)
-            if [[ -z "$THEME" ]]; then
-                THEME="$1"
-            else
-                echo "Error: Multiple theme names provided" >&2
-                usage
-                exit 1
-            fi
-            shift
-            ;;
+        --rollback) ROLLBACK=true ;;
+        *) return 1 ;;
     esac
-done
+    return 0
+}
+
+parse_common_args "$@"
 
 # Handle rollback
 if [[ "$ROLLBACK" == "true" ]]; then

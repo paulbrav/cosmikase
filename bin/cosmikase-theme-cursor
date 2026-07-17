@@ -10,15 +10,17 @@ source "$SCRIPT_DIR/cosmikase-lib.sh"
 
 THEMES_DIR="$(find_themes_dir)"
 
-# Detect editor commands
-find_editor_cmd() {
-    local name="$1"
-    if command -v "$name" >/dev/null 2>&1; then
-        echo "$name"
-    else
-        echo ""
-    fi
-}
+# Single per-editor descriptor table (item 2.6): display|cmd|configdir|pgrep.
+# The apply loop uses display/cmd/configdir; the running-editor loop uses
+# display/pgrep. VS Code's pgrep pattern is anchored to the bare process name
+# ^code$ so it does not match the many command lines that merely contain "code";
+# the others match either case. (The old WM_CLASS column drove the xdotool
+# auto-reload branch, which item 2.8 deleted, so it is gone with it.)
+EDITORS=(
+    "Cursor|cursor|$HOME/.config/Cursor|[Cc]ursor"
+    "VS Code|code|$HOME/.config/Code|^code$"
+    "Antigravity|antigravity|$HOME/.config/Antigravity|[Aa]ntigravity"
+)
 
 usage() {
     echo "Usage: $(basename "$0") <theme-name> [options]"
@@ -27,13 +29,11 @@ usage() {
     echo "and installing extensions."
     echo ""
     echo "Options:"
-    echo "  --no-install       Skip extension installation"
-    echo "  --no-reload        Skip reload attempt"
-    echo "  --cursor-only      Only update Cursor"
-    echo "  --code-only        Only update VS Code"
-    echo "  --antigravity-only Only update Antigravity"
-    echo "  --quiet            Suppress output"
-    echo "  -h, --help         Show this help message"
+    echo "  --no-install    Skip extension installation"
+    echo "  --no-reload     Skip reload attempt"
+    echo "  --only <name>   Only update one editor (cursor|code|antigravity)"
+    echo "  --quiet, -q     Suppress output"
+    echo "  -h, --help      Show this help message"
     echo ""
     echo "Supported editors:"
     echo "  - Cursor       (~/.config/Cursor/User/settings.json)"
@@ -43,68 +43,33 @@ usage() {
     echo "Examples:"
     echo "  $(basename "$0") catppuccin"
     echo "  $(basename "$0") tokyo-night --no-reload"
-    echo "  $(basename "$0") gruvbox --cursor-only"
+    echo "  $(basename "$0") gruvbox --only cursor"
 }
 
-# Parse arguments
-THEME=""
+# Parse arguments (shared scaffold in cosmikase-lib.sh + this script's flags).
 INSTALL_EXTENSION=true
 ATTEMPT_RELOAD=true
-QUIET=false
-UPDATE_CURSOR=true
-UPDATE_CODE=true
-UPDATE_ANTIGRAVITY=true
+ONLY=""
 
-while [[ $# -gt 0 ]]; do
+parse_script_flag() {
     case "$1" in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        --no-install)
-            INSTALL_EXTENSION=false
-            shift
-            ;;
-        --no-reload)
-            ATTEMPT_RELOAD=false
-            shift
-            ;;
-        --cursor-only)
-            UPDATE_CODE=false
-            UPDATE_ANTIGRAVITY=false
-            shift
-            ;;
-        --code-only)
-            UPDATE_CURSOR=false
-            UPDATE_ANTIGRAVITY=false
-            shift
-            ;;
-        --antigravity-only)
-            UPDATE_CURSOR=false
-            UPDATE_CODE=false
-            shift
-            ;;
-        --quiet|-q)
-            QUIET=true
-            shift
-            ;;
-        -*)
-            echo "Unknown option: $1" >&2
-            usage
-            exit 1
-            ;;
-        *)
-            if [[ -z "$THEME" ]]; then
-                THEME="$1"
-            else
-                echo "Error: Multiple theme names provided" >&2
+        --no-install) INSTALL_EXTENSION=false ;;
+        --no-reload)  ATTEMPT_RELOAD=false ;;
+        --only)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --only requires an editor name" >&2
                 usage
                 exit 1
             fi
-            shift
+            ONLY="$2"
+            SHIFT_COUNT=2
             ;;
+        *) return 1 ;;
     esac
-done
+    return 0
+}
+
+parse_common_args "$@"
 
 # Require theme
 require_theme "$THEME" "$THEMES_DIR" || exit 1
@@ -117,21 +82,8 @@ if [[ ! -f "$CURSOR_JSON" ]]; then
     exit 0
 fi
 
-# Parse cursor.json using jq or python
-parse_json() {
-    local key="$1"
-    if command -v jq >/dev/null 2>&1; then
-        jq -r ".$key // empty" "$CURSOR_JSON"
-    elif command -v python3 >/dev/null 2>&1; then
-        python3 -c "import json; d=json.load(open('$CURSOR_JSON')); print(d.get('$key', ''))"
-    else
-        echo "Error: Neither jq nor python3 available for JSON parsing" >&2
-        exit 1
-    fi
-}
-
-COLOR_THEME=$(parse_json "colorTheme")
-EXTENSION_ID=$(parse_json "extension")
+COLOR_THEME=$(parse_json "$CURSOR_JSON" "colorTheme")
+EXTENSION_ID=$(parse_json "$CURSOR_JSON" "extension")
 
 if [[ -z "$COLOR_THEME" ]]; then
     echo "Error: No colorTheme found in $CURSOR_JSON" >&2
@@ -140,17 +92,23 @@ fi
 
 log "Applying editor theme: $COLOR_THEME"
 
+# --only <name> filter: does this editor match the requested name?
+only_selected() {
+    local display="${1,,}" cmd="${2,,}" want="${ONLY,,}"
+    [[ "$want" == "$display" || "$want" == "$cmd" ]]
+}
+
 # Install extension for each editor
 install_extension() {
     local cmd="$1"
     local app_name="$2"
-    
+
     if [[ -z "$cmd" ]] || [[ -z "$EXTENSION_ID" ]]; then
         return
     fi
-    
+
     log "  - Checking extension for $app_name: $EXTENSION_ID"
-    
+
     # Check if extension is already installed
     if ! "$cmd" --list-extensions 2>/dev/null | grep -qi "^${EXTENSION_ID}$"; then
         log "  - Installing extension for $app_name: $EXTENSION_ID"
@@ -271,118 +229,46 @@ EOF
     return 0
 }
 
-# Track which editors were updated for reload notification
+# Apply theme to each editor (loop 1). Track which editors were updated so the
+# reload notification only names the ones we actually touched.
 UPDATED_EDITORS=()
 
-# Process Cursor
-if [[ "$UPDATE_CURSOR" == "true" ]]; then
-    CURSOR_CMD=$(find_editor_cmd "cursor")
-    CURSOR_SETTINGS="$HOME/.config/Cursor/User/settings.json"
-    
-    if [[ -d "$HOME/.config/Cursor" ]]; then
-        if [[ "$INSTALL_EXTENSION" == "true" ]] && [[ -n "$CURSOR_CMD" ]]; then
-            install_extension "$CURSOR_CMD" "Cursor"
-        fi
-        if update_settings "$CURSOR_SETTINGS" "Cursor"; then
-            UPDATED_EDITORS+=("Cursor")
-        fi
+for row in "${EDITORS[@]}"; do
+    IFS='|' read -r display cmd configdir _ <<<"$row"
+    if [[ -n "$ONLY" ]] && ! only_selected "$display" "$cmd"; then
+        continue
     fi
-fi
+    [[ -d "$configdir" ]] || continue
 
-# Process VS Code
-if [[ "$UPDATE_CODE" == "true" ]]; then
-    CODE_CMD=$(find_editor_cmd "code")
-    CODE_SETTINGS="$HOME/.config/Code/User/settings.json"
-    
-    if [[ -d "$HOME/.config/Code" ]]; then
-        if [[ "$INSTALL_EXTENSION" == "true" ]] && [[ -n "$CODE_CMD" ]]; then
-            install_extension "$CODE_CMD" "VS Code"
-        fi
-        if update_settings "$CODE_SETTINGS" "VS Code"; then
-            UPDATED_EDITORS+=("VS Code")
-        fi
+    settings="$configdir/User/settings.json"
+    editor_cmd="$(command -v "$cmd" 2>/dev/null || true)"
+
+    if [[ "$INSTALL_EXTENSION" == "true" ]] && [[ -n "$editor_cmd" ]]; then
+        install_extension "$editor_cmd" "$display"
     fi
-fi
-
-# Process Antigravity
-if [[ "$UPDATE_ANTIGRAVITY" == "true" ]]; then
-    ANTIGRAVITY_CMD=$(find_editor_cmd "antigravity")
-    ANTIGRAVITY_SETTINGS="$HOME/.config/Antigravity/User/settings.json"
-    
-    if [[ -d "$HOME/.config/Antigravity" ]]; then
-        if [[ "$INSTALL_EXTENSION" == "true" ]] && [[ -n "$ANTIGRAVITY_CMD" ]]; then
-            install_extension "$ANTIGRAVITY_CMD" "Antigravity"
-        fi
-        if update_settings "$ANTIGRAVITY_SETTINGS" "Antigravity"; then
-            UPDATED_EDITORS+=("Antigravity")
-        fi
+    if update_settings "$settings" "$display"; then
+        UPDATED_EDITORS+=("$display")
     fi
-fi
+done
 
-# Attempt to reload editors
+# Detect which updated editors are running and notify the user to reload them
+# (loop 2). COSMIC is Wayland-only, so there is no window-manager keystroke
+# injection — item 2.8 removed the unreachable X11/xdotool auto-reload path.
 if [[ "$ATTEMPT_RELOAD" == "true" ]] && [[ ${#UPDATED_EDITORS[@]} -gt 0 ]]; then
-    # Check if any of the editors are running
     running_editors=()
-    
-    if [[ " ${UPDATED_EDITORS[*]} " =~ " Cursor " ]]; then
-        if pgrep -f "cursor" >/dev/null 2>&1 || pgrep -f "Cursor" >/dev/null 2>&1; then
-            running_editors+=("Cursor")
+    for row in "${EDITORS[@]}"; do
+        IFS='|' read -r display _ _ pattern <<<"$row"
+        [[ " ${UPDATED_EDITORS[*]} " == *" $display "* ]] || continue
+        if pgrep -f "$pattern" >/dev/null 2>&1; then
+            running_editors+=("$display")
         fi
-    fi
-    
-    if [[ " ${UPDATED_EDITORS[*]} " =~ " VS Code " ]]; then
-        if pgrep -f "^code$" >/dev/null 2>&1 || pgrep -f "Code" >/dev/null 2>&1; then
-            running_editors+=("VS Code")
-        fi
-    fi
-    
-    if [[ " ${UPDATED_EDITORS[*]} " =~ " Antigravity " ]]; then
-        if pgrep -f "antigravity" >/dev/null 2>&1 || pgrep -f "Antigravity" >/dev/null 2>&1; then
-            running_editors+=("Antigravity")
-        fi
-    fi
-    
+    done
+
     if [[ ${#running_editors[@]} -gt 0 ]]; then
-        reloaded=false
-        
-        # Try using xdotool on X11
-        # Use --class for precise matching to avoid focusing wrong applications
-        if [[ -z "${WAYLAND_DISPLAY:-}" ]] && command -v xdotool >/dev/null 2>&1; then
-            for editor in "${running_editors[@]}"; do
-                # Map display name to WM_CLASS for precise window matching
-                case "$editor" in
-                    "Cursor") class_name="cursor" ;;
-                    "VS Code") class_name="code" ;;
-                    "Antigravity") class_name="antigravity" ;;
-                    *) class_name="${editor,,}" ;;  # lowercase fallback
-                esac
-                # Try --class first (more precise), fall back to --name
-                editor_window=$(xdotool search --class "$class_name" 2>/dev/null | head -1 || true)
-                if [[ -z "$editor_window" ]]; then
-                    editor_window=$(xdotool search --name "$editor" 2>/dev/null | head -1 || true)
-                fi
-                if [[ -n "$editor_window" ]]; then
-                    log "  - Attempting $editor reload via xdotool..."
-                    xdotool windowactivate --sync "$editor_window" 2>/dev/null || true
-                    sleep 0.2
-                    xdotool key --window "$editor_window" ctrl+shift+p 2>/dev/null || true
-                    sleep 0.3
-                    xdotool type --window "$editor_window" "Developer: Reload Window" 2>/dev/null || true
-                    sleep 0.2
-                    xdotool key --window "$editor_window" Return 2>/dev/null || true
-                    reloaded=true
-                fi
-            done
-        fi
-        
-        if [[ "$reloaded" != "true" ]]; then
-            editors_list=$(IFS=', '; echo "${running_editors[*]}")
-            notify "Theme Applied" "Theme set to $COLOR_THEME. Press Ctrl+Shift+P → 'Developer: Reload Window' in: $editors_list"
-            log "  - Running editors: $editors_list"
-            log "  - Reload with: Ctrl+Shift+P → 'Developer: Reload Window'"
-        else
-            log "  - Editor reload triggered"
-        fi
+        editors_list=$(IFS=', '; echo "${running_editors[*]}")
+        notify "Theme Applied" "Theme set to $COLOR_THEME. Press Ctrl+Shift+P → 'Developer: Reload Window' in: $editors_list"
+        log "  - Running editors: $editors_list"
+        log "  - Reload with: Ctrl+Shift+P → 'Developer: Reload Window'"
     else
         log "  - No editors running, theme will apply on next launch"
     fi
