@@ -3,8 +3,9 @@
 #
 # This is a chezmoi run_onchange script: it re-runs whenever cosmikase.yaml
 # changes (the hash below is part of the rendered content). The manifest is read
-# directly with python3 + PyYAML. The manifest lives one level above the chezmoi
-# source dir; chezmoi resolves .chezmoi.sourceDir to an absolute path at apply.
+# through the one canonical reader bin/cosmikase-manifest (python3 + PyYAML). The
+# manifest lives one level above the chezmoi source dir; chezmoi resolves
+# .chezmoi.sourceDir to an absolute path at apply.
 #
 # manifest-sha256: {{ include (joinPath .chezmoi.sourceDir ".." "cosmikase.yaml") | sha256sum }}
 #
@@ -13,44 +14,15 @@
 set -euo pipefail
 
 MANIFEST="{{ .chezmoi.sourceDir }}/../cosmikase.yaml"
+MANIFEST_READER="{{ .chezmoi.sourceDir }}/../bin/cosmikase-manifest"
 CI="${COSMIKASE_CI:-0}"
 
 [ -f "$MANIFEST" ] || { echo "manifest not found: $MANIFEST" >&2; exit 1; }
 
-# ── manifest readers ─────────────────────────────────────────────────────────
-apt_group() { # $1 = core|gui|system -> installable package names
-    python3 - "$MANIFEST" "$1" <<'PY'
-import sys, yaml
-d = yaml.safe_load(open(sys.argv[1])) or {}
-for it in (d.get("apt", {}) or {}).get(sys.argv[2], []) or []:
-    if isinstance(it, dict):
-        if it.get("install", True): print(it["name"])
-    elif it: print(it)
-PY
-}
-flatpak_ids() {
-    python3 - "$MANIFEST" <<'PY'
-import sys, yaml
-d = yaml.safe_load(open(sys.argv[1])) or {}
-for it in d.get("flatpak", []) or []:
-    if isinstance(it, dict) and it.get("install", True): print(it["id"])
-PY
-}
-font_rows() { # name<TAB>url<TAB>check
-    python3 - "$MANIFEST" <<'PY'
-import sys, yaml
-d = yaml.safe_load(open(sys.argv[1])) or {}
-for f in d.get("fonts", []) or []:
-    if f.get("install", True): print("\t".join([f["name"], f["url"], f.get("check","")]))
-PY
-}
-feature() { # $1 -> 1|0
-    python3 - "$MANIFEST" "$1" <<'PY'
-import sys, yaml
-d = yaml.safe_load(open(sys.argv[1])) or {}
-print("1" if (d.get("features", {}) or {}).get(sys.argv[2], False) else "0")
-PY
-}
+# The one canonical manifest reader serves every section (see cosmikase.yaml for
+# the parse contract). `list <path> <field...>` emits installable entries, one
+# per line, fields joined by the ASCII Unit Separator (0x1f).
+manifest() { "$MANIFEST_READER" -m "$MANIFEST" "$@"; }
 
 apt_install() { # install only packages not already present
     local want=("$@") missing=() p
@@ -65,7 +37,7 @@ apt_install() { # install only packages not already present
 # ── core apt (always, incl. CI) ──────────────────────────────────────────────
 echo "==> apt core packages"
 sudo apt-get update -qq
-mapfile -t core < <(apt_group core)
+mapfile -t core < <(manifest list apt.core name)
 apt_install "${core[@]}"
 
 if [ "$CI" = "1" ]; then
@@ -75,13 +47,14 @@ fi
 
 # ── gui + system apt ─────────────────────────────────────────────────────────
 echo "==> apt gui + system packages"
-mapfile -t gui < <(apt_group gui)
-mapfile -t system < <(apt_group system)
+mapfile -t gui < <(manifest list apt.gui name)
+mapfile -t system < <(manifest list apt.system name)
 apt_install "${gui[@]}"
 apt_install "${system[@]}"
 
 # ── ghostty (quick-terminal) via the maintained ghostty-ubuntu PPA ───────────
-if [ "$(feature ghostty)" = "1" ] && ! command -v ghostty >/dev/null 2>&1; then
+# Keyed on membership of apt.ppa (installed one-by-one here, never in the batch).
+if manifest list apt.ppa name | grep -qxF ghostty && ! command -v ghostty >/dev/null 2>&1; then
     echo "==> ghostty (ppa:mkasberg/ghostty-ubuntu)"
     dpkg -s software-properties-common >/dev/null 2>&1 || sudo apt-get install -y software-properties-common
     if ! grep -Rqs "mkasberg/ghostty-ubuntu" /etc/apt/sources.list.d/ 2>/dev/null; then
@@ -92,7 +65,7 @@ if [ "$(feature ghostty)" = "1" ] && ! command -v ghostty >/dev/null 2>&1; then
 fi
 
 # ── flatpak (add flathub only if any app is enabled) ─────────────────────────
-mapfile -t fpids < <(flatpak_ids)
+mapfile -t fpids < <(manifest list flatpak id)
 if [ "${#fpids[@]}" -gt 0 ]; then
     echo "==> flatpak apps"
     dpkg -s flatpak >/dev/null 2>&1 || sudo apt-get install -y flatpak
@@ -106,7 +79,7 @@ fi
 
 # ── nerd fonts ───────────────────────────────────────────────────────────────
 FONT_DIR="$HOME/.local/share/fonts"
-while IFS=$'\t' read -r fname furl fcheck; do
+while IFS=$'\x1f' read -r fname furl fcheck; do
     [ -z "$fname" ] && continue
     if [ -n "$fcheck" ] && [ -f "$FONT_DIR/$fcheck" ]; then continue; fi
     echo "==> font: $fname"
@@ -118,6 +91,6 @@ while IFS=$'\t' read -r fname furl fcheck; do
         echo "  (skip $fname: download or extract failed)"
     fi
     rm -rf "$tmp"
-done < <(font_rows)
+done < <(manifest list fonts name url check)
 
 echo "==> packages done"

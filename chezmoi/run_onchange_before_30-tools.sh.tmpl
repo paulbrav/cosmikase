@@ -9,6 +9,7 @@
 set -euo pipefail
 
 MANIFEST="{{ .chezmoi.sourceDir }}/../cosmikase.yaml"
+MANIFEST_READER="{{ .chezmoi.sourceDir }}/../bin/cosmikase-manifest"
 CI="${COSMIKASE_CI:-0}"
 [ -f "$MANIFEST" ] || { echo "manifest not found: $MANIFEST" >&2; exit 1; }
 
@@ -25,27 +26,13 @@ export NVM_DIR="$HOME/.nvm"
 # shellcheck disable=SC1091
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-read_tools() { # $1 = section -> US-separated (\x1f) fields per enabled entry
-    # Fields are joined with the ASCII Unit Separator (0x1f), NOT a tab: tab is
-    # IFS whitespace, so `IFS=$'\t' read` collapses consecutive tabs and an empty
-    # middle field (e.g. ai_tools entries with no `source`) would shift every
-    # later field left. A non-whitespace separator preserves empty fields.
-    python3 - "$MANIFEST" "$1" <<'PY'
-import sys, yaml
-d = yaml.safe_load(open(sys.argv[1])) or {}
-sec = sys.argv[2]
-FIELDS = {
-    "cargo_tools": ["name"],
-    "uv_tools": ["name"],
-    "npm_globals": ["name"],
-    "go_tools": ["name", "package"],
-    "ai_tools": ["name", "method", "source", "check", "key_url", "repo_line", "package"],
-}
-for it in d.get(sec, []) or []:
-    if isinstance(it, dict) and it.get("install", True):
-        print("\x1f".join(str(it.get(f, "")) for f in FIELDS[sec]))
-PY
-}
+# One canonical manifest reader (bin/cosmikase-manifest). `list <section>
+# <field...>` emits installable entries, fields joined by the ASCII Unit
+# Separator (0x1f) — NOT a tab: tab is IFS whitespace, so an empty middle field
+# (e.g. an ai_tools entry with no `source`) would collapse under a tab-split and
+# shift every later field left. The Unit Separator preserves empty fields, so
+# the `IFS=$'\x1f' read` loops below stay column-aligned.
+manifest() { "$MANIFEST_READER" -m "$MANIFEST" "$@"; }
 
 # ── cargo tools ──────────────────────────────────────────────────────────────
 if command -v cargo >/dev/null 2>&1; then
@@ -54,7 +41,7 @@ if command -v cargo >/dev/null 2>&1; then
         command -v "$name" >/dev/null 2>&1 && continue
         echo "==> cargo install $name"
         cargo install --locked "$name" || echo "  (skip $name)"
-    done < <(read_tools cargo_tools)
+    done < <(manifest list cargo_tools name)
 else
     echo "  (cargo not found; skipping cargo tools)"
 fi
@@ -66,7 +53,7 @@ if command -v go >/dev/null 2>&1; then
         command -v "$name" >/dev/null 2>&1 && continue
         echo "==> go install $pkg"
         go install "$pkg" || echo "  (skip $name)"
-    done < <(read_tools go_tools)
+    done < <(manifest list go_tools name package)
 else
     echo "  (go not found; skipping go tools)"
 fi
@@ -79,7 +66,7 @@ if command -v uv >/dev/null 2>&1; then
         printf '%s\n' "$installed_uv" | grep -qx "$name" && continue
         echo "==> uv tool install $name"
         uv tool install "$name" || echo "  (skip $name)"
-    done < <(read_tools uv_tools)
+    done < <(manifest list uv_tools name)
 else
     echo "  (uv not found; skipping uv tools)"
 fi
@@ -91,7 +78,7 @@ if command -v npm >/dev/null 2>&1; then
         npm ls -g --depth=0 "$name" >/dev/null 2>&1 && continue
         echo "==> npm install -g $name"
         npm install -g "$name" || echo "  (skip $name)"
-    done < <(read_tools npm_globals)
+    done < <(manifest list npm_globals name)
 else
     echo "  (npm not found; skipping npm globals)"
 fi
@@ -135,6 +122,6 @@ while IFS=$'\x1f' read -r name method source check key_url repo_line package; do
             ;;
         *) echo "  (unknown method '$method' for $name; skipping)" ;;
     esac
-done < <(read_tools ai_tools)
+done < <(manifest list ai_tools name method source check key_url repo_line package)
 
 echo "==> tools done"

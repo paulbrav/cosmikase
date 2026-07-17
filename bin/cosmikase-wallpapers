@@ -37,29 +37,12 @@ find_manifest() {
     return 1
 }
 
-# Emit TSV rows "theme<TAB>filename<TAB>sha256<TAB>url" for the requested theme
-# (or all). Requires python3 + PyYAML.
+# Emit rows "theme␟filename␟sha256␟url" (␟ = ASCII Unit Separator, 0x1f) for the
+# requested theme (or all) via the one canonical manifest reader. `records`
+# flattens the themes map-of-lists, prefixing each record with its theme key.
 manifest_rows() {
     local manifest="$1" want_theme="${2:-}"
-    python3 - "$manifest" "$want_theme" <<'PY'
-import sys
-try:
-    import yaml
-except ImportError:
-    sys.stderr.write("error: python3 PyYAML is required (pip install pyyaml / apt install python3-yaml)\n")
-    sys.exit(3)
-manifest, want = sys.argv[1], sys.argv[2]
-with open(manifest) as fh:
-    data = yaml.safe_load(fh) or {}
-for theme, records in (data.get("themes") or {}).items():
-    if want and theme != want:
-        continue
-    for rec in records or []:
-        fn = rec.get("filename", "")
-        sha = rec.get("sha256", "")
-        url = rec.get("url", "") or ""
-        print("\t".join([theme, fn, sha, url]))
-PY
+    "$SCRIPT_DIR/cosmikase-manifest" -m "$manifest" records --key "$want_theme" themes filename sha256 url
 }
 
 sha_of() { sha256sum "$1" | cut -d' ' -f1; }
@@ -74,7 +57,7 @@ cmd_fetch() {
     fi
 
     local theme fn sha url dest tmp got
-    while IFS=$'\t' read -r theme fn sha url; do
+    while IFS=$'\x1f' read -r theme fn sha url; do
         dest="$RUNTIME_DIR/$theme/$fn"
         if [[ -f "$dest" ]] && [[ "$(sha_of "$dest")" == "$sha" ]]; then
             skipped=$((skipped + 1)); continue
@@ -110,7 +93,7 @@ cmd_verify() {
     # Only fetchable wallpapers are checked here; in-tree wallpapers are git's to
     # verify (git status / git fsck), not this script's.
     local theme fn sha url path got
-    while IFS=$'\t' read -r theme fn sha url; do
+    while IFS=$'\x1f' read -r theme fn sha url; do
         path="$RUNTIME_DIR/$theme/$fn"
         if [[ ! -f "$path" ]]; then
             missing=$((missing + 1)); continue
@@ -132,7 +115,7 @@ cmd_list() {
     local want_theme="${1:-}" manifest
     manifest="$(find_manifest)" || { echo "error: wallpapers.yaml not found" >&2; return 1; }
     local theme fn sha url state
-    while IFS=$'\t' read -r theme fn sha url; do
+    while IFS=$'\x1f' read -r theme fn sha url; do
         if [[ -f "$RUNTIME_DIR/$theme/$fn" ]]; then
             state="fetched"
         else

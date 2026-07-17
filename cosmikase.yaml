@@ -1,8 +1,9 @@
 # cosmikase.yaml — THE manifest
 # ─────────────────────────────────────────────────────────────────────────────
-# Single source of truth for what gets installed. Read directly (python3 + PyYAML)
-# by the chezmoi run_onchange scripts under chezmoi/:
-#   run_onchange_before_10-packages.sh.tmpl   -> apt.*, flatpak, fonts, features
+# Single source of truth for what gets installed. Read through the one canonical
+# reader `bin/cosmikase-manifest` (python3 + PyYAML) by the chezmoi run_onchange
+# scripts under chezmoi/:
+#   run_onchange_before_10-packages.sh.tmpl   -> apt.*, flatpak, fonts
 #   run_onchange_before_20-runtimes.sh.tmpl   -> runtimes
 #   run_onchange_before_30-tools.sh.tmpl      -> cargo_tools, go_tools, uv_tools,
 #                                                npm_globals, ai_tools
@@ -107,6 +108,15 @@ apt:
     - { name: libpam-u2f, install: false }
     - { name: fido2-tools, install: false }
 
+  # PPA-sourced apt packages — installed individually from a dedicated PPA, NOT
+  # as part of the core/gui/system batch above. The package script keys its PPA
+  # block on membership of this list (set `install: false` to opt out).
+  ppa:
+    # ghostty is the quick-terminal dropdown; installed from the maintained
+    # ppa:mkasberg/ghostty-ubuntu apt channel (an honest apt install, not a snap).
+    # cosmic-term is the daily terminal and ships with the COSMIC desktop.
+    - { name: ghostty }
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # FLATPAK APPLICATIONS  (flathub remote added automatically if any are enabled)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -148,26 +158,19 @@ fonts:
     check: JetBrainsMonoNerdFont-Regular.ttf
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# FEATURE TOGGLES  (read by the package script)
-# ═══════════════════════════════════════════════════════════════════════════════
-features:
-  # ghostty is the quick-terminal dropdown; installed from the maintained
-  # ppa:mkasberg/ghostty-ubuntu apt channel (honest apt install, not a snap).
-  # cosmic-term is the daily terminal and ships with the COSMIC desktop.
-  ghostty: true
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # LANGUAGE RUNTIMES  (version pins; installers guarded by command -v; skipped in CI)
 # ═══════════════════════════════════════════════════════════════════════════════
 runtimes:
-  rust: { install: true }                       # rustup official installer
-  uv: { install: true }                         # astral.sh
-  nvm: { install: true, version: "0.40.3", node: "lts" }
-  bun: { install: true }                        # bun.sh
-  go: { install: true, version: "1.24.4" }      # tarball -> /usr/local/go
-  zig: { install: false, version: "0.15.2" }    # tarball -> /opt/zig-<ver>
-  julia: { install: true }                      # juliaup
-  starship: { install: true }                   # -> ~/.local/bin
+  # `install:` is omitted where the default (install) is wanted; only `zig` opts
+  # out. The reader defaults a missing `install` to true (see cosmikase.yaml:10).
+  rust: {}                                       # rustup official installer
+  uv: {}                                         # astral.sh
+  nvm: { version: "0.40.3", node: "lts" }
+  bun: {}                                        # bun.sh
+  go: { version: "1.24.4" }                      # tarball -> /usr/local/go
+  zig: { install: false, version: "0.15.2" }     # tarball -> /opt/zig-<ver>
+  julia: {}                                      # juliaup
+  starship: {}                                   # -> ~/.local/bin
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # LANGUAGE TOOLS  (installed by run_onchange_before_30-tools; skipped in CI)

@@ -23,7 +23,6 @@ go_tools:    [...]    # installed via `go install`
 uv_tools:    [...]    # installed via `uv tool install`
 npm_globals: [...]    # installed via `npm -g`
 ai_tools:    [...]    # AI CLIs (claude, codex, grok, …)
-features: {...}       # boolean feature toggles
 ```
 
 The default theme is **not** set here — it lives in exactly one place,
@@ -121,18 +120,6 @@ ai_tools:
 ```
 
 Items may be plain strings or `{ name: ..., install: ... }` where a per-item toggle is useful.
-
----
-
-## features
-
-Boolean toggles read by the scripts to enable/disable optional behavior.
-
-```yaml
-features:
-  yubikey_setup: false
-  run_fw_update: true
-```
 
 ---
 

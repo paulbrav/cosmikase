@@ -11,6 +11,7 @@
 set -euo pipefail
 
 MANIFEST="{{ .chezmoi.sourceDir }}/../cosmikase.yaml"
+MANIFEST_READER="{{ .chezmoi.sourceDir }}/../bin/cosmikase-manifest"
 CI="${COSMIKASE_CI:-0}"
 [ -f "$MANIFEST" ] || { echo "manifest not found: $MANIFEST" >&2; exit 1; }
 
@@ -19,23 +20,11 @@ if [ "$CI" = "1" ]; then
     exit 0
 fi
 
-enabled() { # $1 runtime -> 1|0
-    python3 - "$MANIFEST" "$1" <<'PY'
-import sys, yaml
-d = yaml.safe_load(open(sys.argv[1])) or {}
-r = (d.get("runtimes", {}) or {}).get(sys.argv[2], {}) or {}
-print("1" if r.get("install", False) else "0")
-PY
-}
-field() { # $1 runtime $2 field -> value
-    python3 - "$MANIFEST" "$1" "$2" <<'PY'
-import sys, yaml
-d = yaml.safe_load(open(sys.argv[1])) or {}
-r = (d.get("runtimes", {}) or {}).get(sys.argv[2], {}) or {}
-v = r.get(sys.argv[3], "")
-print("" if v is None else v)
-PY
-}
+# One canonical manifest reader (bin/cosmikase-manifest). `enabled` honours the
+# documented default (a missing `install:` means install; see cosmikase.yaml:10).
+manifest() { "$MANIFEST_READER" -m "$MANIFEST" "$@"; }
+enabled() { manifest enabled "runtimes.$1"; }       # $1 runtime -> 1|0
+field() { manifest get "runtimes.$1.$2"; }          # $1 runtime $2 field -> value
 
 mkdir -p "$HOME/.local/bin"
 

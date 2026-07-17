@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""cosmikase-manifest - the single canonical reader for the YAML manifests.
+
+Every chezmoi run_onchange package script and cosmikase-wallpapers reads its
+manifest through this helper instead of embedding its own PyYAML heredoc, so the
+parse rules (notably the `install:` default) live in exactly one place and can
+no longer drift between copies.
+
+Output is line-oriented and shell-consumable. `list`/`records` join their fields
+with the ASCII Unit Separator (0x1f), NOT a tab: tab is IFS whitespace, so an
+empty middle field would be collapsed by `IFS=$'\t' read`; the Unit Separator
+preserves every field, empty or not. Shell callers read with `IFS=$'\x1f'`.
+
+Verbs (a dotted <path> like "apt.core" or "runtimes.nvm.version" walks maps):
+  list <path> <field>...          one line per installable entry of the list at
+                                  <path>; each line is <field>... joined by the
+                                  separator. Dict entries honour `install`
+                                  (default true); a plain-scalar entry is emitted
+                                  verbatim.
+  get <path> [default]            the scalar at <path>, or [default] ("") if any
+                                  path segment is missing.
+  enabled <path>                  "1" if the entry at <path> has a truthy
+                                  `install` (default true, matching the manifest
+                                  contract), else "0".
+  records <path> [--key K] <f>... flatten the map-of-lists at <path> into one
+                                  line per record: the map key, then <f>...,
+                                  joined by the separator. --key limits output to
+                                  a single map key.
+"""
+
+import argparse
+import sys
+
+SEP = "\x1f"
+
+
+def load(path):
+    try:
+        import yaml
+    except ImportError:
+        sys.stderr.write(
+            "error: python3 PyYAML is required (apt install python3-yaml / pip install pyyaml)\n"
+        )
+        raise SystemExit(3) from None
+    with open(path) as fh:
+        return yaml.safe_load(fh) or {}
+
+
+def resolve(data, dotted):
+    node = data
+    for key in dotted.split("."):
+        if not isinstance(node, dict):
+            return None
+        node = node.get(key)
+    return node
+
+
+def cmd_list(data, args):
+    for entry in resolve(data, args.path) or []:
+        if isinstance(entry, dict):
+            if entry.get("install", True):
+                print(SEP.join(str(entry.get(f, "")) for f in args.fields))
+        elif entry is not None and entry != "":
+            print(str(entry))
+
+
+def cmd_get(data, args):
+    value = resolve(data, args.path)
+    print(args.default if value is None else value)
+
+
+def cmd_enabled(data, args):
+    entry = resolve(data, args.path)
+    if isinstance(entry, dict):
+        enabled = entry.get("install", True)
+    elif entry is None:
+        enabled = True
+    else:
+        enabled = entry
+    print("1" if enabled else "0")
+
+
+def cmd_records(data, args):
+    mapping = resolve(data, args.path) or {}
+    for key, records in mapping.items():
+        if args.key and key != args.key:
+            continue
+        for record in records or []:
+            row = (str(record.get(f, "")) for f in args.fields)
+            print(SEP.join([key, *row]))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="cosmikase-manifest")
+    parser.add_argument("-m", "--manifest", required=True)
+    sub = parser.add_subparsers(dest="verb", required=True)
+
+    p = sub.add_parser("list")
+    p.add_argument("path")
+    p.add_argument("fields", nargs="*")
+    p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("get")
+    p.add_argument("path")
+    p.add_argument("default", nargs="?", default="")
+    p.set_defaults(func=cmd_get)
+
+    p = sub.add_parser("enabled")
+    p.add_argument("path")
+    p.set_defaults(func=cmd_enabled)
+
+    p = sub.add_parser("records")
+    p.add_argument("path")
+    p.add_argument("--key", default="")
+    p.add_argument("fields", nargs="*")
+    p.set_defaults(func=cmd_records)
+
+    args = parser.parse_args(argv)
+    args.func(load(args.manifest), args)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
