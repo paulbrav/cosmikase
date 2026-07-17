@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# cosmikase-wallpapers - fetch/verify theme wallpapers described in
-# themes/wallpapers.yaml. Wallpapers with a known upstream source were removed
-# from git to keep the repo small; this restores them (sha256-verified) into
+# cosmikase-wallpapers - fetch/verify theme wallpapers listed in
+# themes/wallpapers.yaml. The manifest lists only wallpapers with a known,
+# byte-verifiable upstream source; those are kept out of git and restored
+# (sha256-verified) into
 #   ${XDG_DATA_HOME:-$HOME/.local/share}/cosmikase/backgrounds/<theme>/
-# Wallpapers whose source is "unknown" stay in the repo tree and are not fetched.
+# Wallpapers without a verifiable source are not listed; they ship in-tree under
+# themes/<name>/backgrounds/ and git owns their integrity.
 #
 # Usage:
 #   cosmikase-wallpapers fetch [theme]     download missing wallpapers (all themes, or one)
-#   cosmikase-wallpapers verify [theme]    check sha256 of present wallpapers
-#   cosmikase-wallpapers list [theme]      show fetchable wallpapers and their state
+#   cosmikase-wallpapers verify [theme]    check sha256 of fetched wallpapers
+#   cosmikase-wallpapers list [theme]      show each wallpaper and its state
 #
 # Offline-safe: fetch warns and continues if the network is unavailable.
 set -euo pipefail
@@ -35,8 +37,8 @@ find_manifest() {
     return 1
 }
 
-# Emit TSV rows "theme<TAB>filename<TAB>sha256<TAB>in_tree<TAB>url" for the
-# requested theme (or all). Requires python3 + PyYAML.
+# Emit TSV rows "theme<TAB>filename<TAB>sha256<TAB>url" for the requested theme
+# (or all). Requires python3 + PyYAML.
 manifest_rows() {
     local manifest="$1" want_theme="${2:-}"
     python3 - "$manifest" "$want_theme" <<'PY'
@@ -55,9 +57,8 @@ for theme, records in (data.get("themes") or {}).items():
     for rec in records or []:
         fn = rec.get("filename", "")
         sha = rec.get("sha256", "")
-        in_tree = "true" if rec.get("in_tree") else "false"
         url = rec.get("url", "") or ""
-        print("\t".join([theme, fn, sha, in_tree, url]))
+        print("\t".join([theme, fn, sha, url]))
 PY
 }
 
@@ -72,10 +73,8 @@ cmd_fetch() {
         return 0
     fi
 
-    local theme fn sha in_tree url dest tmp got
-    while IFS=$'\t' read -r theme fn sha in_tree url; do
-        [[ "$in_tree" == "true" ]] && continue      # stays in repo, nothing to fetch
-        [[ -z "$url" ]] && continue                 # broken/unknown, no source
+    local theme fn sha url dest tmp got
+    while IFS=$'\t' read -r theme fn sha url; do
         dest="$RUNTIME_DIR/$theme/$fn"
         if [[ -f "$dest" ]] && [[ "$(sha_of "$dest")" == "$sha" ]]; then
             skipped=$((skipped + 1)); continue
@@ -108,18 +107,13 @@ cmd_verify() {
     local want_theme="${1:-}" manifest bad=0 ok=0 missing=0
     manifest="$(find_manifest)" || { echo "error: wallpapers.yaml not found" >&2; return 1; }
 
-    local themes_dir; themes_dir="$(find_themes_dir)"
-    local theme fn sha in_tree url path got
-    while IFS=$'\t' read -r theme fn sha in_tree url; do
-        if [[ "$in_tree" == "true" ]]; then
-            path="$themes_dir/$theme/backgrounds/$fn"
-        else
-            path="$RUNTIME_DIR/$theme/$fn"
-        fi
+    # Only fetchable wallpapers are checked here; in-tree wallpapers are git's to
+    # verify (git status / git fsck), not this script's.
+    local theme fn sha url path got
+    while IFS=$'\t' read -r theme fn sha url; do
+        path="$RUNTIME_DIR/$theme/$fn"
         if [[ ! -f "$path" ]]; then
-            [[ "$in_tree" == "true" ]] && { echo "MISSING (in-tree) $theme/$fn" >&2; bad=$((bad + 1)); } \
-                                       || missing=$((missing + 1))
-            continue
+            missing=$((missing + 1)); continue
         fi
         got="$(sha_of "$path")"
         if [[ "$got" == "$sha" ]]; then
@@ -137,13 +131,9 @@ cmd_verify() {
 cmd_list() {
     local want_theme="${1:-}" manifest
     manifest="$(find_manifest)" || { echo "error: wallpapers.yaml not found" >&2; return 1; }
-    local theme fn sha in_tree url state
-    while IFS=$'\t' read -r theme fn sha in_tree url; do
-        if [[ "$in_tree" == "true" ]]; then
-            state="in-repo"
-        elif [[ -z "$url" ]]; then
-            state="no-source"
-        elif [[ -f "$RUNTIME_DIR/$theme/$fn" ]]; then
+    local theme fn sha url state
+    while IFS=$'\t' read -r theme fn sha url; do
+        if [[ -f "$RUNTIME_DIR/$theme/$fn" ]]; then
             state="fetched"
         else
             state="fetchable"
@@ -153,7 +143,7 @@ cmd_list() {
 }
 
 usage() {
-    sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 main() {

@@ -1,8 +1,8 @@
 # Ruff configuration for cosmikase.
 #
-# There is no installable Python package any more — only two standalone
-# PEP 723 scripts (bin/cosmikase-chezmoi and themes/render.py). This file is
-# the sole home for lint/format config now that pyproject.toml is gone.
+# There is no installable Python package any more — only one standalone
+# PEP 723 script (bin/cosmikase-chezmoi). This file is the sole home for
+# lint/format config now that pyproject.toml is gone.
 
 line-length = 100
 target-version = "py310"

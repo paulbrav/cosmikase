@@ -30,14 +30,16 @@ version pins that contradict the installer, no `default` that nothing consumes. 
 in the manifest, a script acts on it. Runtime version pins live where they are used, in the
 `run_onchange_` scripts.
 
-## Palette-first themes
+## Curated per-app theme files
 
-Each theme's real payload is a seven-key color palette (`palette.yaml`: background,
-foreground, accent, error, warning, success, cursor). A renderer (`themes/render.py`)
-generates the per-app configs from that palette instead of regex-patching existing files, so
-every theme stays consistent and adding one is cheap. Wallpapers are fetched from a
-checksummed manifest, never committed — they were the single largest contributor to repo bloat.
-The default theme (nord) is defined in exactly one place: `chezmoi/.chezmoi.toml.tmpl`.
+Each theme is a directory of curated, per-app config files (`cursor.json`, `cosmic.ron`,
+`cosmic-term.ron`, `ghostty.conf`, `btop.theme`, `neovim.lua`, …). The theme scripts copy the
+relevant file into place for each app — there is no intermediate palette representation to
+generate from or keep in sync, so a theme's checked-in files are exactly what the runtime
+applies. Wallpapers with a known upstream source are re-fetched from a checksummed manifest
+(`themes/wallpapers.yaml`) rather than committed; the rest ship in-tree under
+`themes/<name>/backgrounds/`. The default theme (nord) is defined in exactly one place:
+`chezmoi/.chezmoi.toml.tmpl`.
 
 ## COSMIC UX layer
 

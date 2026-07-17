@@ -89,15 +89,28 @@ ls /lib/firmware/amdgpu/isp_4_1_1.bin*     # firmware present?
 uname -r                                   # kernel ≥ 7.2?
 ```
 
-Interim paths: the Ubuntu **OEM kernel**, a **DKMS backport** of `amd_capture`, or a self-built
-**≥ 7.2** kernel. No libcamera is required.
+Interim paths: the Ubuntu **OEM kernel** (`linux-oem-24.04c`), a **DKMS backport** of
+`amd_capture`, or a self-built **≥ 7.2** kernel. The sensor is an AMD ISP4 MIPI/CSI camera
+(not USB UVC); it exposes a plain V4L2 node (`/dev/video0`) and needs no libcamera. Confirm
+with `v4l2-ctl --list-devices` (from `v4l-utils`).
 
 ### Fingerprint FAIL
 
+The HP ZBook Ultra G1a has a Synaptics fingerprint sensor. It works with `fprintd` after a
+firmware update, once enabled in PAM:
+
 ```bash
+fwupdmgr update                        # apply the sensor firmware update, then reboot
+pam-auth-update --enable fprintd       # enable fingerprint auth in PAM
 systemctl status fprintd
-fprintd-enroll        # enroll a finger once fprintd + Synaptics reader are present
+fprintd-enroll                         # enroll a finger once fprintd + the reader are present
 ```
+
+### WiFi unstable
+
+The MediaTek **MT7925** adapter's stability improved in **kernel 6.16+**; if you see drops on
+an older kernel, moving to a newer kernel (the interim webcam kernels above all qualify) fixes
+it.
 
 ### Power udev rule inactive
 

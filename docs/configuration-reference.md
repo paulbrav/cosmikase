@@ -24,12 +24,12 @@ uv_tools:    [...]    # installed via `uv tool install`
 npm_globals: [...]    # installed via `npm -g`
 ai_tools:    [...]    # AI CLIs (claude, codex, grok, …)
 features: {...}       # boolean feature toggles
-hp_zbook_ultra: {...} # hardware notes + warnings
-theme: {}             # theme-related settings read by scripts
 ```
 
 The default theme is **not** set here — it lives in exactly one place,
-`chezmoi/.chezmoi.toml.tmpl` (a chezmoi prompt with the `nord` default).
+`chezmoi/.chezmoi.toml.tmpl` (a chezmoi prompt with the `nord` default). Hardware
+notes for the HP ZBook Ultra G1a are **not** in the manifest either — no script
+reads them; see [Troubleshooting](troubleshooting.md#preflight--hardware).
 
 ---
 
@@ -132,36 +132,6 @@ Boolean toggles read by the scripts to enable/disable optional behavior.
 features:
   yubikey_setup: false
   run_fw_update: true
-```
-
----
-
-## hp_zbook_ultra
-
-Hardware-specific notes and warnings for the HP ZBook Ultra G1a. Consumed by the scripts that
-emit hardware guidance and by `cosmikase-preflight`.
-
-```yaml
-hp_zbook_ultra:
-  warn_on_mix: true          # warn if mixing Pop!_OS and Ubuntu OEM kernels
-  notes: |
-    Fingerprint: works with fprintd + Synaptics reader after firmware update.
-    Webcam: sensor OV05C10 behind AMD ISP4, driver `amd_capture`, firmware
-      `/lib/firmware/amdgpu/isp_4_1_1.bin`. Merged in mainline Linux 7.2 (no
-      libcamera needed). Pop 24.04 ships 6.17.9 -> use the OEM kernel, a DKMS
-      backport, or a >= 7.2 kernel until 7.2 lands.
-```
-
----
-
-## theme
-
-Theme-related settings that scripts read (the themes directory, etc.). The default theme name
-is deliberately **not** here — see `chezmoi/.chezmoi.toml.tmpl`.
-
-```yaml
-theme:
-  dir: ~/.local/share/cosmikase/themes
 ```
 
 ---

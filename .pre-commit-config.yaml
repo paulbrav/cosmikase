@@ -1,7 +1,7 @@
 # Pre-commit hooks for cosmikase.
 #
-# After the Python-package removal there are exactly two Python files
-# (bin/cosmikase-chezmoi, themes/render.py) and a set of bash scripts. No
+# After the Python-package removal there is exactly one Python file
+# (bin/cosmikase-chezmoi) and a set of bash scripts. No
 # mypy/pytest of deleted modules, no ansible-lint (Ansible is gone).
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -15,15 +15,15 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
-      # cosmikase-chezmoi has no .py extension, so match both scripts by path
-      # and bypass pre-commit's python type detection with types: [file].
+      # cosmikase-chezmoi has no .py extension, so match it by path and
+      # bypass pre-commit's python type detection with types: [file].
       - id: ruff
         args: [--fix]
         types: [file]
-        files: ^(bin/cosmikase-chezmoi|themes/render\.py)$
+        files: ^bin/cosmikase-chezmoi$
       - id: ruff-format
         types: [file]
-        files: ^(bin/cosmikase-chezmoi|themes/render\.py)$
+        files: ^bin/cosmikase-chezmoi$
 
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0

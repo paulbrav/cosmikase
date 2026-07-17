@@ -240,32 +240,6 @@ ai_tools:
     repo_line: "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main"
     package: antigravity
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# HARDWARE-SPECIFIC NOTES — HP ZBook Ultra G1a
-# ═══════════════════════════════════════════════════════════════════════════════
-hp_zbook_ultra:
-  emit_notes: true
-  warn_on_mix: true
-  oem_kernel: linux-oem-24.04c
-  notes: |
-    HP ZBook Ultra G1a hardware status on Pop!_OS 24.04 / COSMIC:
-    - Fingerprint: Synaptics sensor; works with fprintd after a firmware update
-      (fwupdmgr update). Enable in PAM with `pam-auth-update --enable fprintd`.
-    - Webcam: AMD ISP4 MIPI/CSI camera, OmniVision OV05C10 sensor (NOT USB UVC).
-      Driver: `amd_capture`. Firmware: /lib/firmware/amdgpu/isp_4_1_1.bin(.zst).
-      Merged in mainline Linux 7.2 (not 6.18 — that earlier note was wrong).
-      No libcamera needed; a plain V4L2 node (/dev/video0) is exposed.
-      Pop!_OS 24.04 ships 6.17.9, so the webcam needs ONE of:
-        * the HP OEM kernel (linux-oem-24.04c), or
-        * a DKMS backport of amd_capture, or
-        * a mainline kernel >= 7.2.
-      Verify with `v4l2-ctl --list-devices` (v4l-utils).
-    - WiFi (MediaTek MT7925): stability improved in kernel 6.16+.
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# THEME
-# ═══════════════════════════════════════════════════════════════════════════════
 # The default theme is defined in EXACTLY ONE place: chezmoi/.chezmoi.toml.tmpl
-# (promptStringOnce default = "nord"). This block is intentionally empty so no
-# second definition can drift.
-theme: {}
+# (promptStringOnce default = "nord"). HP ZBook Ultra G1a hardware notes (webcam,
+# fingerprint, WiFi) live in docs/troubleshooting.md — no manifest key reads them.

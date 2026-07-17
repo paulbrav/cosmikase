@@ -46,14 +46,14 @@ jobs:
         with:
           version: "latest"
 
-      # The Python package was removed; only two single-file scripts remain.
+      # The Python package was removed; only one single-file script remains.
       # ruff config lives in ruff.toml (extend-include picks up the
       # extensionless bin/cosmikase-chezmoi).
       - name: Run ruff check
-        run: uvx ruff check bin/cosmikase-chezmoi themes/render.py
+        run: uvx ruff check bin/cosmikase-chezmoi
 
       - name: Run ruff format check
-        run: uvx ruff format --check bin/cosmikase-chezmoi themes/render.py
+        run: uvx ruff format --check bin/cosmikase-chezmoi
 
   tests:
     name: Pytest

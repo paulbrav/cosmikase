@@ -1,9 +1,10 @@
 # Cosmikase Themes
 
-A palette-first theme collection for Pop!_OS / COSMIC. Each theme declares its
-colours once in `palette.yaml`; the app-specific files are generated from that
-palette (for the two files that are fully derivable) or hand-curated (for the
-rest). Wallpapers live in a manifest, not in git.
+A theme collection for Pop!_OS / COSMIC. Each theme is a directory of curated,
+per-app config files; the theme scripts copy the relevant file into place for
+each app. There is no intermediate palette representation — a theme's checked-in
+files are exactly what the runtime applies. Wallpapers with a known upstream
+source live in a fetch manifest rather than in git.
 
 ## Available themes
 
@@ -29,15 +30,14 @@ Each `themes/<name>/` directory contains:
 
 | File | Purpose |
 |------|---------|
-| `palette.yaml` | **Declared colour source of truth** — 7 colour keys + `variant` (see below) |
 | `cursor.json` | Cursor / VS Code / Antigravity colour theme name, extension id, and colours |
-| `ghostty.conf` | Ghostty terminal colours (generated from palette or curated) |
-| `cosmic-term.ron` | COSMIC Terminal colour scheme (generated from palette or curated) |
+| `ghostty.conf` | Ghostty terminal colours |
+| `cosmic-term.ron` | COSMIC Terminal colour scheme |
 | `cosmic.ron` | COSMIC desktop colour theme |
 | `neovim.lua` | Neovim colourscheme snippet |
 | `btop.theme` | btop resource-monitor theme |
 | `opencode.json` | OpenCode colour theme |
-| `antigravity.conf` | Antigravity launcher palette |
+| `antigravity.conf` | Antigravity launcher colours |
 | `backgrounds/` | Wallpapers still tracked in git (see Wallpapers) |
 | `preview.png` | Theme preview image (ported themes) |
 | `light.mode` | Present only for light themes — marks COSMIC light mode |
@@ -47,58 +47,29 @@ dropdown). Kitty and Alacritty were removed, so their per-theme configs are gone
 Hyprland/waybar/mako/walker/swayosd/starship/chromium/icons theme files were also
 removed — cosmikase targets COSMIC, not a Hyprland stack.
 
-## palette.yaml — the colour source of truth
+## Colours and the dark/light flag
 
-```yaml
-name: Nord
-variant: dark          # dark | light
-colors:
-  background: "#2e3440"
-  foreground: "#eceff4"
-  accent:     "#88c0d0"
-  sidebar:    "#242933"
-  terminal:   "#2e3440"
-  error:      "#bf616a"
-  warning:    "#ebcb8b"
-```
+Each app's colours live directly in that app's config file (`cursor.json`,
+`cosmic-term.ron`, `ghostty.conf`, …); editing a theme means editing those files.
+`cursor.json`'s `light` flag is the declared dark/light truth for a theme; light
+themes also carry a `light.mode` marker file, which flips COSMIC into light mode.
 
-These 7 keys were extracted from each theme's `cursor.json` `colors` block.
-`variant` comes from `cursor.json`'s `light` flag (the declared truth), which is
-also mirrored by the `light.mode` marker on light themes.
-
-### Regenerating ghostty.conf / cosmic-term.ron
-
-`ghostty.conf` and `cosmic-term.ron` are the two files whose colours are fully
-derivable from the palette. Regenerate them with the single-file renderer:
-
-```bash
-themes/render.py --theme nord      # one theme
-themes/render.py --all             # every theme
-themes/render.py --all --dry-run   # preview without writing
-```
-
-`render.py` is a PEP 723 script (`uv run themes/render.py …`, deps: pyyaml,
-jinja2) using the templates in `themes/_templates/`. The renderer reproduces the
-palette-defined slots exactly (background, foreground, cursor, and the
-black/red/green/yellow ANSI colours) and fills the remaining ANSI slots from the
-accent. Use it for **new themes** or to fix drift; richer hand-curated palettes
-that ship today are left as-is.
-
-### Why there is no `theme.yaml`
+## Why there is no per-theme manifest
 
 Earlier revisions carried a `theme.yaml` manifest whose only consumer was the
-(now deleted) Python package. It was removed. `palette.yaml` is the colour source
-of truth, `cursor.json` carries the editor theme metadata, and the default
-wallpaper is simply the first image found in `backgrounds/` — so nothing reads a
-per-theme manifest any more.
+(now deleted) Python package, and later a `palette.yaml` layer that nothing at
+runtime read. Both were removed. `cursor.json` carries the editor theme metadata,
+each per-app file carries its own colours, and the default wallpaper is simply the
+first image found in `backgrounds/` — so nothing reads a per-theme manifest any more.
 
 ## Wallpapers
 
-Wallpapers are described by [`wallpapers.yaml`](wallpapers.yaml), which records
-every wallpaper's `sha256`, byte size, and provenance (`source`). To keep the
-repo small, wallpapers with a **verified upstream source** were removed from git;
-wallpapers whose source is **unknown** stay in the tree (removing them would be
-irreversible data loss — they are listed at the top of the manifest).
+[`wallpapers.yaml`](wallpapers.yaml) is a fetch manifest: it lists only the
+wallpapers with a known upstream source, each as `filename` + `url` + `sha256`.
+To keep the repo small those files were removed from git and are re-fetched
+(sha256-verified) on demand. Wallpapers without a verifiable upstream source are
+not listed — they ship in-tree under `themes/<name>/backgrounds/`, where git owns
+their integrity.
 
 Restore or verify the removed wallpapers with:
 
@@ -123,11 +94,11 @@ missing.
 - **omarchy-ported themes** — wallpapers originate from
   [basecamp/omarchy](https://github.com/basecamp/omarchy) (MIT). Two are still
   byte-verifiable upstream and are re-fetched; the rest were renamed/changed
-  upstream and are kept in-tree as `unknown` provenance.
+  upstream and are kept in-tree.
 - **catppuccin / osaka-jade** — custom (Catppuccin palette art, Unsplash /
-  Wallhaven imagery); kept in-tree as `unknown`.
-- **cosmic-dark / cosmic-light** — space and abstract imagery; kept in-tree as
-  `unknown` pending provenance verification.
+  Wallhaven imagery); kept in-tree.
+- **cosmic-dark / cosmic-light** — space and abstract imagery; kept in-tree
+  (provenance unverified).
 
 ## Applying a theme
 
@@ -145,13 +116,15 @@ reapplies dotfiles, and calls the per-app helpers:
 
 ## Adding a new theme
 
-1. Create `themes/<name>/palette.yaml` with the 7 colour keys and a `variant`.
-2. Run `themes/render.py --theme <name>` to generate `ghostty.conf` and
-   `cosmic-term.ron`.
-3. Add `cursor.json` (editor theme name + extension + colours), and optionally
-   `cosmic.ron`, `neovim.lua`, `btop.theme`, `opencode.json`, `antigravity.conf`.
-4. Add wallpapers under `backgrounds/`, then record them in `wallpapers.yaml`
-   (`bin/cosmikase-wallpapers verify` re-checks sha256s).
+1. Create `themes/<name>/` and add `cursor.json` (editor theme name + extension +
+   colours). For a light theme, set its `light` flag and add a `light.mode`
+   marker file next to it.
+2. Add the per-app config files by copying an existing theme's and editing the
+   colours: `ghostty.conf`, `cosmic-term.ron`, `cosmic.ron`, `neovim.lua`,
+   `btop.theme`, `opencode.json`, `antigravity.conf`.
+3. Add wallpapers under `backgrounds/`. If a wallpaper has a byte-verifiable
+   upstream source, add a `filename` + `url` + `sha256` record to
+   `wallpapers.yaml` and drop the file from git; otherwise leave it in-tree.
 
 ## Credits
 

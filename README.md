@@ -57,7 +57,7 @@ cosmikase/
 ├── Makefile            # dev conveniences (lint, test, plugins, …)
 ├── bin/                # runtime bash scripts + one PEP 723 uv helper
 ├── chezmoi/            # dotfiles + COSMIC UX + run_onchange package scripts
-├── themes/             # per-theme palette.yaml + curated app configs + renderer
+├── themes/             # one dir per theme: curated per-app config files + wallpaper manifest
 ├── plugins/            # Cargo workspace: shared crate + 5 pop-launcher plugins
 ├── docs/               # design + reference + researched guides
 └── tests/              # pytest + container smoke test of install.sh
@@ -67,7 +67,7 @@ cosmikase/
 
 Two terminals, each with a clear job:
 
-- **cosmic-term** — the daily driver, themed from each theme's palette.
+- **cosmic-term** — the daily driver, themed from each theme's curated `cosmic-term.ron`.
 - **Ghostty** — the drop-down quick terminal, toggled with `Super + grave` via
   `bin/cosmikase-dropterm` (Ghostty's own `quick-terminal` is the primary path).
 
@@ -75,10 +75,9 @@ Kitty and Alacritty are not used anywhere in this repo.
 
 ## Themes
 
-Each theme is **palette-first**: `themes/<name>/palette.yaml` holds seven color keys
-(background, foreground, accent, error, warning, success, cursor) as the declared source of
-truth. `themes/render.py` regenerates the per-app configs (ghostty, cosmic-term) from a
-palette, so adding a theme is cheap.
+Each theme is a directory of **curated per-app config files** — `cursor.json`, `cosmic.ron`,
+`cosmic-term.ron`, `ghostty.conf`, `btop.theme`, `neovim.lua`, and so on. The theme scripts
+copy these files into place directly; there is no intermediate palette layer to keep in sync.
 
 Wallpapers are **not committed to git**. `themes/wallpapers.yaml` records each file's source
 URL and sha256; `bin/cosmikase-wallpapers fetch [theme]` downloads and verifies them into

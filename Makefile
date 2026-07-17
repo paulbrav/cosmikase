@@ -43,7 +43,7 @@ theme:
 lint:
 	shellcheck $(SHELL_SCRIPTS)
 	@if command -v ruff >/dev/null 2>&1; then \
-	  for f in bin/cosmikase-chezmoi themes/render.py; do [ -f "$$f" ] && ruff check "$$f"; done; \
+	  ruff check bin/cosmikase-chezmoi; \
 	else echo "ruff not installed; skipping python lint"; fi
 
 test:

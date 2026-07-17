@@ -18,8 +18,9 @@ chezmoi/            chezmoi source dir. Dotfiles as dot_* files/templates, COSMI
                     dot_config/cosmic/, and run_onchange_/run_after_ scripts that read the
                     manifest and install packages. `.chezmoi.toml.tmpl` is the single source
                     of the default theme (nord).
-themes/             One dir per theme: palette.yaml (7-key source of truth) + curated app
-                    configs; render.py regenerates configs; wallpapers.yaml is a fetch manifest.
+themes/             One dir per theme: curated per-app config files (cursor.json, cosmic.ron,
+                    cosmic-term.ron, ghostty.conf, …) copied into place; wallpapers.yaml is a
+                    fetch manifest for wallpapers with a known upstream source.
 plugins/            Cargo workspace: plugin-common crate + five pop-launcher plugins.
 docs/               design.md, cli-reference.md, configuration-reference.md, keybindings.md,
                     troubleshooting.md, pop-launcher-plugins.md, private-tools.md, and six
@@ -49,9 +50,8 @@ The chezmoi source directory is `chezmoi/`. Locally you can point chezmoi at it 
   scripts are idempotent and safe to re-run.
 - Reuse helpers from `bin/cosmikase-lib.sh` (`log`, `notify`, `require_theme`, `find_helper`,
   history helpers) instead of reimplementing them.
-- **Python** is limited to two PEP 723 single-file `uv` scripts (`bin/cosmikase-chezmoi`,
-  `themes/render.py`); keep them lint-clean under `ruff`. Do not reintroduce an installable
-  Python package.
+- **Python** is limited to one PEP 723 single-file `uv` script (`bin/cosmikase-chezmoi`);
+  keep it lint-clean under `ruff`. Do not reintroduce an installable Python package.
 - `snake_case` for functions and variables; `UPPER_SNAKE_CASE` for constants and env vars.
 
 ## Security & Secrets
