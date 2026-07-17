@@ -14,9 +14,6 @@
 {{- else if ne (env "COSMIKASE_CI") "1" -}}
 {{-   $theme = promptStringOnce . "theme" "Default theme" "nord" -}}
 {{- end -}}
-{{/* Absolute path — a literal "~" is never expanded by the consumers that read
-     .themes_dir as a filesystem path (theme hook, nvim dofile, ghostty/antigravity). */}}
-{{- $themes_dir := joinPath .chezmoi.homeDir ".local" "share" "cosmikase" "themes" -}}
 {{- $font_family := "JetBrainsMono Nerd Font" -}}
 {{- $font_size := 9 -}}
 {{- $padding := 14 -}}
@@ -24,8 +21,11 @@
 sourceDir = {{ .chezmoi.sourceDir | quote }}
 
 [data]
+    # Repo root (parent of the chezmoi source dir). Templates and symlink_ entries
+    # reach bin/ and themes/ through .repo_dir instead of the `joinPath
+    # .chezmoi.sourceDir ".."` escape idiom.
+    repo_dir = {{ dir .chezmoi.sourceDir | quote }}
     theme = {{ $theme | quote }}
-    themes_dir = {{ $themes_dir | quote }}
     font_family = {{ $font_family | quote }}
     font_size = {{ $font_size }}
     padding = {{ $padding }}

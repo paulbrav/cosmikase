@@ -1,8 +1,10 @@
 # Ghostty terminal configuration
 # Theme is dynamically applied via chezmoi template
 
-# Theme - include from themes directory
-config-file = {{ .themes_dir }}/{{ .theme }}/ghostty.conf
+# Theme - include from the active-theme pointer. The `current` symlink under
+# ~/.local/share/cosmikase/ is re-pointed on every theme switch, so this file is
+# theme-independent and never re-renders per theme (item 2.5).
+config-file = {{ .chezmoi.homeDir }}/.local/share/cosmikase/current/ghostty.conf
 
 # Font
 font-family = "{{ .font_family }}"

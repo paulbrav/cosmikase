@@ -164,52 +164,109 @@ install_extension() {
     fi
 }
 
-# Update settings.json for a VS Code fork
+# Update settings.json for a VS Code fork. This helper is the SOLE writer of
+# editor theme settings (there is no longer a chezmoi settings.json template —
+# item 4.1): it merges colorTheme, preferred dark/light, color customizations
+# and token colors read straight from the theme's cursor.json into the user's
+# existing settings, preserving every other key.
 update_settings() {
     local settings_file="$1"
     local app_name="$2"
-    
+
     if [[ ! -d "$(dirname "$settings_file")" ]]; then
         log "  - $app_name config directory not found, skipping"
         return 1
     fi
-    
+
     # Create settings file if it doesn't exist
     if [[ ! -f "$settings_file" ]]; then
         mkdir -p "$(dirname "$settings_file")"
         echo '{}' > "$settings_file"
     fi
-    
-    # Update settings using jq or python
+
+    # Merge the theme into the existing settings using jq or python. Both paths
+    # produce identical output so the no-jq fallback cannot drift.
     if command -v jq >/dev/null 2>&1; then
         local tmp_file
         tmp_file=$(mktemp)
-        jq --arg theme "$COLOR_THEME" '.["workbench.colorTheme"] = $theme' "$settings_file" > "$tmp_file"
-        mv "$tmp_file" "$settings_file"
+        if jq --slurpfile c "$CURSOR_JSON" '
+              ($c[0]) as $t
+            | ($t.light // false) as $light
+            | ($t.colors // {}) as $col
+            | . + {
+                "window.commandCenter": true,
+                "workbench.colorTheme": $t.colorTheme,
+                "workbench.preferredDarkColorTheme":
+                    (if $light then "Cursor Dark Midnight" else $t.colorTheme end),
+                "workbench.preferredLightColorTheme":
+                    (if $light then $t.colorTheme else "Cursor Light" end),
+                "workbench.colorCustomizations": {
+                    "editor.background": $col.background,
+                    "sideBar.background": ($col.sidebar // $col.background),
+                    "terminal.background": ($col.terminal // $col.background),
+                    "activityBar.background": ($col.sidebar // $col.background)
+                }
+              }
+            | if ($t.tokenColors != null)
+              then . + {"editor.tokenColorCustomizations": {"textMateRules": $t.tokenColors}}
+              else . end
+        ' "$settings_file" > "$tmp_file" 2>/dev/null; then
+            mv "$tmp_file" "$settings_file"
+        else
+            rm -f "$tmp_file"
+            log "  - Warning: could not update $app_name settings (invalid JSON?)"
+            return 1
+        fi
     elif command -v python3 >/dev/null 2>&1; then
-        python3 << EOF
+        if ! CURSOR_JSON="$CURSOR_JSON" SETTINGS_FILE="$settings_file" python3 - <<'EOF'
 import json
 import os
 
-settings_file = "$settings_file"
-color_theme = "$COLOR_THEME"
+settings_file = os.environ["SETTINGS_FILE"]
+cursor_json = os.environ["CURSOR_JSON"]
 
 try:
-    with open(settings_file, 'r') as f:
+    with open(settings_file) as f:
         settings = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
     settings = {}
 
-settings["workbench.colorTheme"] = color_theme
+with open(cursor_json) as f:
+    t = json.load(f)
 
-with open(settings_file, 'w') as f:
+light = t.get("light", False)
+col = t.get("colors", {})
+bg = col.get("background")
+
+settings["window.commandCenter"] = True
+settings["workbench.colorTheme"] = t["colorTheme"]
+settings["workbench.preferredDarkColorTheme"] = (
+    "Cursor Dark Midnight" if light else t["colorTheme"]
+)
+settings["workbench.preferredLightColorTheme"] = (
+    t["colorTheme"] if light else "Cursor Light"
+)
+settings["workbench.colorCustomizations"] = {
+    "editor.background": bg,
+    "sideBar.background": col.get("sidebar", bg),
+    "terminal.background": col.get("terminal", bg),
+    "activityBar.background": col.get("sidebar", bg),
+}
+if t.get("tokenColors") is not None:
+    settings["editor.tokenColorCustomizations"] = {"textMateRules": t["tokenColors"]}
+
+with open(settings_file, "w") as f:
     json.dump(settings, f, indent=4)
 EOF
+        then
+            log "  - Warning: could not update $app_name settings"
+            return 1
+        fi
     else
         echo "Error: Neither jq nor python3 available for JSON editing" >&2
         return 1
     fi
-    
+
     log "  - Updated $app_name settings"
     return 0
 }

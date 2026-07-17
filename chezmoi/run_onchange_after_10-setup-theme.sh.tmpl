@@ -1,14 +1,20 @@
 #!/bin/bash
-# Run after chezmoi apply to install per-app theme assets and reload apps.
-# The active theme comes from chezmoi data ({{ .theme }}) — the single source of
-# truth for the default is chezmoi/.chezmoi.toml.tmpl, never this hook.
-# Helper scripts (cosmikase-theme-*, cosmikase-wallpapers) are installed to
-# ~/.local/bin; this hook degrades gracefully when they are absent.
+# The single post-apply theme applier. This is a run_onchange hook whose body
+# embeds the active theme ({{ .theme }}), so it fires exactly when the theme
+# changes — a fresh install or a `cosmikase-theme <name>` switch — and NOT on an
+# unrelated `chezmoi apply`. That is what stops the old double-apply and the
+# every-apply COSMIC re-theme / wallpaper stomp (item 1.1).
+#
+# It owns COSMIC, terminals AND the editors (Cursor/VS Code/Antigravity): the
+# render-time Cursor settings template is gone, so cosmikase-theme-cursor is the
+# sole writer of editor theme settings now (item 4.1). Helper scripts are
+# symlinked into ~/.local/bin by chezmoi's native symlink_ entries; this hook
+# degrades gracefully when they are absent.
 
 set -euo pipefail
 
 THEME="{{ .theme }}"
-THEMES_DIR="{{ .themes_dir }}"
+THEMES_DIR="{{ .chezmoi.homeDir }}/.local/share/cosmikase/themes"
 THEME_PATH="$THEMES_DIR/$THEME"
 LOCAL_BIN="$HOME/.local/bin"
 
@@ -66,6 +72,18 @@ elif command -v cosmikase-theme-cosmic >/dev/null 2>&1; then
     THEMES_DIR="$THEMES_DIR" cosmikase-theme-cosmic "$THEME" --quiet || true
 else
     echo "  - Skipping COSMIC theme (helper not installed)"
+fi
+
+# Apply editor theme (Cursor / VS Code / Antigravity). The helper is the single
+# writer of editor settings.json now that the render-time template is gone.
+if [[ -x "$LOCAL_BIN/cosmikase-theme-cursor" ]]; then
+    echo "  - Applying editor theme..."
+    THEMES_DIR="$THEMES_DIR" "$LOCAL_BIN/cosmikase-theme-cursor" "$THEME" --quiet || true
+elif command -v cosmikase-theme-cursor >/dev/null 2>&1; then
+    echo "  - Applying editor theme..."
+    THEMES_DIR="$THEMES_DIR" cosmikase-theme-cursor "$THEME" --quiet || true
+else
+    echo "  - Skipping editor theme (helper not installed)"
 fi
 
 # Reload terminal emulators (ghostty + cosmic-term)
